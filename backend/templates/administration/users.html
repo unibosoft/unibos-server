@@ -132,7 +132,13 @@
                     </td>
                     <td>
                         {% if user.last_activity %}
-                        {{ user.last_activity|timesince }} ago
+                            {% with time_diff=user.last_activity|timesince %}
+                                {% if "0 minutes" in time_diff or "minute, " in time_diff %}
+                                    <span style="color: #4CAF50; font-weight: bold;">now</span>
+                                {% else %}
+                                    {{ time_diff }} ago
+                                {% endif %}
+                            {% endwith %}
                         {% else %}
                         Never
                         {% endif %}

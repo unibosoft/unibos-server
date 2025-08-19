@@ -12,6 +12,11 @@ from .models import Role, UserRole, Department, PermissionRequest, AuditLog, Sys
 from apps.solitaire.models import SolitairePlayer, SolitaireGameSession, SolitaireActivity
 from apps.birlikteyiz.models import CronJob, EarthquakeDataSource
 import json
+from datetime import timedelta
+from django.http import HttpResponse
+from django.core.paginator import Paginator
+from django.db.models import Avg
+import csv
 
 
 def is_admin(user):
@@ -374,6 +379,121 @@ def permission_requests(request):
     }
     
     return render(request, 'administration/permission_requests.html', context)
+
+
+@login_required(login_url='/login/')
+@user_passes_test(is_admin, login_url='/login/')
+def system_logs(request):
+    """System logs viewer with filtering and search"""
+    from apps.logging.models import SystemLog
+    
+    # Get filter parameters
+    level = request.GET.get('level', '')
+    category = request.GET.get('category', '')
+    search = request.GET.get('search', '')
+    timerange = request.GET.get('timerange', '1h')
+    export_format = request.GET.get('export', '')
+    
+    # Base queryset
+    logs = SystemLog.objects.select_related('user').order_by('-timestamp')
+    
+    # Apply time range filter
+    now = timezone.now()
+    if timerange == '1h':
+        logs = logs.filter(timestamp__gte=now - timedelta(hours=1))
+    elif timerange == '24h':
+        logs = logs.filter(timestamp__gte=now - timedelta(hours=24))
+    elif timerange == '7d':
+        logs = logs.filter(timestamp__gte=now - timedelta(days=7))
+    elif timerange == '30d':
+        logs = logs.filter(timestamp__gte=now - timedelta(days=30))
+    
+    # Apply other filters
+    if level:
+        logs = logs.filter(level=level)
+    if category:
+        logs = logs.filter(category=category)
+    if search:
+        logs = logs.filter(
+            Q(message__icontains=search) |
+            Q(module__icontains=search) |
+            Q(function__icontains=search) |
+            Q(path__icontains=search)
+        )
+    
+    # Handle exports
+    if export_format == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="system_logs.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Timestamp', 'Level', 'Category', 'Message', 'User', 'IP', 'Path', 'Duration'])
+        for log in logs[:1000]:  # Limit export
+            writer.writerow([
+                log.timestamp,
+                log.level,
+                log.category,
+                log.message,
+                log.user.username if log.user else '',
+                log.ip_address,
+                log.path,
+                log.duration_ms
+            ])
+        return response
+    
+    elif export_format == 'json':
+        data = list(logs[:1000].values(
+            'timestamp', 'level', 'category', 'message',
+            'user__username', 'ip_address', 'path', 'duration_ms'
+        ))
+        return JsonResponse(data, safe=False)
+    
+    # Get statistics
+    total_logs = logs.count()
+    error_count = logs.filter(level='error').count()
+    error_rate = (error_count / total_logs * 100) if total_logs > 0 else 0
+    
+    # Active users in last hour
+    active_users = logs.filter(
+        timestamp__gte=now - timedelta(hours=1),
+        user__isnull=False
+    ).values('user').distinct().count()
+    
+    # Average response time
+    avg_response_time = logs.filter(
+        duration_ms__isnull=False
+    ).aggregate(avg=Avg('duration_ms'))['avg'] or 0
+    
+    # Chart data for last 24 hours
+    chart_labels = []
+    chart_data = []
+    error_data = []
+    for i in range(24):
+        hour_start = now - timedelta(hours=23-i)
+        hour_end = hour_start + timedelta(hours=1)
+        hour_logs = logs.filter(timestamp__gte=hour_start, timestamp__lt=hour_end)
+        chart_labels.append(hour_start.strftime('%H:00'))
+        chart_data.append(hour_logs.count())
+        error_data.append(hour_logs.filter(level='error').count())
+    
+    # Pagination
+    paginator = Paginator(logs, 50)
+    page = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page)
+    
+    context = {
+        'logs': page_obj,
+        'page_obj': page_obj,
+        'total_logs': total_logs,
+        'error_rate': round(error_rate, 2),
+        'active_users': active_users,
+        'avg_response_time': round(avg_response_time),
+        'chart_labels': json.dumps(chart_labels),
+        'chart_data': json.dumps(chart_data),
+        'error_data': json.dumps(error_data),
+        'pending_requests_count': PermissionRequest.objects.filter(status='pending').count(),
+    }
+    
+    return render(request, 'administration/system_logs.html', context)
 
 
 @login_required(login_url='/login/')
