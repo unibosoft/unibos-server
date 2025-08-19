@@ -570,6 +570,156 @@ def lock_screen(request):
     return redirect('/')
 
 
+@login_required(login_url='/login/')
+@user_passes_test(is_admin, login_url='/login/')
+def delete_user(request, user_id):
+    """Delete a user"""
+    if request.method == 'POST':
+        user = get_object_or_404(User, id=user_id)
+        
+        # Don't allow deleting superusers or self
+        if user.is_superuser or user == request.user:
+            return JsonResponse({'error': 'Cannot delete this user'}, status=403)
+        
+        username = user.username
+        user.delete()
+        
+        # Log the deletion
+        AuditLog.objects.create(
+            user=request.user,
+            action='user_delete',
+            target_object=f'User: {username}',
+            details={'deleted_user_id': user_id, 'deleted_username': username},
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+        
+        messages.success(request, f'User {username} has been deleted')
+        return JsonResponse({'success': True})
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required(login_url='/login/')
+@user_passes_test(is_admin, login_url='/login/')
+def bulk_delete_users(request):
+    """Delete multiple users at once"""
+    if request.method == 'POST':
+        import json
+        data = json.loads(request.body)
+        user_ids = data.get('user_ids', [])
+        
+        deleted_count = 0
+        deleted_users = []
+        
+        for user_id in user_ids:
+            try:
+                user = User.objects.get(id=user_id)
+                # Don't allow deleting superusers or self
+                if not user.is_superuser and user != request.user:
+                    username = user.username
+                    user.delete()
+                    deleted_count += 1
+                    deleted_users.append(username)
+            except User.DoesNotExist:
+                continue
+        
+        # Log the bulk deletion
+        if deleted_count > 0:
+            AuditLog.objects.create(
+                user=request.user,
+                action='bulk_delete',
+                target_object=f'Bulk delete: {deleted_count} users',
+                details={'deleted_users': deleted_users, 'user_ids': user_ids},
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            messages.success(request, f'Successfully deleted {deleted_count} users')
+        
+        return JsonResponse({'success': True, 'deleted_count': deleted_count})
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required(login_url='/login/')
+@user_passes_test(is_admin, login_url='/login/')
+def toggle_user_status(request, user_id):
+    """Toggle user active status"""
+    if request.method == 'POST':
+        user = get_object_or_404(User, id=user_id)
+        
+        # Don't allow toggling superusers or self
+        if user.is_superuser or user == request.user:
+            return JsonResponse({'error': 'Cannot modify this user'}, status=403)
+        
+        user.is_active = not user.is_active
+        user.save()
+        
+        status = 'activated' if user.is_active else 'deactivated'
+        
+        # Log the status change
+        AuditLog.objects.create(
+            user=request.user,
+            action='user_status_change',
+            target_user=user,
+            target_object=f'User status: {status}',
+            details={'user_id': user_id, 'is_active': user.is_active},
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+        
+        messages.success(request, f'User {user.username} has been {status}')
+        return JsonResponse({'success': True, 'is_active': user.is_active})
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required(login_url='/login/')
+@user_passes_test(is_admin, login_url='/login/')
+def bulk_status_users(request):
+    """Change status for multiple users at once"""
+    if request.method == 'POST':
+        import json
+        data = json.loads(request.body)
+        user_ids = data.get('user_ids', [])
+        active = data.get('active', True)
+        
+        updated_count = 0
+        updated_users = []
+        
+        for user_id in user_ids:
+            try:
+                user = User.objects.get(id=user_id)
+                # Don't allow modifying superusers or self
+                if not user.is_superuser and user != request.user:
+                    user.is_active = active
+                    user.save()
+                    updated_count += 1
+                    updated_users.append(user.username)
+            except User.DoesNotExist:
+                continue
+        
+        status = 'activated' if active else 'deactivated'
+        
+        # Log the bulk status change
+        if updated_count > 0:
+            AuditLog.objects.create(
+                user=request.user,
+                action='bulk_status_change',
+                target_object=f'Bulk {status}: {updated_count} users',
+                details={'updated_users': updated_users, 'user_ids': user_ids, 'active': active},
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            messages.success(request, f'Successfully {status} {updated_count} users')
+        
+        return JsonResponse({'success': True, 'updated_count': updated_count})
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
 @login_required(login_url="/login/")
 @user_passes_test(is_admin, login_url="/login/")
 def solitaire_dashboard(request):

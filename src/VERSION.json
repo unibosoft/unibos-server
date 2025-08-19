@@ -1,10 +1,10 @@
 {
-  "version": "v495",
-  "build_number": "20250819_0719",
-  "release_date": "2025-08-19 07:19:54 +0300",
+  "version": "v496",
+  "build_number": "20250819_0747",
+  "release_date": "2025-08-19 07:47:34 +0300",
   "author": "berk hatırlı",
   "location": "bitez, bodrum, muğla, türkiye, dünya, güneş sistemi, samanyolu, yerel galaksi grubu, evren",
-  "description": "Updated administration module changes,Authentication system changes,birlikteyiz module changes,CCTV module improvements,common module changes,core module changes,Currencies module updates,Documents module improvements,Movies module updates,Music module updates,personal_inflation module changes,recaria module changes,RestoPOS module updates,solitaire module changes,users module changes,version_manager module changes,Web UI enhancements,WIMM module updates,WIMS module updates,database model changes,view logic updates,URL routing updates,template improvements,static files updates,database migrations,version management improvements,unified version manager updates,documentation updates,styling improvements,screenshots archived (762 files)",
+  "description": "User Management: Added delete functionality with custom confirmation popup and bulk operations",
   "features": [
     "🎬 **Movies Module**: Complete movie/series collection management with TMDB/OMDB API integration",
     "🎵 **Music Module**: Spotify-integrated music library without storing files, open source artwork",

@@ -74,6 +74,7 @@
         <table class="terminal-table">
             <thead>
                 <tr>
+                    <th><input type="checkbox" id="selectAll" onclick="toggleAllCheckboxes()"></th>
                     <th>Username</th>
                     <th>Full Name</th>
                     <th>Email</th>
@@ -87,6 +88,11 @@
             <tbody>
                 {% for user in users %}
                 <tr>
+                    <td>
+                        {% if not user.is_superuser and user != request.user %}
+                        <input type="checkbox" class="user-checkbox" value="{{ user.id }}">
+                        {% endif %}
+                    </td>
                     <td>
                         <strong>{{ user.username }}</strong>
                         {% if user.is_superuser %}
@@ -130,12 +136,13 @@
                         <a href="#" onclick="toggleUserStatus({{ user.id }})" class="action-link">
                             {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
                         </a>
+                        <a href="#" onclick="deleteUser({{ user.id }}, '{{ user.username }}')" class="action-link delete-link">Delete</a>
                         {% endif %}
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="text-center">No users found</td>
+                    <td colspan="9" class="text-center">No users found</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -149,27 +156,288 @@
     <div class="button-group">
         <button class="btn-secondary" onclick="syncWithLDAP()">🔄 sync with ldap</button>
         <button class="btn-secondary" onclick="sendBulkEmail()">📧 send bulk email</button>
-        <button class="btn-danger" onclick="bulkDeactivate()">⚠️ bulk deactivate</button>
+        <button class="btn-warning" onclick="bulkDeactivate()">⚠️ bulk deactivate</button>
         <button class="btn-primary" onclick="bulkActivate()">✅ bulk activate</button>
+        <button class="btn-danger" onclick="bulkDelete()">🗑️ bulk delete</button>
     </div>
 </div>
 
+<!-- Custom Confirmation Popup -->
+<div id="confirmPopup" class="confirm-popup" style="display: none;">
+    <div class="popup-content">
+        <div class="popup-header">
+            <span class="popup-icon">⚠️</span>
+            <h3 id="popupTitle">confirm action</h3>
+        </div>
+        <div class="popup-body">
+            <p id="popupMessage">are you sure?</p>
+        </div>
+        <div class="popup-footer">
+            <button class="btn-cancel" onclick="closePopup()">cancel</button>
+            <button class="btn-confirm" id="confirmButton">confirm</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.confirm-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.popup-content {
+    background: #1a1a1a;
+    border: 2px solid #00ff00;
+    border-radius: 0;
+    padding: 0;
+    width: 400px;
+    font-family: 'Courier New', monospace;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+}
+
+.popup-header {
+    background: #0a0a0a;
+    padding: 15px;
+    border-bottom: 1px solid #00ff00;
+    text-align: center;
+}
+
+.popup-icon {
+    font-size: 24px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.popup-header h3 {
+    color: #00ff00;
+    margin: 0;
+    font-size: 16px;
+    text-transform: lowercase;
+}
+
+.popup-body {
+    padding: 20px;
+    text-align: center;
+}
+
+.popup-body p {
+    color: #00ff00;
+    margin: 0;
+    font-size: 14px;
+}
+
+.popup-footer {
+    padding: 15px;
+    border-top: 1px solid #00ff00;
+    display: flex;
+    justify-content: space-around;
+}
+
+.btn-cancel, .btn-confirm {
+    padding: 8px 20px;
+    border: 1px solid #00ff00;
+    background: #0a0a0a;
+    color: #00ff00;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    text-transform: lowercase;
+}
+
+.btn-cancel:hover {
+    background: #1a1a1a;
+}
+
+.btn-confirm {
+    background: #ff0000;
+    border-color: #ff0000;
+    color: #ffffff;
+}
+
+.btn-confirm:hover {
+    background: #cc0000;
+}
+
+.delete-link {
+    color: #ff6b6b !important;
+}
+
+.delete-link:hover {
+    color: #ff0000 !important;
+}
+
+.user-checkbox {
+    cursor: pointer;
+}
+</style>
+
 <script>
+let currentAction = null;
+let currentUserId = null;
+
+function showPopup(title, message, action) {
+    currentAction = action;
+    document.getElementById('popupTitle').textContent = title;
+    document.getElementById('popupMessage').textContent = message;
+    document.getElementById('confirmPopup').style.display = 'flex';
+    
+    // Set confirm button action
+    document.getElementById('confirmButton').onclick = function() {
+        if (currentAction) {
+            currentAction();
+        }
+        closePopup();
+    };
+}
+
+function closePopup() {
+    document.getElementById('confirmPopup').style.display = 'none';
+    currentAction = null;
+    currentUserId = null;
+}
+
 function toggleUserStatus(userId) {
-    if (confirm('Are you sure you want to change this user\'s status?')) {
-        // Implement toggle status via AJAX
-        fetch(`/administration/users/${userId}/toggle-status/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-                'Content-Type': 'application/json'
-            }
-        }).then(response => {
-            if (response.ok) {
-                location.reload();
-            }
-        });
+    showPopup(
+        'confirm status change',
+        'are you sure you want to change this user\'s status?',
+        function() {
+            fetch(`/administration/users/${userId}/toggle-status/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    location.reload();
+                }
+            });
+        }
+    );
+}
+
+function deleteUser(userId, username) {
+    showPopup(
+        '⚠️ confirm deletion',
+        `are you sure you want to permanently delete user "${username}"? this action cannot be undone!`,
+        function() {
+            fetch(`/administration/users/${userId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Error deleting user');
+                }
+            });
+        }
+    );
+}
+
+function toggleAllCheckboxes() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+}
+
+function getSelectedUsers() {
+    const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+function bulkDelete() {
+    const selectedUsers = getSelectedUsers();
+    if (selectedUsers.length === 0) {
+        alert('please select users to delete');
+        return;
     }
+    
+    showPopup(
+        '⚠️ confirm bulk deletion',
+        `are you sure you want to permanently delete ${selectedUsers.length} selected users? this action cannot be undone!`,
+        function() {
+            fetch('/administration/users/bulk-delete/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ user_ids: selectedUsers })
+            }).then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Error deleting users');
+                }
+            });
+        }
+    );
+}
+
+function bulkDeactivate() {
+    const selectedUsers = getSelectedUsers();
+    if (selectedUsers.length === 0) {
+        alert('please select users to deactivate');
+        return;
+    }
+    
+    showPopup(
+        'confirm bulk deactivation',
+        `are you sure you want to deactivate ${selectedUsers.length} selected users?`,
+        function() {
+            fetch('/administration/users/bulk-status/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ user_ids: selectedUsers, active: false })
+            }).then(response => {
+                if (response.ok) {
+                    location.reload();
+                }
+            });
+        }
+    );
+}
+
+function bulkActivate() {
+    const selectedUsers = getSelectedUsers();
+    if (selectedUsers.length === 0) {
+        alert('please select users to activate');
+        return;
+    }
+    
+    showPopup(
+        'confirm bulk activation',
+        `are you sure you want to activate ${selectedUsers.length} selected users?`,
+        function() {
+            fetch('/administration/users/bulk-status/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ user_ids: selectedUsers, active: true })
+            }).then(response => {
+                if (response.ok) {
+                    location.reload();
+                }
+            });
+        }
+    );
 }
 
 function exportUsers() {
