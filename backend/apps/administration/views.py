@@ -840,40 +840,60 @@ def bulk_status_users(request):
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 
-@login_required(login_url="/login/")
-@user_passes_test(is_admin, login_url="/login/")
+@login_required(login_url='/login/')
+@user_passes_test(is_admin, login_url='/login/')
 def solitaire_dashboard(request):
     """Solitaire management dashboard"""
     from django.db.models import Sum, Avg, Max
     from datetime import timedelta
     
-    # Get statistics
+    # Get statistics with proper null handling
     total_players = SolitairePlayer.objects.count()
     active_players = SolitairePlayer.objects.filter(
         last_seen__gte=timezone.now() - timedelta(days=7)
     ).count()
     
-    total_games = SolitaireGameSession.objects.count()
+    # Count games properly
+    total_games = SolitaireGameSession.objects.filter(
+        Q(is_completed=True) | Q(is_abandoned=True) | Q(is_won=True)
+    ).count()
+    
+    # If no completed games, count all sessions
+    if total_games == 0:
+        total_games = SolitaireGameSession.objects.count()
+    
     games_won = SolitaireGameSession.objects.filter(is_won=True).count()
     
-    # Recent activity
+    # Recent activity - get last 10 sessions
     recent_sessions = SolitaireGameSession.objects.select_related("player").order_by("-started_at")[:10]
     
-    # Active sessions (games in progress)
+    # Active sessions - games started recently and not finished
     active_sessions = SolitaireGameSession.objects.filter(
         is_completed=False,
         is_abandoned=False,
+        is_won=False,
         started_at__gte=timezone.now() - timedelta(hours=24)
     ).select_related("player").order_by("-started_at")
     
-    # Top players
-    top_players = SolitaireGameSession.objects.filter(is_won=True).values(
-        "player__id", "player__display_name", "player__user__username"
-    ).annotate(
-        wins=Count("id"),
-        total_score=Sum("score"),
-        avg_score=Avg("score")
-    ).order_by("-wins")[:10]
+    # Top players - group by player properly
+    top_players = SolitairePlayer.objects.annotate(
+        wins=Count("game_sessions", filter=Q(game_sessions__is_won=True)),
+        total_games=Count("game_sessions"),
+        total_score=Sum("game_sessions__score", filter=Q(game_sessions__is_won=True)),
+        avg_score=Avg("game_sessions__score", filter=Q(game_sessions__is_won=True))
+    ).filter(total_games__gt=0).order_by("-wins")[:10]
+    
+    # Format top players for display
+    top_players_list = []
+    for player in top_players:
+        top_players_list.append({
+            "player__id": player.id,
+            "player__display_name": player.display_name,
+            "player__user__username": player.user.username if player.user else None,
+            "wins": player.wins or 0,
+            "total_score": player.total_score or 0,
+            "avg_score": player.avg_score or 0
+        })
     
     context = {
         "total_players": total_players,
@@ -883,7 +903,8 @@ def solitaire_dashboard(request):
         "win_rate": round((games_won / total_games * 100) if total_games > 0 else 0, 1),
         "recent_sessions": recent_sessions,
         "active_sessions": active_sessions,
-        "top_players": top_players,
+        "active_sessions_count": active_sessions.count(),
+        "top_players": top_players_list,
         "pending_requests_count": PermissionRequest.objects.filter(status="pending").count(),
     }
     
@@ -894,11 +915,13 @@ def solitaire_dashboard(request):
 @user_passes_test(is_admin, login_url="/login/")
 def solitaire_players(request):
     """List all solitaire players"""
+    # Get players with proper statistics
     players = SolitairePlayer.objects.all().annotate(
-        games_count=Count("game_sessions"),
-        wins_count=Count("game_sessions", filter=Q(game_sessions__is_won=True)),
-        total_score=Sum("game_sessions__score"),
-        avg_score=Avg("game_sessions__score")
+        games_count=Count("game_sessions", distinct=True),
+        wins_count=Count("game_sessions", filter=Q(game_sessions__is_won=True), distinct=True),
+        total_score=Sum("game_sessions__score", filter=Q(game_sessions__score__isnull=False)),
+        avg_score=Avg("game_sessions__score", filter=Q(game_sessions__score__isnull=False)),
+        last_game=Max("game_sessions__started_at")
     ).order_by("-last_seen")
     
     # Filter by status
@@ -938,9 +961,16 @@ def solitaire_players(request):
 @user_passes_test(is_admin, login_url="/login/")
 def solitaire_sessions(request):
     """List all game sessions with filtering"""
-    from django.db.models import Avg
+    from django.db.models import Avg, F, ExpressionWrapper, DurationField
+    from datetime import timedelta
     
-    sessions = SolitaireGameSession.objects.select_related("player").order_by("-started_at")
+    # Get sessions with calculated duration
+    sessions = SolitaireGameSession.objects.select_related("player").annotate(
+        duration=ExpressionWrapper(
+            F("ended_at") - F("started_at"),
+            output_field=DurationField()
+        )
+    ).order_by("-started_at")
     
     # Filter by status
     status = request.GET.get("status")
@@ -977,12 +1007,18 @@ def solitaire_sessions(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
     
-    # Get statistics
+    # Get statistics with proper null handling
     total_sessions = sessions.count()
     won_sessions = sessions.filter(is_won=True).count()
     abandoned_sessions = sessions.filter(is_abandoned=True).count()
-    avg_score = sessions.filter(is_completed=True).aggregate(Avg("score"))["score__avg"] or 0
-    avg_time = sessions.filter(is_completed=True).aggregate(Avg("time_played"))["time_played__avg"] or 0
+    
+    # Calculate average score only for completed games with scores
+    completed_with_score = sessions.filter(is_completed=True, score__isnull=False)
+    avg_score = completed_with_score.aggregate(Avg("score"))["score__avg"] or 0
+    
+    # Calculate average time for completed games
+    completed_with_time = sessions.filter(is_completed=True, time_played__isnull=False, time_played__gt=0)
+    avg_time = completed_with_time.aggregate(Avg("time_played"))["time_played__avg"] or 0
     
     context = {
         "sessions": page_obj,

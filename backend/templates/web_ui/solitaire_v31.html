@@ -136,6 +136,19 @@
             opacity: 0.95;
         }
         
+        /* Dragging group container */
+        .drag-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.9;
+        }
+        
+        .drag-ghost .card {
+            position: absolute;
+            pointer-events: none;
+        }
+        
         /* Card face */
         .card.face-up {
             background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
@@ -589,15 +602,18 @@
         let sessionId = '{{ session_id|default:"" }}';
         
         // Game state
+        // Load initial game state from backend
+        const initialGameState = {{ game_state|safe|default:'{}' }};
+        
         let game = {
             deck: [],
-            stock: [],
-            waste: [],
-            foundations: [[], [], [], []],
-            tableau: [[], [], [], [], [], [], []],
-            score: 0,
-            moves: 0,
-            time: 0,
+            stock: initialGameState.stock || [],
+            waste: initialGameState.waste || [],
+            foundations: initialGameState.foundations || [[], [], [], []],
+            tableau: initialGameState.tableau || [[], [], [], [], [], [], []],
+            score: initialGameState.score || 0,
+            moves: initialGameState.moves || 0,
+            time: initialGameState.time || 0,
             timerInterval: null,
             draggedCards: [],
             dragSource: null,
@@ -842,6 +858,29 @@
                             game.draggedCards.push(game.tableau[col][i]);
                         }
                     }
+                }
+                
+                // Create drag ghost for multiple cards
+                if (game.draggedCards.length > 1) {
+                    const ghost = document.createElement('div');
+                    ghost.className = 'drag-ghost';
+                    ghost.id = 'drag-ghost';
+                    
+                    game.draggedCards.forEach((card, index) => {
+                        const cardEl = createCardElement(card);
+                        cardEl.style.top = `${index * 18}px`;
+                        cardEl.style.left = '0px';
+                        ghost.appendChild(cardEl);
+                    });
+                    
+                    document.body.appendChild(ghost);
+                    e.dataTransfer.setDragImage(ghost, 55, 20);
+                    
+                    // Remove ghost after drag starts
+                    setTimeout(() => {
+                        const existingGhost = document.getElementById('drag-ghost');
+                        if (existingGhost) existingGhost.remove();
+                    }, 0);
                 }
                 
                 element.classList.add('dragging');
@@ -1488,7 +1527,17 @@
             })
             .then(response => response.json())
             .then(result => {
-                if (!result.success) {
+                if (result.success) {
+                    // Update game state from server if provided
+                    if (result.game_state) {
+                        game.score = result.game_state.score || game.score;
+                        game.moves = result.game_state.moves || game.moves;
+                        game.time = result.game_state.time || game.time;
+                        // Update UI
+                        document.getElementById('score').textContent = game.score;
+                        document.getElementById('moves').textContent = game.moves;
+                    }
+                } else {
                     console.log(`Action ${action} failed:`, result.error);
                 }
             })

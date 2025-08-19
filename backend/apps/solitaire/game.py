@@ -129,6 +129,8 @@ class SolitaireGame:
                 card.face_up = False
             self.score = max(0, self.score - 100)  # Penalty for recycling
         elif self.stock:
+            # Clear waste pile before drawing new cards
+            self.waste = []
             # Draw 3 cards (or remaining)
             for _ in range(min(3, len(self.stock))):
                 card = self.stock.pop()
@@ -266,13 +268,11 @@ class SolitaireGame:
             'score': self.score,
             'moves': self.moves
         }
-        self.undo_stack.append(state)
-        # Keep only last 10 states
-        if len(self.undo_stack) > 10:
-            self.undo_stack.pop(0)
+        # Only keep the last state for single undo
+        self.undo_stack = [state]
     
     def undo(self):
-        """Undo last move"""
+        """Undo last move - can only be used once"""
         if self.undo_stack:
             state = self.undo_stack.pop()
             self.stock = [Card.from_dict(c) for c in state['stock']]
@@ -283,6 +283,8 @@ class SolitaireGame:
                            for pile in state['tableau']]
             self.score = state['score']
             self.moves = state['moves']
+            # Clear undo stack after using undo once
+            self.undo_stack = []
             return True
         return False
     

@@ -13,19 +13,32 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Start web core restart in background (non-blocking)
+# Start web core in background (non-blocking)
 (
-    if [ -f "backend/start_backend.sh" ]; then
-        ./backend/start_backend.sh restart > /dev/null 2>&1
-        
-        # Wait for backend to be ready
-        sleep 3
-    
-        # Check if backend started successfully
-        if [ -f "backend/.backend.pid" ]; then
-            PID=$(cat "backend/.backend.pid" 2>/dev/null)
-            if ps -p "$PID" > /dev/null 2>&1; then
-                # Open web UI in browser silently
+    # Check if backend is already running
+    if [ -f "backend/.backend.pid" ]; then
+        PID=$(cat "backend/.backend.pid" 2>/dev/null)
+        if ps -p "$PID" > /dev/null 2>&1; then
+            # Backend already running, just open browser
+            if command -v open > /dev/null 2>&1; then
+                # macOS
+                open "http://localhost:8000" 2>/dev/null
+            elif command -v xdg-open > /dev/null 2>&1; then
+                # Linux
+                xdg-open "http://localhost:8000" 2>/dev/null &
+            elif command -v wslview > /dev/null 2>&1; then
+                # WSL
+                wslview "http://localhost:8000" 2>/dev/null &
+            fi
+        else
+            # Backend not running, start it
+            if [ -f "backend/start_backend.sh" ]; then
+                ./backend/start_backend.sh start > /dev/null 2>&1
+                
+                # Wait for backend to be ready
+                sleep 3
+                
+                # Open browser
                 if command -v open > /dev/null 2>&1; then
                     # macOS
                     open "http://localhost:8000" 2>/dev/null
@@ -36,6 +49,26 @@ NC='\033[0m' # No Color
                     # WSL
                     wslview "http://localhost:8000" 2>/dev/null &
                 fi
+            fi
+        fi
+    else
+        # No PID file, start backend
+        if [ -f "backend/start_backend.sh" ]; then
+            ./backend/start_backend.sh start > /dev/null 2>&1
+            
+            # Wait for backend to be ready
+            sleep 3
+            
+            # Open browser
+            if command -v open > /dev/null 2>&1; then
+                # macOS
+                open "http://localhost:8000" 2>/dev/null
+            elif command -v xdg-open > /dev/null 2>&1; then
+                # Linux
+                xdg-open "http://localhost:8000" 2>/dev/null &
+            elif command -v wslview > /dev/null 2>&1; then
+                # WSL
+                wslview "http://localhost:8000" 2>/dev/null &
             fi
         fi
     fi

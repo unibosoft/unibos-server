@@ -220,16 +220,82 @@ class SolitaireGameSession(models.Model):
     
     def end_session(self, won=False):
         """Mark session as ended"""
-        self.ended_at = timezone.now()
+        if not self.ended_at:
+            self.ended_at = timezone.now()
         self.is_completed = True
         self.is_won = won
+        self.is_abandoned = False  # Not abandoned if properly ended
         self.save()
     
     def abandon_session(self):
         """Mark session as abandoned"""
-        self.ended_at = timezone.now()
+        if not self.ended_at:
+            self.ended_at = timezone.now()
         self.is_abandoned = True
+        self.is_completed = False  # Not completed if abandoned
+        self.is_won = False  # Can't win if abandoned
         self.save()
+
+
+class SolitaireGameDeck(models.Model):
+    """Store unique deck configurations for multiplayer games"""
+    
+    deck_id = models.CharField(max_length=50, unique=True, db_index=True)
+    deck_seed = models.CharField(max_length=100)  # Seed for deck generation
+    deck_configuration = models.JSONField()  # Full deck configuration
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['deck_id']),
+            models.Index(fields=['created_at']),
+        ]
+    
+    def __str__(self):
+        return f"Deck #{self.deck_id}"
+
+
+class SolitaireMultiplayerGame(models.Model):
+    """Multiplayer game sessions"""
+    
+    game_code = models.CharField(max_length=10, unique=True, db_index=True)
+    deck = models.ForeignKey(SolitaireGameDeck, on_delete=models.CASCADE, related_name='multiplayer_games')
+    
+    # Players (max 2 for now)
+    player1 = models.ForeignKey(SolitairePlayer, on_delete=models.CASCADE, related_name='multiplayer_games_as_player1', null=True)
+    player2 = models.ForeignKey(SolitairePlayer, on_delete=models.CASCADE, related_name='multiplayer_games_as_player2', null=True, blank=True)
+    
+    # Game sessions for each player
+    player1_session = models.ForeignKey(SolitaireGameSession, on_delete=models.CASCADE, related_name='multiplayer_as_player1', null=True)
+    player2_session = models.ForeignKey(SolitaireGameSession, on_delete=models.CASCADE, related_name='multiplayer_as_player2', null=True, blank=True)
+    
+    # Game status
+    is_active = models.BooleanField(default=True)
+    winner = models.ForeignKey(SolitairePlayer, on_delete=models.SET_NULL, null=True, blank=True, related_name='won_multiplayer_games')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Multiplayer Game {self.game_code}"
+    
+    def is_full(self):
+        """Check if game has 2 players"""
+        return self.player1 and self.player2
+    
+    def get_opponent(self, player):
+        """Get the opponent of a given player"""
+        if self.player1 == player:
+            return self.player2
+        elif self.player2 == player:
+            return self.player1
+        return None
 
 
 class SolitaireActivity(models.Model):

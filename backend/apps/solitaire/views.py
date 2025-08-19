@@ -29,10 +29,17 @@ def get_or_create_player(request):
     # Get or create player
     if request.user.is_authenticated:
         # For authenticated users
+        # Get session key safely
+        session_key = getattr(request.session, 'session_key', None)
+        if not session_key and hasattr(request.session, 'get'):
+            session_key = request.session.get('session_key')
+        if not session_key:
+            session_key = str(uuid.uuid4())
+            
         player, created = SolitairePlayer.objects.get_or_create(
             user=request.user,
             defaults={
-                'session_key': request.session.session_key or str(uuid.uuid4()),
+                'session_key': session_key,
                 'ip_address': ip_address,
                 'user_agent': user_agent,
                 'is_anonymous': False,
@@ -41,10 +48,13 @@ def get_or_create_player(request):
         )
     else:
         # For anonymous users (future public access)
-        session_key = request.session.session_key
+        session_key = getattr(request.session, 'session_key', None)
         if not session_key:
-            request.session.save()
-            session_key = request.session.session_key
+            if hasattr(request.session, 'save'):
+                request.session.save()
+                session_key = getattr(request.session, 'session_key', None)
+        if not session_key:
+            session_key = str(uuid.uuid4())
         
         player, created = SolitairePlayer.objects.get_or_create(
             session_key=session_key,
@@ -68,40 +78,60 @@ def get_or_create_player(request):
     return player
 
 
-@login_required
 def solitaire_game(request):
-    """Main solitaire game view"""
-    # Track player
+    """Main solitaire game view - supports both authenticated and anonymous users"""
+    # Track player (works for both authenticated and anonymous)
     player = get_or_create_player(request)
     player.total_sessions += 1
     player.save()
     
     # Get or create active session
-    session = SolitaireSession.objects.filter(
-        user=request.user,
-        is_active=True
-    ).first()
+    if request.user.is_authenticated:
+        session = SolitaireSession.objects.filter(
+            user=request.user,
+            is_active=True
+        ).first()
+    else:
+        # For anonymous users, use session key
+        session_key = getattr(request.session, 'session_key', None)
+        if not session_key:
+            if hasattr(request.session, 'save'):
+                request.session.save()
+                session_key = getattr(request.session, 'session_key', None)
+        if not session_key:
+            session_key = str(uuid.uuid4())
+        
+        # Anonymous sessions don't use SolitaireSession model, skip
+        session = None
     
     game_session = None
     
     if not session:
         # Create new session
         session_id = str(uuid.uuid4())
-        session = SolitaireSession.objects.create(
-            user=request.user,
-            session_id=session_id
-        )
+        
+        if request.user.is_authenticated:
+            session = SolitaireSession.objects.create(
+                user=request.user,
+                session_id=session_id
+            )
+        else:
+            # For anonymous users, we'll track only in SolitaireGameSession
+            session = None
         
         # Initialize new game
         game = SolitaireGame()
         game.new_game()
-        session.save_game_state(game.to_dict())
+        game_state = game.to_dict()
+        
+        if session:
+            session.save_game_state(game_state)
         
         # Create game session for tracking
         game_session = SolitaireGameSession.objects.create(
             player=player,
             session_id=session_id,
-            game_state=game.to_dict(),
+            game_state=game_state,
             browser_info={
                 'user_agent': request.META.get('HTTP_USER_AGENT', ''),
                 'screen_width': request.GET.get('screen_width', ''),
@@ -126,14 +156,25 @@ def solitaire_game(request):
             # Create new game session for existing session
             game_session = SolitaireGameSession.objects.create(
                 player=player,
-                session_id=session.session_id,
-                game_state=session.get_game_state()
+                session_id=session.session_id if session else session_id,
+                game_state=session.get_game_state() if session else game_state
             )
     
+    # Prepare context
+    if session:
+        context_session_id = session.session_id
+        context_game_state = session.get_game_state()
+        context_is_locked = bool(session.lock_password)
+    else:
+        # For anonymous users or new sessions
+        context_session_id = session_id if 'session_id' in locals() else game_session.session_id
+        context_game_state = game_state if 'game_state' in locals() else game_session.game_state
+        context_is_locked = False
+    
     context = {
-        'session_id': session.session_id,
-        'game_state': session.get_game_state(),
-        'is_locked': bool(session.lock_password),
+        'session_id': context_session_id,
+        'game_state': context_game_state,
+        'is_locked': context_is_locked,
         'player_id': player.id,
         'is_anonymous': player.is_anonymous
     }
@@ -146,7 +187,7 @@ def solitaire_game(request):
     context['solitaire_version'] = 'v3.1'
     context['spacing_version'] = '2px-18px-fixed'
     
-    response = render(request, 'web_ui/solitaire_v31.html', context)
+    response = render(request, 'web_ui/solitaire.html', context)
     
     # Add cache-busting headers
     response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private'
@@ -156,10 +197,9 @@ def solitaire_game(request):
     return response
 
 
-@login_required
 @csrf_exempt
 def solitaire_api(request, action):
-    """API endpoint for game actions"""
+    """API endpoint for game actions - supports both authenticated and anonymous users"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     
@@ -167,14 +207,34 @@ def solitaire_api(request, action):
         data = json.loads(request.body)
         session_id = data.get('session_id')
         
-        session = SolitaireSession.objects.get(
-            session_id=session_id,
-            user=request.user
-        )
+        # Get session for authenticated users, or use session_id directly for anonymous
+        if request.user.is_authenticated:
+            session = SolitaireSession.objects.get(
+                session_id=session_id,
+                user=request.user
+            )
+        else:
+            # For anonymous users, we don't have SolitaireSession
+            # We'll work directly with SolitaireGameSession
+            session = None
         
         # Load game state
         game = SolitaireGame()
-        game.from_dict(session.get_game_state())
+        
+        if session:
+            game.from_dict(session.get_game_state())
+        else:
+            # For anonymous users, get from SolitaireGameSession
+            player = get_or_create_player(request)
+            try:
+                game_session = SolitaireGameSession.objects.get(
+                    session_id=session_id,
+                    player=player
+                )
+                game.from_dict(game_session.game_state)
+            except SolitaireGameSession.DoesNotExist:
+                # New game for anonymous user
+                game.new_game()
         
         result = {'success': False}
         
@@ -190,9 +250,15 @@ def solitaire_api(request, action):
             result['success'] = True
             
         elif action == 'move':
+            # Frontend handles the move logic, just update our state
             pile_type = data.get('pile_type')
             pile_index = data.get('pile_index', 0)
-            result['success'] = game.move_selected_to(pile_type, pile_index)
+            # Update game state from frontend
+            if 'score' in data:
+                game.score = data['score']
+            if 'moves' in data:
+                game.moves = data['moves']
+            result['success'] = True
             
         elif action == 'auto':
             result['success'] = game.auto_move_to_foundation()
@@ -202,11 +268,17 @@ def solitaire_api(request, action):
             
         elif action == 'new_game':
             game.new_game()
-            session.is_won = False
+            if session:
+                session.is_won = False
             result['success'] = True
             
         elif action == 'save_time':
             game.time = data.get('time', 0)
+            # Also update score and moves if provided
+            if 'score' in data:
+                game.score = data['score']
+            if 'moves' in data:
+                game.moves = data['moves']
             result['success'] = True
         
         elif action == 'win':
@@ -231,14 +303,23 @@ def solitaire_api(request, action):
             else:
                 result['error'] = 'Incorrect password'
         
-        # Save game state
-        session.save_game_state(game.to_dict())
+        # Save game state - also accept frontend's full game state
+        if 'game_state' in data:
+            # Use frontend's game state
+            game_state = data['game_state']
+        else:
+            game_state = game.to_dict()
+            
+        if session:
+            session.save_game_state(game_state)
         
-        # Update game session tracking
-        player = get_or_create_player(request)
+        # Update game session tracking  
+        if 'player' not in locals():
+            player = get_or_create_player(request)
+        
         try:
             game_session = SolitaireGameSession.objects.get(
-                session_id=session.session_id,
+                session_id=session_id,
                 player=player
             )
             # Update game session with current state
@@ -247,6 +328,12 @@ def solitaire_api(request, action):
             game_session.score = game.score
             game_session.time_played = game.time
             game_session.save()
+            
+            # Debug log
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Updated session {session_id[:8]}: moves={game.moves}, score={game.score}, time={game.time}")
+            logger.debug(f"Received data: {data}")
             
             # Log activity based on action
             if action == 'move' and result['success']:

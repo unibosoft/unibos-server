@@ -64,6 +64,9 @@ urlpatterns = [
     # RestoPOS Module - Restaurant POS System
     path('restopos/', include('apps.restopos.urls', namespace='restopos')),
     
+    # Solitaire Game Module
+    path('solitaire/', include('apps.solitaire.urls', namespace='solitaire')),
+    
     # WebSocket URLs (handled by ASGI)
     # ws/currencies/ - Real-time currency updates
     # ws/recaria/ - Game real-time features
