@@ -6,6 +6,17 @@ The version manager reads recent entries to generate meaningful commit messages.
 
 ---
 
+## [2025-08-19 10:59] Data Import: User Import from Old SQL Backup
+- Successfully imported 7 users from old Unicorn database SQL backup
+- Source file: unicorn_db_backup_v030-beta_2025_05_22_19_50.sql
+- Created berkhatirli superuser with strong password: Unib0s_Str0ng_2025!
+- Imported users: beyhan, ersan, Leventhatirli, Armutdaldaasilsin, gulcinhatirli, Aslinda, berk2
+- Added phone numbers for users where available
+- All users have default password: Unicorn2025! (except berkhatirli)
+- **Result**: ✅ All users imported successfully with error-free login capability
+
+---
+
 ## [2025-08-19 10:48] Version Manager: Added automatic SQL cleanup functionality
 - Added cleanup_old_sql_files() function to version_manager.sh
 - Automatically maintains only the 3 most recent SQL backup files
