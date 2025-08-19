@@ -29,17 +29,35 @@
              hx-target="#main-content"
              hx-push-url="true">
             <div class="module-icon">{{ module.icon }}</div>
-            <div class="module-name">{{ module.name }}</div>
-            <div class="module-desc">
-                {% if module.id == 'recaria' %}
-                    ultima online inspired system
-                {% elif module.id == 'birlikteyiz' %}
-                    community emergency response
-                {% elif module.id == 'kisisel_enflasyon' %}
-                    personal inflation tracking
-                {% elif module.id == 'currencies' %}
-                    real-time currency exchange
-                {% endif %}
+            <div class="module-info">
+                <div class="module-name">{{ module.name }}</div>
+                <div class="module-desc">
+                    {% if module.id == 'recaria' %}
+                        ultima online inspired system
+                    {% elif module.id == 'birlikteyiz' %}
+                        community emergency response
+                    {% elif module.id == 'kisisel_enflasyon' %}
+                        personal inflation tracking
+                    {% elif module.id == 'currencies' %}
+                        real-time currency exchange
+                    {% elif module.id == 'wimm' %}
+                        where is my money tracker
+                    {% elif module.id == 'wims' %}
+                        where is my stuff inventory
+                    {% elif module.id == 'store' %}
+                        e-commerce marketplace
+                    {% elif module.id == 'cctv' %}
+                        camera monitoring system
+                    {% elif module.id == 'documents' %}
+                        ocr document management
+                    {% elif module.id == 'movies' %}
+                        movie collection manager
+                    {% elif module.id == 'music' %}
+                        spotify music library
+                    {% elif module.id == 'restopos' %}
+                        restaurant pos system
+                    {% endif %}
+                </div>
             </div>
         </div>
         {% endfor %}

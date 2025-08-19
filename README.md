@@ -1,4 +1,4 @@
-# 🪐 UNIBOS - Unicorn Bodrum Operating System
+# 🪐 unibos - unicorn bodrum operating system
 
 <div align="center">
 
@@ -8,45 +8,45 @@
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey.svg)](https://github.com/unibos/unibos)
 
-**A comprehensive, modular operating system platform combining terminal and web interfaces**
+**a comprehensive, modular operating system platform combining terminal and web interfaces**
 
-[Features](#features) • [Quick Start](#quick-start) • [Documentation](#documentation) • [Modules](#modules) • [Contributing](#contributing)
+[features](#features) • [quick start](#quick-start) • [documentation](#documentation) • [modules](#modules) • [contributing](#contributing)
 
 </div>
 
-## 🌟 About UNIBOS
+## 🌟 about unibos
 
-UNIBOS is an ambitious project that started as a simple Raspberry Pi system and evolved into a comprehensive platform with 448 versions of continuous development. It combines the simplicity of terminal interfaces with the power of modern web technologies, offering both offline-first capabilities and cloud integration.
+unibos is an ambitious project that started as a simple Raspberry Pi system and evolved into a comprehensive platform with 448 versions of continuous development. It combines the simplicity of terminal interfaces with the power of modern web technologies, offering both offline-first capabilities and cloud integration.
 
-### 🎯 Key Features
+### 🎯 key features
 
-- **🔐 Enterprise Security**: JWT authentication, 2FA support, role-based access control
-- **🌍 Multi-Language**: Support for 10 languages including English, Turkish, Spanish, French, German, Chinese, Japanese
-- **📊 Comprehensive Modules**: Financial tracking, inventory management, document OCR, camera monitoring
-- **🚀 446+ Versions**: Continuous development from v001 (June 2025) to present
-- **💾 Dual Database**: SQLite for development, PostgreSQL for production
-- **🔄 Real-time Updates**: WebSocket support for live data
-- **📱 Cross-Platform**: Works on Linux, macOS, Windows, and Raspberry Pi
+- **🔐 enterprise security**: JWT authentication, 2FA support, role-based access control
+- **🌍 multi-language**: Support for 10 languages including English, Turkish, Spanish, French, German, Chinese, Japanese
+- **📊 comprehensive modules**: Financial tracking, inventory management, document OCR, camera monitoring
+- **🚀 446+ versions**: Continuous development from v001 (June 2025) to present
+- **💾 dual database**: SQLite for development, PostgreSQL for production
+- **🔄 real-time updates**: WebSocket support for live data
+- **📱 cross-platform**: Works on Linux, macOS, Windows, and Raspberry Pi
 
-## 📦 Modules
+## 📦 modules
 
-| Module | Description | Status |
+| module | description | status |
 |--------|-------------|--------|
-| **💰 WIMM** | Where Is My Money - Financial management with multi-currency support | ✅ Active |
-| **📦 WIMS** | Where Is My Stuff - Inventory and warehouse management | ✅ Active |
-| **💱 Currencies** | Real-time exchange rates and crypto tracking | ✅ Active |
-| **📊 Personal Inflation** | Individual inflation calculator based on receipts | ✅ Active |
-| **📄 Documents** | OCR-powered document management and receipt parsing | ✅ Active |
-| **📹 CCTV** | Camera monitoring with TP-Link Tapo integration | ✅ Active |
-| **🪐 Recaria** | Space exploration game with real-world maps | ✅ Active |
-| **📡 Birlikteyiz** | Emergency mesh network communication (LoRa) | ✅ Active |
-| **🎬 Movies** | Movie & series collection with TMDB/OMDB integration | ✅ Active |
-| **🎵 Music** | Spotify-integrated music library and statistics | ✅ Active |
-| **🍽️ RestoPOS** | Professional restaurant POS and management system | ✅ Active |
+| **💰 wimm** | where is my money - financial management with multi-currency support | ✅ Active |
+| **📦 wims** | where is my stuff - inventory and warehouse management | ✅ Active |
+| **💱 currencies** | real-time exchange rates and crypto tracking | ✅ Active |
+| **📊 personal inflation** | individual inflation calculator based on receipts | ✅ Active |
+| **📄 documents** | ocr-powered document management and receipt parsing | ✅ Active |
+| **📹 cctv** | camera monitoring with TP-Link Tapo integration | ✅ Active |
+| **🪐 recaria** | space exploration game with real-world maps | ✅ Active |
+| **📡 birlikteyiz** | emergency mesh network communication (LoRa) | ✅ Active |
+| **🎬 movies** | movie & series collection with TMDB/OMDB integration | ✅ Active |
+| **🎵 music** | spotify-integrated music library and statistics | ✅ Active |
+| **🍽️ restopos** | professional restaurant POS and management system | ✅ Active |
 
-## 🚀 Quick Start
+## 🚀 quick start
 
-### Prerequisites
+### prerequisites
 
 - Python 3.8+ (3.11+ recommended)
 - 2GB RAM minimum (8GB recommended)
@@ -200,9 +200,7 @@ Berk Hatırlı
 
 <div align="center">
 
-**"Technology should be accessible to everyone"**
-
-© 2025 Unicorn Bodrum Software - Building the future, one module at a time
+© 2025 unicorn bodrum software - building the future, one module at a time
 
 [Website](https://unibos.com) • [Documentation](https://docs.unibos.com) • [Community](https://community.unibos.com)
 

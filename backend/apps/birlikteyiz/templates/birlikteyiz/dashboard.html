@@ -157,29 +157,182 @@
 </div>
 {% endif %}
 
+<!-- Custom Confirmation Popup -->
+<div id="confirmPopup" class="confirm-popup" style="display: none;">
+    <div class="popup-content">
+        <div class="popup-header">
+            <span class="popup-icon">⚠️</span>
+            <h3 id="popupTitle">veri çekme onayı</h3>
+        </div>
+        <div class="popup-body">
+            <p id="popupMessage">tüm kaynaklardan veri çekmek istiyor musunuz?</p>
+        </div>
+        <div class="popup-footer">
+            <button class="btn-cancel" onclick="closePopup()">iptal</button>
+            <button class="btn-confirm" id="confirmButton">onayla</button>
+        </div>
+    </div>
+</div>
+
+<!-- Success Popup -->
+<div id="successPopup" class="confirm-popup" style="display: none;">
+    <div class="popup-content">
+        <div class="popup-header">
+            <span class="popup-icon">✅</span>
+            <h3>başarılı</h3>
+        </div>
+        <div class="popup-body">
+            <p id="successMessage">veri çekme işlemi başlatıldı</p>
+        </div>
+        <div class="popup-footer">
+            <button class="btn-confirm" onclick="closeSuccessPopup()">tamam</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.confirm-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.popup-content {
+    background: #1a1a1a;
+    border: 2px solid #00ff00;
+    border-radius: 0;
+    padding: 0;
+    width: 400px;
+    font-family: 'Courier New', monospace;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+}
+
+.popup-header {
+    background: #0a0a0a;
+    padding: 15px;
+    border-bottom: 1px solid #00ff00;
+    text-align: center;
+}
+
+.popup-icon {
+    font-size: 24px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.popup-header h3 {
+    color: #00ff00;
+    margin: 0;
+    font-size: 16px;
+    text-transform: lowercase;
+}
+
+.popup-body {
+    padding: 20px;
+    text-align: center;
+}
+
+.popup-body p {
+    color: #00ff00;
+    margin: 0;
+    font-size: 14px;
+}
+
+.popup-footer {
+    padding: 15px;
+    border-top: 1px solid #00ff00;
+    display: flex;
+    justify-content: space-around;
+}
+
+.btn-cancel, .btn-confirm {
+    padding: 8px 20px;
+    border: 1px solid #00ff00;
+    background: #0a0a0a;
+    color: #00ff00;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    text-transform: lowercase;
+}
+
+.btn-cancel:hover {
+    background: #1a1a1a;
+}
+
+.btn-confirm {
+    background: #00ff00;
+    color: #0a0a0a;
+}
+
+.btn-confirm:hover {
+    background: #00cc00;
+}
+</style>
+
 <script>
 function refreshData() {
     location.reload();
 }
 
+function showPopup(title, message, onConfirm) {
+    document.getElementById('popupTitle').textContent = title;
+    document.getElementById('popupMessage').textContent = message;
+    document.getElementById('confirmPopup').style.display = 'flex';
+    
+    document.getElementById('confirmButton').onclick = function() {
+        if (onConfirm) {
+            onConfirm();
+        }
+        closePopup();
+    };
+}
+
+function closePopup() {
+    document.getElementById('confirmPopup').style.display = 'none';
+}
+
+function showSuccessPopup(message) {
+    document.getElementById('successMessage').textContent = message;
+    document.getElementById('successPopup').style.display = 'flex';
+    setTimeout(() => {
+        closeSuccessPopup();
+        location.reload();
+    }, 2000);
+}
+
+function closeSuccessPopup() {
+    document.getElementById('successPopup').style.display = 'none';
+}
+
 function startDataFetch() {
-    if (confirm('Tüm kaynaklardan veri çekmek istiyor musunuz?')) {
-        fetch('{% url "birlikteyiz:manual_fetch" %}', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Veri çekme işlemi başlatıldı');
-                setTimeout(() => location.reload(), 2000);
-            } else {
-                alert('Hata: ' + data.error);
-            }
-        });
-    }
+    showPopup(
+        'veri çekme onayı',
+        'tüm kaynaklardan veri çekmek istiyor musunuz?',
+        function() {
+            fetch('{% url "birlikteyiz:manual_fetch" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccessPopup('veri çekme işlemi başlatıldı');
+                } else {
+                    showPopup('hata', 'hata: ' + data.error, null);
+                }
+            });
+        }
+    );
 }
 </script>
 

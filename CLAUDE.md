@@ -91,6 +91,12 @@ This document defines the rules and guidelines Claude should follow when working
 - Accessible markup (ARIA labels)
 - Mobile-responsive design
 
+### Documentation (README.md, etc):
+- **ALL text must be lowercase**
+- No title case anywhere
+- Remove motivational quotes
+- Keep professional but minimal
+
 ---
 
 ## 🧪 Testing Requirements
