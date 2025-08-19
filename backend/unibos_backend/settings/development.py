@@ -32,11 +32,11 @@ if env('USE_SQLITE', default=False):
 # Email Backend for development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# Django Debug Toolbar
-if DEBUG:
-    INSTALLED_APPS += ['debug_toolbar']
-    MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
-    INTERNAL_IPS = ['127.0.0.1', 'localhost']
+# Django Debug Toolbar (disabled - not installed)
+# if DEBUG:
+#     INSTALLED_APPS += ['debug_toolbar']
+#     MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+#     INTERNAL_IPS = ['127.0.0.1', 'localhost']
 
 # Disable some security features for development
 SECURE_SSL_REDIRECT = False
@@ -44,8 +44,10 @@ SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
 # More verbose logging for development
-LOGGING['loggers']['django']['level'] = 'DEBUG'
-LOGGING['loggers']['apps']['level'] = 'DEBUG'
+if 'LOGGING' in globals():
+    LOGGING['loggers']['django']['level'] = 'DEBUG'
+    if 'apps' in LOGGING['loggers']:
+        LOGGING['loggers']['apps']['level'] = 'DEBUG'
 
 # Celery Configuration for development
 CELERY_TASK_ALWAYS_EAGER = env('CELERY_EAGER', default=False)
@@ -54,10 +56,10 @@ CELERY_TASK_EAGER_PROPAGATES = True
 # Static files
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
-# Development-specific apps
-INSTALLED_APPS += [
-    'django_seed',  # For generating test data
-]
+# Development-specific apps (disabled - not installed)
+# INSTALLED_APPS += [
+#     'django_seed',  # For generating test data
+# ]
 
 # Disable rate limiting in development
 REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {

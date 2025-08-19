@@ -73,6 +73,7 @@ LOCAL_APPS = [
     'apps.movies',  # Movies and series collection management
     'apps.music',  # Music collection with Spotify integration
     'apps.restopos',  # Restaurant POS system
+    'apps.logging',  # System and activity logging
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -91,6 +92,10 @@ MIDDLEWARE = [
     'apps.common.middleware.SecurityHeadersMiddleware',
     'apps.common.middleware.RequestLoggingMiddleware',
     'apps.common.middleware.RateLimitMiddleware',
+    'apps.common.middleware_activity.UserActivityMiddleware',  # Track user activity
+    'apps.common.middleware_activity.APIActivityMiddleware',  # Track API activity
+    'apps.logging.middleware.SystemLoggingMiddleware',  # System logging
+    'apps.logging.middleware.ActivityLoggingMiddleware',  # Activity logging
     'django_prometheus.middleware.PrometheusAfterMiddleware',  # Must be last
 ]
 
@@ -350,7 +355,7 @@ SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 CSRF_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read the cookie for AJAX requests
 CSRF_COOKIE_SAMESITE = 'Lax'
 
 # Logging Configuration

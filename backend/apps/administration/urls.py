@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 app_name = 'administration'
@@ -20,6 +20,9 @@ urlpatterns = [
     path('screen-lock/', views.screen_lock_settings, name='screen_lock_settings'),
     path('unlock/', views.unlock_screen, name='unlock_screen'),
     path('lock/', views.lock_screen, name='lock_screen'),
+    
+    # System and Activity Logging
+    path('system-logs/', include('apps.logging.urls')),
     
     # Solitaire management
     path('solitaire/', views.solitaire_dashboard, name='solitaire_dashboard'),

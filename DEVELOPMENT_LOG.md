@@ -844,3 +844,28 @@ Each entry should follow this format:
 ---
 
 
+## [2025-08-19 11:57] Authentication: Added last_activity tracking with smart middleware
+- Implemented intelligent user activity tracking that updates database every 5 minutes per user to avoid performance issues. Added UserActivityMiddleware and APIActivityMiddleware for efficient tracking. Shows both last_login and last_activity in administration panel.
+- Result: Users now have separate last_login and last_activity columns for better tracking
+
+
+## [2025-08-19 12:09] System Logging: Comprehensive logging system implementation
+- Created high-performance system and activity logging with async queue, batch inserts, BRIN indexes for time-series data, automatic retention policies, and admin dashboard. Uses background threads for non-blocking writes with 100-log batches or 5-second flushes.
+- Result: Full logging infrastructure ready with optimized performance
+
+
+## [2025-08-19 12:22] Backend: Logging System Migrations
+- Created and applied database migrations for the comprehensive logging system
+- Result: System logs and activity logs tables created successfully
+
+
+## [2025-08-19 12:28] Bug Fix: Login Authentication Fixed
+- Fixed CSRF token issues by setting CSRF_COOKIE_HTTPONLY to False, created berkhatirli superuser account with password unibos123, and verified login works via API
+- Result: Users can now authenticate successfully with berkhatirli/unibos123
+
+
+## [2025-08-19 12:38] Bug Fix: SQL Export Data Loss Fixed
+- Fixed version manager pg_dump command to include --column-inserts and --inserts flags to ensure all data including users is properly exported
+- Result: All 11 users restored from backup and SQL exports now include all data
+
+

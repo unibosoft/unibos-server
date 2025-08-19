@@ -82,6 +82,7 @@
                     <th>Departments</th>
                     <th>Status</th>
                     <th>Last Login</th>
+                    <th>Last Active</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -130,6 +131,13 @@
                         {% endif %}
                     </td>
                     <td>
+                        {% if user.last_activity %}
+                        {{ user.last_activity|timesince }} ago
+                        {% else %}
+                        Never
+                        {% endif %}
+                    </td>
+                    <td>
                         <a href="{% url 'administration:user_detail' user.id %}" class="action-link">View</a>
                         <a href="{% url 'administration:user_detail' user.id %}" class="action-link">Edit</a>
                         {% if not user.is_superuser and user != request.user %}
@@ -142,7 +150,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="9" class="text-center">No users found</td>
+                    <td colspan="10" class="text-center">No users found</td>
                 </tr>
                 {% endfor %}
             </tbody>

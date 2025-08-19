@@ -73,9 +73,10 @@ start_backend() {
         echo "Log file rotated"
     fi
     
-    # Start Django with emergency settings for stability
+    # Start Django with development settings
     cd "$SCRIPT_DIR"
-    nohup "$PYTHON_BIN" manage.py runserver --settings=unibos_backend.settings.emergency 0.0.0.0:$PORT >> "$LOG_FILE" 2>&1 &
+    export SECRET_KEY='dev-secret-key-for-testing'
+    nohup "$PYTHON_BIN" manage.py runserver --settings=unibos_backend.settings.development 0.0.0.0:$PORT >> "$LOG_FILE" 2>&1 &
     PID=$!
     echo $PID > "$PID_FILE"
     

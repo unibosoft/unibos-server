@@ -13,57 +13,35 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Restart web core to ensure it's running with latest version
-echo -e "${CYAN}🔄 ensuring web core is running...${NC}"
-if [ -f "backend/start_backend.sh" ]; then
-    # Check if backend is already running
-    if [ -f "backend/.backend.pid" ]; then
-        PID=$(cat "backend/.backend.pid" 2>/dev/null)
-        if ps -p "$PID" > /dev/null 2>&1; then
-            echo -e "${YELLOW}   web core already running (pid: $PID)${NC}"
-            echo -e "${CYAN}   restarting for fresh session...${NC}"
-            ./backend/start_backend.sh restart > /dev/null 2>&1
-        else
-            echo -e "${CYAN}   starting web core...${NC}"
-            ./backend/start_backend.sh start > /dev/null 2>&1
-        fi
-    else
-        echo -e "${CYAN}   starting web core...${NC}"
-        ./backend/start_backend.sh start > /dev/null 2>&1
-    fi
+# Start web core restart in background (non-blocking)
+(
+    if [ -f "backend/start_backend.sh" ]; then
+        ./backend/start_backend.sh restart > /dev/null 2>&1
+        
+        # Wait for backend to be ready
+        sleep 3
     
-    # Wait for backend to be ready
-    sleep 2
-    
-    # Check if backend started successfully
-    if [ -f "backend/.backend.pid" ]; then
-        PID=$(cat "backend/.backend.pid" 2>/dev/null)
-        if ps -p "$PID" > /dev/null 2>&1; then
-            echo -e "${GREEN}   ✅ web core ready${NC}"
-            
-            # Open web UI in browser (works on macOS, Linux, and WSL)
-            echo -e "${CYAN}   opening web ui in browser...${NC}"
-            if command -v open > /dev/null 2>&1; then
-                # macOS
-                open "http://localhost:8000" 2>/dev/null
-            elif command -v xdg-open > /dev/null 2>&1; then
-                # Linux
-                xdg-open "http://localhost:8000" 2>/dev/null &
-            elif command -v wslview > /dev/null 2>&1; then
-                # WSL
-                wslview "http://localhost:8000" 2>/dev/null &
-            else
-                echo -e "${YELLOW}   ⚠️  couldn't auto-open browser${NC}"
-                echo -e "${CYAN}   📌 open manually: http://localhost:8000${NC}"
+        # Check if backend started successfully
+        if [ -f "backend/.backend.pid" ]; then
+            PID=$(cat "backend/.backend.pid" 2>/dev/null)
+            if ps -p "$PID" > /dev/null 2>&1; then
+                # Open web UI in browser silently
+                if command -v open > /dev/null 2>&1; then
+                    # macOS
+                    open "http://localhost:8000" 2>/dev/null
+                elif command -v xdg-open > /dev/null 2>&1; then
+                    # Linux
+                    xdg-open "http://localhost:8000" 2>/dev/null &
+                elif command -v wslview > /dev/null 2>&1; then
+                    # WSL
+                    wslview "http://localhost:8000" 2>/dev/null &
+                fi
             fi
-        else
-            echo -e "${YELLOW}   ⚠️  web core may not have started properly${NC}"
         fi
     fi
-else
-    echo -e "${YELLOW}   ⚠️  backend start script not found${NC}"
-fi
+) &  # Run entire web core startup in background
 
+# Continue with CLI immediately
 echo ""
 
 # Set environment variable to prevent package installation prompts

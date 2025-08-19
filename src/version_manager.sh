@@ -135,7 +135,7 @@ export_postgresql() {
     # Export dosya adı - unibos_ prefix'i ile
     SQL_FILE="unibos_${version}_${timestamp}.sql"
     
-    # pg_dump ile export
+    # pg_dump ile export - TÜM VERİLERİ DAHİL ET
     PGPASSWORD=$DB_PASS pg_dump \
         -h $DB_HOST \
         -p $DB_PORT \
@@ -147,6 +147,8 @@ export_postgresql() {
         --if-exists \
         --no-owner \
         --no-privileges \
+        --column-inserts \
+        --inserts \
         2>/dev/null || {
             echo -e "${YELLOW}⚠️  PostgreSQL export başarısız oldu (veritabanı çalışmıyor olabilir)${NC}"
             return 1
