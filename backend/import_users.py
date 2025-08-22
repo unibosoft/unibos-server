@@ -1,178 +1,141 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
-Import users from old Unicorn database SQL backup to new UNIBOS database
-Kullanıcıları hatasız import et ve login yapabilmelerini sağla
+Import users from PostgreSQL dump to SQLite database
 """
 
 import os
 import sys
 import django
-import re
+import uuid
 from datetime import datetime
 
-# Django setup
-sys.path.append('/Users/berkhatirli/Desktop/unibos/backend')
-os.environ['SECRET_KEY'] = 'django-insecure-unibos-import-temp-key-2025'
-os.environ['DATABASE_URL'] = 'postgresql://unibos_user:unibos_password@localhost:5432/unibos_db'
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unibos_backend.settings.emergency')
+# Setup Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unibos_backend.settings.development')
 django.setup()
 
-from django.contrib.auth.models import User
-from apps.core.models import UserProfile
-from django.db import transaction
+from django.contrib.auth import get_user_model
+from django.utils import timezone
 
-def parse_user_data_from_sql():
-    """SQL dosyasından kullanıcı verilerini parse et"""
-    sql_file = '/Users/berkhatirli/Desktop/unibos/import/unicorn_db_backup_v030-beta_2025_05_22_19_50.sql'
-    
-    users = []
-    
-    # SQL dosyasını oku
-    with open(sql_file, 'r', encoding='utf-8') as f:
-        content = f.read()
-    
-    # auth_user tablosundan verileri çek
-    # Pattern: INSERT INTO `auth_user` VALUES (...)
-    pattern = r"INSERT INTO `auth_user` VALUES \((.*?)\);"
-    match = re.search(pattern, content, re.DOTALL)
-    
-    if match:
-        values_str = match.group(1)
-        
-        # Kullanıcıları parse et
-        # Format: (id, password, last_login, is_superuser, username, first_name, last_name, email, is_staff, is_active, date_joined)
-        user_pattern = r"\((\d+),'([^']*?)','([^']*?)',(\d+),'([^']*?)','([^']*?)','([^']*?)','([^']*?)',(\d+),(\d+),'([^']*?)'\)"
-        
-        for user_match in re.finditer(user_pattern, values_str):
-            user_data = {
-                'id': int(user_match.group(1)),
-                'password_hash': user_match.group(2),
-                'last_login': user_match.group(3) if user_match.group(3) != 'NULL' else None,
-                'is_superuser': bool(int(user_match.group(4))),
-                'username': user_match.group(5),
-                'first_name': user_match.group(6),
-                'last_name': user_match.group(7),
-                'email': user_match.group(8),
-                'is_staff': bool(int(user_match.group(9))),
-                'is_active': bool(int(user_match.group(10))),
-                'date_joined': user_match.group(11)
-            }
-            users.append(user_data)
-    
-    return users
+User = get_user_model()
+
+# User data from PostgreSQL dump
+users_data = [
+    {
+        'username': 'berkhatirli',
+        'password': 'pbkdf2_sha256$720000$K1kngUEfoZXw0fmZDeRuY0$qpIXNi6Stky26xKvwfo/Ii7zW+p5EoqLOPpl1iKU7Jw=',
+        'email': 'berk@unibos.com',
+        'first_name': 'Berk',
+        'last_name': 'Hatırlı',
+        'is_superuser': True,
+        'is_staff': True,
+        'is_active': True,
+        'date_joined': '2025-08-09 08:56:20.712157+03',
+        'last_login': '2025-08-19 10:10:25.522759+03'
+    },
+    {
+        'username': 'admin',
+        'password': 'pbkdf2_sha256$720000$GAeKTx6kvEZM4MgKHUNXYN$cuDqNYPs2BUI8CYNzbBZ4xRhuvdOw2J/nTQGAazhlpY=',
+        'email': 'admin@unibos.com',
+        'first_name': '',
+        'last_name': '',
+        'is_superuser': True,
+        'is_staff': True,
+        'is_active': True,
+        'date_joined': '2025-08-19 09:40:56.232978+03',
+        'last_login': None
+    }
+]
+
+def parse_datetime(dt_str):
+    """Parse datetime string from PostgreSQL format"""
+    if not dt_str:
+        return None
+    # Remove timezone info for simplicity
+    dt_str = dt_str.replace('+03', '')
+    try:
+        return datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S.%f')
+    except:
+        return datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S')
 
 def import_users():
-    """Kullanıcıları import et"""
-    print("🚀 Kullanıcı import işlemi başlıyor...")
-    print("=" * 50)
+    """Import users from PostgreSQL data"""
     
-    users_data = parse_user_data_from_sql()
-    
-    if not users_data:
-        print("❌ SQL dosyasından kullanıcı verisi bulunamadı!")
-        return
-    
-    print(f"📊 {len(users_data)} kullanıcı bulundu")
-    print("-" * 50)
-    
-    imported = 0
-    updated = 0
-    skipped = 0
-    
-    # Özel şifre mapping (berkhatirli için)
-    special_passwords = {
-        'berkhatirli': 'Unib0s_Str0ng_2025!'  # Güçlü şifre
-    }
-    
-    with transaction.atomic():
-        for user_data in users_data:
-            username = user_data['username']
+    for user_data in users_data:
+        username = user_data['username']
+        
+        # Check if user already exists
+        if User.objects.filter(username=username).exists():
+            print(f"User {username} already exists, skipping...")
+            continue
+        
+        # Create user with UUID
+        user = User(
+            id=uuid.uuid4(),
+            username=username,
+            password=user_data['password'],  # Already hashed
+            email=user_data['email'],
+            first_name=user_data.get('first_name', ''),
+            last_name=user_data.get('last_name', ''),
+            is_superuser=user_data.get('is_superuser', False),
+            is_staff=user_data.get('is_staff', False),
+            is_active=user_data.get('is_active', True),
+            is_verified=True,  # Custom field
             
-            try:
-                # Kullanıcı var mı kontrol et
-                if User.objects.filter(username=username).exists():
-                    user = User.objects.get(username=username)
-                    
-                    # berkhatirli için özel işlem
-                    if username == 'berkhatirli':
-                        # Email'i güncelle
-                        user.email = user_data['email']
-                        user.first_name = user_data['first_name']
-                        user.last_name = user_data['last_name']
-                        user.is_staff = user_data['is_staff']
-                        user.is_superuser = user_data['is_superuser']
-                        user.is_active = user_data['is_active']
-                        
-                        # Özel şifre belirle
-                        user.set_password(special_passwords[username])
-                        user.save()
-                        
-                        print(f"✅ Güncellendi: {username} - Şifre: {special_passwords[username]}")
-                        updated += 1
-                    else:
-                        print(f"⚠️  {username} zaten mevcut, atlanıyor...")
-                        skipped += 1
-                    continue
-                
-                # Yeni kullanıcı oluştur
-                user = User.objects.create(
-                    username=username,
-                    email=user_data['email'],
-                    first_name=user_data['first_name'],
-                    last_name=user_data['last_name'],
-                    is_staff=user_data['is_staff'],
-                    is_superuser=user_data['is_superuser'],
-                    is_active=user_data['is_active']
-                )
-                
-                # Şifre belirle
-                if username in special_passwords:
-                    password = special_passwords[username]
-                else:
-                    # Diğer kullanıcılar için varsayılan şifre
-                    password = 'Unicorn2025!'
-                
-                user.set_password(password)
-                user.save()
-                
-                # GSM numarası ekle (varsa)
-                phone_numbers = {
-                    'berkhatirli': '5323672225',
-                    'beyhan': '5551234567',  # Örnek
-                    'ersan': '5551234568',   # Örnek
+            # Default values for custom fields
+            phone_number='',
+            bio='',
+            country='TR',
+            city='Istanbul',
+            user_timezone='Europe/Istanbul',
+            language='tr',
+            theme='light',
+            notifications_enabled=True,
+            email_notifications=True,
+            verification_token='',
+            require_password_change=False,
+            login_count=0,
+        )
+        
+        # Set datetime fields
+        if user_data.get('date_joined'):
+            user.date_joined = parse_datetime(user_data['date_joined'])
+        if user_data.get('last_login'):
+            user.last_login = parse_datetime(user_data['last_login'])
+        
+        # Set last_password_change to date_joined
+        user.last_password_change = user.date_joined
+        
+        # Save user
+        user.save()
+        print(f"✅ Created user: {username} ({user.email})")
+        
+        # Also check/create screen lock for berkhatirli
+        if username == 'berkhatirli':
+            from apps.administration.models import ScreenLock
+            screen_lock, created = ScreenLock.objects.get_or_create(
+                user=user,
+                defaults={
+                    'is_enabled': True,
+                    'lock_password': 'lplp',  # The known password
+                    'failed_attempts': 0,
+                    'max_failed_attempts': 5,
+                    'lockout_duration': 60,
                 }
-                
-                if username in phone_numbers:
-                    profile, created = UserProfile.objects.get_or_create(
-                        user=user,
-                        defaults={'phone_number': phone_numbers[username]}
-                    )
-                    if created:
-                        print(f"  📱 Telefon eklendi: {phone_numbers[username]}")
-                
-                print(f"✅ Import edildi: {username} ({user_data['email']}) - Şifre: {password}")
-                imported += 1
-                
-            except Exception as e:
-                print(f"❌ Hata: {username} import edilemedi - {str(e)}")
-    
-    print("\n" + "=" * 50)
-    print("📊 Import Özeti:")
-    print(f"  ✅ Başarıyla import edilen: {imported} kullanıcı")
-    print(f"  🔄 Güncellenen: {updated} kullanıcı")
-    print(f"  ⚠️  Atlanan (zaten mevcut): {skipped} kullanıcı")
-    print("=" * 50)
-    
-    # berkhatirli için özel bilgi
-    if 'berkhatirli' in [u['username'] for u in users_data]:
-        print("\n🔐 berkhatirli kullanıcısı için:")
-        print(f"  Kullanıcı adı: berkhatirli")
-        print(f"  Şifre: {special_passwords.get('berkhatirli', 'Unicorn2025!')}")
-        print(f"  Email: berk@berkinatolyesi.com")
-        print(f"  Süper kullanıcı: Evet")
-    
-    print("\n💡 Diğer kullanıcılar için varsayılan şifre: Unicorn2025!")
-    print("✨ Import işlemi tamamlandı!")
+            )
+            if created:
+                print(f"  ✅ Created screen lock for {username} with password: lplp")
+            else:
+                # Update existing screen lock password
+                screen_lock.lock_password = 'lplp'
+                screen_lock.is_enabled = True
+                screen_lock.save()
+                print(f"  ✅ Updated screen lock for {username} with password: lplp")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
+    print("=== Importing Users from PostgreSQL Dump ===")
     import_users()
+    
+    # Show all users
+    print("\n=== All Users in Database ===")
+    for user in User.objects.all():
+        print(f"- {user.username}: {user.email} (superuser: {user.is_superuser})")

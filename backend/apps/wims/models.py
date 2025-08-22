@@ -3,7 +3,7 @@ WIMS (Where Is My Stuff) - Inventory Management Module
 Handles stock tracking, warehouse management, and item movements
 """
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
 from apps.core.models import BaseModel, Item, ItemPrice
@@ -12,7 +12,7 @@ from apps.wimm.models import Invoice, InvoiceItem
 
 class Warehouse(BaseModel):
     """Physical or logical storage locations"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='warehouses')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='warehouses')
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=20, unique=True)
     
@@ -151,7 +151,7 @@ class StockItem(BaseModel):
 
 class StockMovement(BaseModel):
     """Track all inventory movements"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='stock_movements')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='stock_movements')
     
     # Movement type
     movement_type = models.CharField(max_length=20, choices=[
@@ -245,7 +245,7 @@ class StockMovement(BaseModel):
 
 class StockCount(BaseModel):
     """Physical inventory counts"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='stock_counts')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='stock_counts')
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='stock_counts')
     
     # Count details
@@ -269,7 +269,7 @@ class StockCount(BaseModel):
     notes = models.TextField(blank=True)
     
     # Approval
-    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_counts')
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_counts')
     approved_date = models.DateTimeField(null=True, blank=True)
     
     class Meta:

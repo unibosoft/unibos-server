@@ -81,36 +81,47 @@ class ModuleView(BaseUIView):
     def dispatch(self, request, *args, **kwargs):
         """Handle special module routing"""
         module_id = self.kwargs.get('module_id')
+        from django.shortcuts import redirect, render
+        
+        # Map module IDs to their proper names
+        if module_id == 'kisisel_enflasyon':
+            return redirect('personal_inflation:dashboard')
         
         # Redirect CCTV to its own app
         if module_id == 'cctv':
-            from django.shortcuts import redirect
             return redirect('cctv:dashboard')
         
         # Redirect Documents to its own app
         if module_id == 'documents':
-            from django.shortcuts import redirect
             return redirect('documents:dashboard')
         
         # Redirect Movies to its own app
         if module_id == 'movies':
-            from django.shortcuts import redirect
             return redirect('movies:dashboard')
         
         # Redirect Music to its own app
         if module_id == 'music':
-            from django.shortcuts import redirect
             return redirect('music:dashboard')
         
         # Redirect RestoPOS to its own app
         if module_id == 'restopos':
-            from django.shortcuts import redirect
             return redirect('restopos:dashboard')
         
         # Redirect Birlikteyiz to its own app
         if module_id == 'birlikteyiz':
-            from django.shortcuts import redirect
             return redirect('birlikteyiz:dashboard')
+        
+        # Redirect Recaria to its own view
+        if module_id == 'recaria':
+            return redirect('recaria:dashboard')
+        
+        # Handle store module (placeholder for now)
+        if module_id == 'store':
+            return render(request, 'web_ui/module_placeholder.html', {
+                'module_name': 'store',
+                'module_icon': '🛍️',
+                'message': 'store module is under development'
+            })
         
         return super().dispatch(request, *args, **kwargs)
     
@@ -770,11 +781,41 @@ class SettingsView(BaseUIView):
 @never_cache
 def solitaire_view(request):
     """Solitaire game view (screen lock minimized mode)"""
+    # Import the solitaire models and game logic
+    from apps.solitaire.models import SolitaireSession
+    from apps.solitaire.game import SolitaireGame
+    import uuid
+    import json
+    
     # Set session flag
     request.session['in_solitaire'] = True
     
     # Get or create screen lock for user
     screen_lock, created = ScreenLock.objects.get_or_create(user=request.user)
+    
+    # Get or create active session (same logic as solitaire app)
+    session = SolitaireSession.objects.filter(
+        user=request.user,
+        is_active=True
+    ).first()
+    
+    if not session:
+        # Create new game session
+        game = SolitaireGame()
+        game.new_game()
+        game_state = game.to_dict()
+        
+        # Create session
+        session = SolitaireSession.objects.create(
+            user=request.user,
+            session_id=str(uuid.uuid4()),
+            is_active=True
+        )
+        session.save_game_state(game_state)
+        session.save()
+    
+    # Get game state
+    game_state = session.get_game_state()
     
     context = {
         'has_screen_lock': screen_lock.is_enabled,
@@ -783,10 +824,14 @@ def solitaire_view(request):
         'cache_buster': int(timezone.now().timestamp() * 1000),  # Current timestamp in ms
         'spacing_version': '2px-18px-fixed',
         'solitaire_version': 'v3.1',
+        # ADD THE MISSING GAME STATE!
+        'session_id': session.session_id,
+        'game_state': json.dumps(game_state),
+        'is_authenticated': True
     }
     
-    # Use new template name to force Safari to load fresh
-    response = render(request, 'web_ui/solitaire_v31.html', context)
+    # Use the actual solitaire template, not a separate one
+    response = render(request, 'web_ui/solitaire.html', context)
     
     # Add aggressive cache-busting headers specifically for Safari
     response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private'

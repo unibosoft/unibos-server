@@ -64,9 +64,6 @@ urlpatterns = [
     # RestoPOS Module - Restaurant POS System
     path('restopos/', include('apps.restopos.urls', namespace='restopos')),
     
-    # Solitaire Game Module
-    path('solitaire/', include('apps.solitaire.urls', namespace='solitaire')),
-    
     # WebSocket URLs (handled by ASGI)
     # ws/currencies/ - Real-time currency updates
     # ws/recaria/ - Game real-time features
@@ -88,8 +85,12 @@ urlpatterns = [
         }
     ), name='api-root'),
     
-    # Web UI - Terminal-style interface
+    # Web UI - Terminal-style interface (includes solitaire at /solitaire/)
     path('', include('apps.web_ui.urls')),
+    
+    # Solitaire Game Module API endpoints
+    # Note: /solitaire/ is handled by web_ui, this is just for API
+    path('solitaire/', include('apps.solitaire.urls', namespace='solitaire')),
 ]
 
 # Serve media files in development

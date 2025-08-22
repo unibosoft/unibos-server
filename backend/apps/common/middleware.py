@@ -104,14 +104,14 @@ class RateLimitMiddleware(MiddlewareMixin):
     
     def process_request(self, request):
         # Skip rate limiting for certain paths
-        exempt_paths = ['/admin/', '/static/', '/media/', '/health/']
+        exempt_paths = ['/admin/', '/static/', '/media/', '/health/', '/administration/unlock/']
         if any(request.path.startswith(path) for path in exempt_paths):
             return None
         
         # Get client identifier
         if request.user.is_authenticated:
             identifier = f"user_{request.user.id}"
-            limit = 1000  # Authenticated users: 1000 requests per hour
+            limit = 10000  # Authenticated users: 10000 requests per hour
         else:
             identifier = f"ip_{self.get_client_ip(request)}"
             limit = 100  # Anonymous users: 100 requests per hour

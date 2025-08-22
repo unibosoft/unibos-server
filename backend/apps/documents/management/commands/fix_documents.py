@@ -4,8 +4,10 @@ Usage: python manage.py fix_documents [--regenerate-all] [--create-samples]
 """
 
 from django.core.management.base import BaseCommand
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.utils import timezone
+
+User = get_user_model()
 from django.core.files.base import ContentFile
 from apps.documents.models import Document, ParsedReceipt
 from apps.documents.thumbnail_service import EnhancedThumbnailGenerator

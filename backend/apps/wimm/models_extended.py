@@ -3,7 +3,7 @@ Extended WIMM (Where Is My Money) Models
 Comprehensive financial management with credit cards, subscriptions, and advanced tracking
 """
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
@@ -12,7 +12,7 @@ import uuid
 
 class CreditCard(models.Model):
     """Credit card management with security and tracking"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='credit_cards')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='credit_cards')
     
     # Card identification (secure - only store last 4 digits)
     card_nickname = models.CharField(max_length=50)

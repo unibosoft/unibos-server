@@ -635,8 +635,37 @@
             document.documentElement.lang = savedLang;
         });
         
+        // Global keyboard shortcuts
+        let globalKeysPressed = {};
+        
         // Keyboard navigation
         document.addEventListener('keydown', function(e) {
+            const key = e.key.toLowerCase();
+            globalKeysPressed[key] = true;
+            
+            // Check if typing in an input field
+            const isTypingInInput = document.activeElement.tagName === 'INPUT' || 
+                                   document.activeElement.tagName === 'TEXTAREA';
+            
+            // Q+W combination for solitaire toggle/minimize from ANY screen
+            if (!isTypingInInput && globalKeysPressed['q'] && globalKeysPressed['w'] && !globalKeysPressed['e']) {
+                console.log('Q+W combination detected, toggling solitaire/minimize');
+                e.preventDefault();
+                toggleMinimize();
+                return;
+            }
+            
+            // Q+W+E combination to exit unibos from ANY screen
+            if (!isTypingInInput && globalKeysPressed['q'] && globalKeysPressed['w'] && globalKeysPressed['e']) {
+                console.log('Q+W+E combination detected, exiting unibos completely');
+                globalKeysPressed = {};
+                e.preventDefault();
+                if (confirm('are you sure you want to exit unibos?')) {
+                    window.location.href = '{% url "web_ui:logout" %}';
+                }
+                return;
+            }
+            
             // ESC key - go back or exit fullscreen
             if (e.key === 'Escape') {
                 if (document.fullscreenElement) {
@@ -657,6 +686,11 @@
                 e.preventDefault();
                 navigateSidebar(e.shiftKey ? -1 : 1);
             }
+        });
+        
+        document.addEventListener('keyup', function(e) {
+            const key = e.key.toLowerCase();
+            delete globalKeysPressed[key];
         });
         
         function navigateSidebar(direction) {

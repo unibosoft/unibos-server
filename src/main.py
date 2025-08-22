@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🪐 unibos v508 - unicorn bodrum operating system
+🪐 unibos v509 - unicorn bodrum operating system
 Simplified Web Forge + Lowercase UI + Single Server Architecture
 
 Author: berk hatırlı - bitez, bodrum, muğla, türkiye
-Version: v508_20250819_1838
+Version: v509_20250822_2350
 Purpose: Professional terminal UI with multi-module support"""
 
 import os
@@ -128,9 +128,9 @@ except ImportError:
 
 # Version information
 VERSION_INFO = {
-    "version": "v508",
-    "build": "20250819_1838", 
-    "build_date": "2025-08-19 18:38:19 +03:00",
+    "version": "v509",
+    "build": "20250822_2350", 
+    "build_date": "2025-08-22 23:50:44 +03:00",
     "author": "berk hatırlı",
     "location": "bitez, bodrum, muğla, türkiye, dünya, güneş sistemi, samanyolu, yerel galaksi grubu, evren"
 }
@@ -1900,7 +1900,7 @@ def show_recaria_submenu():
                 move_cursor(content_x + 10, content_height // 2)
                 print(f"{Colors.YELLOW}feature coming soon!{Colors.RESET}")
                 time.sleep(1)
-        elif key == '\x1b' or key == '\x1b[D' or key == 'q':  # Esc/Left/q
+        elif key == '\x1b' or key == '\x1b[D':  # Esc/Left
             menu_state.in_submenu = None
             break
 
@@ -2325,7 +2325,7 @@ def show_tool_screen(tool_key):
     # Wait for key
     while True:
         key = get_single_key(timeout=0.1)
-        if key == '\x1b' or key == '\x1b[D' or key == 'q':  # ESC, Left Arrow, or q
+        if key == '\x1b' or key == '\x1b[D':  # ESC, Left Arrow
             menu_state.in_submenu = None
             draw_main_screen()
             break
@@ -2497,7 +2497,7 @@ def show_system_scrolls():
     # Wait for key
     while True:
         key = get_single_key(timeout=0.1)
-        if key == '\x1b' or key == '\x1b[D' or key == 'q':  # ESC, Left Arrow, or q
+        if key == '\x1b' or key == '\x1b[D':  # ESC, Left Arrow
             menu_state.in_submenu = None
             draw_main_screen()
             break
@@ -2685,7 +2685,7 @@ def show_module_screen(module_key):
     # Wait for key
     while True:
         key = get_single_key(timeout=0.1)
-        if key == '\x1b' or key == '\x1b[D' or key == 'q':  # ESC, Left Arrow, or q
+        if key == '\x1b' or key == '\x1b[D':  # ESC, Left Arrow
             menu_state.in_submenu = None
             draw_main_screen()
             break
@@ -2819,7 +2819,7 @@ def handle_documents_module():
                 launch_documents_function(idx)
                 draw_documents_menu()
                 
-        elif key == '\x1b' or key == 'q':  # ESC or q
+        elif key == '\x1b':  # ESC
             menu_state.in_submenu = None
             break
             
@@ -3113,9 +3113,37 @@ def main_loop():
                     draw_main_screen()
                 continue
             
-            # Handle quit command - only 'q' should quit from main menu
-            if key and key.lower() == 'q' and not menu_state.in_submenu:  # Only q quits from main menu
-                break
+            # Handle keyboard combinations
+            # Track pressed keys for combinations (Q+W for solitaire, Q+W+E for exit)
+            if not hasattr(menu_state, 'keys_pressed'):
+                menu_state.keys_pressed = set()
+            
+            # Add key to pressed set
+            if key and len(key) == 1:
+                menu_state.keys_pressed.add(key.lower())
+                
+                # Check for Q+W combination (solitaire)
+                if 'q' in menu_state.keys_pressed and 'w' in menu_state.keys_pressed and 'e' not in menu_state.keys_pressed:
+                    # Go to solitaire (minimize)
+                    menu_state.keys_pressed.clear()
+                    handle_minimize()
+                    continue
+                
+                # Check for Q+W+E combination (exit)
+                if 'q' in menu_state.keys_pressed and 'w' in menu_state.keys_pressed and 'e' in menu_state.keys_pressed:
+                    # Exit unibos
+                    menu_state.keys_pressed.clear()
+                    break
+                
+                # Clear keys after a short timeout
+                def clear_keys():
+                    time.sleep(0.5)
+                    menu_state.keys_pressed.clear()
+                threading.Thread(target=clear_keys, daemon=True).start()
+            else:
+                # Clear on non-letter keys
+                if hasattr(menu_state, 'keys_pressed'):
+                    menu_state.keys_pressed.clear()
             
             # Handle arrow keys with simple handler
             if key == '\x1b[A':  # Up arrow
@@ -3410,7 +3438,7 @@ def draw_database_setup_menu():
                 return
             else:
                 handle_db_option(option_key)
-        elif key == 'q' or key == '\x1b' or key == '\x1b[D':  # q, ESC, or Left Arrow
+        elif key == '\x1b' or key == '\x1b[D':  # ESC or Left Arrow
             menu_state.in_submenu = None
             draw_main_screen()
             return
@@ -3674,7 +3702,7 @@ def launch_django_web_ui():
     # Return handled by menu system
 
 def start_web_backend(is_restart=False):
-    """Start Django backend server using start_backend.sh script"""
+    """Start Django backend server using server_manager"""
     if not is_restart:
         show_server_action("⚙️ starting web core", Colors.CYAN)
     
@@ -3682,38 +3710,21 @@ def start_web_backend(is_restart=False):
     content_x = 27 + 4
     y = 5
     
-    backend_path = Path('/Users/berkhatirli/Desktop/unibos/backend')
-    script_path = backend_path / 'start_backend.sh'
-    
-    # Check if backend and script exist
-    if not backend_path.exists():
-        move_cursor(content_x, y)
-        print(f"{Colors.RED}✗ backend directory not found!{Colors.RESET}")
-        y += 2
-        return
-    
-    if not script_path.exists():
-        move_cursor(content_x, y)
-        print(f"{Colors.RED}✗ start_backend.sh script not found!{Colors.RESET}")
-        y += 2
-        return
-    
-    # Use the start_backend.sh script
-    move_cursor(content_x, y)
-    print(f"{Colors.YELLOW}starting web core server...{Colors.RESET}")
-    y += 2
-    
     try:
-        # Run the start_backend.sh script
-        result = subprocess.run(
-            ['bash', str(script_path), 'start'],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
+        from server_manager import start_web_core, get_web_core_status
         
-        # Check if successful
-        if result.returncode == 0:
+        move_cursor(content_x, y)
+        print(f"{Colors.YELLOW}checking services...{Colors.RESET}")
+        
+        # Start with auto-recovery
+        success = start_web_core(silent=True)
+        
+        # Check status
+        time.sleep(2)
+        status = get_web_core_status()
+        
+        move_cursor(content_x, y + 1)
+        if success and status.get('running') and status.get('api_healthy'):
             move_cursor(content_x, y)
             print(f"{Colors.GREEN}✓ web core started successfully{Colors.RESET}")
             y += 1
@@ -6380,7 +6391,7 @@ def stop_all_web_servers():
     get_single_key()
 
 def stop_backend_server():
-    """Stop the backend Django server"""
+    """Stop the backend Django server using server_manager"""
     show_server_action("🔴 Stopping Backend Server", Colors.RED)
     
     cols, lines = get_terminal_size()
@@ -6388,22 +6399,23 @@ def stop_backend_server():
     y = 5
     
     try:
-        # Find and kill Django process
-        result = subprocess.run(['pkill', '-f', 'manage.py runserver'], capture_output=True, text=True)
+        from server_manager import stop_web_core, get_web_core_status
         
-        move_cursor(content_x, y)
-        if result.returncode == 0:
-            print(f"{Colors.GREEN}✓ Backend server stopped successfully{Colors.RESET}")
+        # Check current status first
+        status = get_web_core_status()
+        if not status.get('running'):
+            move_cursor(content_x, y)
+            print(f"{Colors.YELLOW}ℹ️ No backend server running{Colors.RESET}")
         else:
-            # Try lsof approach
-            lsof_result = subprocess.run(['lsof', '-ti:8000'], capture_output=True, text=True)
-            if lsof_result.stdout.strip():
-                pids = lsof_result.stdout.strip().split('\n')
-                for pid in pids:
-                    subprocess.run(['kill', '-9', pid])
-                print(f"{Colors.GREEN}✓ Backend server stopped (port 8000 freed){Colors.RESET}")
-            else:
-                print(f"{Colors.YELLOW}ℹ️ No backend server running{Colors.RESET}")
+            move_cursor(content_x, y)
+            print(f"{Colors.YELLOW}stopping web core...{Colors.RESET}")
+            
+            # Stop the server
+            stop_web_core(silent=True)
+            
+            move_cursor(content_x, y + 1)
+            print(f"{Colors.GREEN}✓ Backend server stopped successfully{Colors.RESET}")
+            
     except Exception as e:
         move_cursor(content_x, y)
         print(f"{Colors.RED}✗ Error stopping backend: {str(e)}{Colors.RESET}")
@@ -6446,23 +6458,48 @@ def stop_frontend_server():
     get_single_key()
 
 def restart_backend_server():
-    """Restart the backend Django server"""
+    """Restart the backend Django server with auto-recovery"""
     show_server_action("🔄 Restarting Backend Server", Colors.YELLOW)
     
     cols, lines = get_terminal_size()
     content_x = 27 + 4
     y = 5
     
-    # First stop
-    move_cursor(content_x, y)
-    print("Stopping backend server...")
-    subprocess.run(['pkill', '-f', 'manage.py runserver'], capture_output=True)
-    time.sleep(1)
-    
-    # Then start
-    move_cursor(content_x, y + 1)
-    print("Starting backend server...")
-    start_web_backend(is_restart=True)
+    try:
+        # Use the enhanced server_manager
+        from server_manager import restart_web_core, get_web_core_status
+        
+        # Show status
+        move_cursor(content_x, y)
+        print("Checking services...")
+        
+        # Run restart with auto-recovery
+        restart_web_core(silent=True)
+        
+        # Check final status
+        time.sleep(2)
+        status = get_web_core_status()
+        
+        move_cursor(content_x, y + 1)
+        if status.get('running') and status.get('api_healthy'):
+            print(f"{Colors.GREEN}✓ Web Core restarted successfully{Colors.RESET}")
+            if status.get('pid'):
+                print(f"  PID: {status['pid']}")
+        else:
+            print(f"{Colors.YELLOW}⚠ Web Core may need manual intervention{Colors.RESET}")
+            if not status.get('postgresql'):
+                print(f"  PostgreSQL not running")
+            
+    except ImportError:
+        # Fallback to old method if server_manager not available
+        move_cursor(content_x, y)
+        print("Stopping backend server...")
+        subprocess.run(['pkill', '-f', 'manage.py runserver'], capture_output=True)
+        time.sleep(1)
+        
+        move_cursor(content_x, y + 1)
+        print("Starting backend server...")
+        start_web_backend(is_restart=True)
 
 def restart_frontend_server():
     """Frontend removed - no longer needed"""
@@ -6782,15 +6819,36 @@ def show_simple_web_status():
     content_x = 27 + 4
     y = 5
     
-    backend_running, backend_pid = check_backend_running()
+    try:
+        from server_manager import get_web_core_status
+        status = get_web_core_status()
+        
+        backend_running = status.get('running', False)
+        backend_pid = status.get('pid')
+        postgresql_running = status.get('postgresql', False)
+        api_healthy = status.get('api_healthy', False)
+    except:
+        # Fallback to old method
+        backend_running, backend_pid = check_backend_running()
+        postgresql_running = True  # Assume it's running
+        api_healthy = backend_running
     
     move_cursor(content_x, y)
     print(f"{Colors.BOLD}{Colors.CYAN}═══ web core status ═══{Colors.RESET}")
     y += 2
     
+    # PostgreSQL status
+    move_cursor(content_x, y)
+    if postgresql_running:
+        print(f"{Colors.GREEN}● postgresql: RUNNING{Colors.RESET}")
+    else:
+        print(f"{Colors.RED}● postgresql: STOPPED{Colors.RESET}")
+    y += 1
+    
+    # Backend status
+    move_cursor(content_x, y)
     if backend_running:
-        move_cursor(content_x, y)
-        print(f"{Colors.GREEN}● server status: RUNNING{Colors.RESET}")
+        print(f"{Colors.GREEN}● web core: RUNNING{Colors.RESET}")
         y += 1
         move_cursor(content_x, y)
         print(f"  PID: {backend_pid}")
@@ -6799,10 +6857,12 @@ def show_simple_web_status():
         print(f"  URL: http://localhost:8000")
         y += 1
         move_cursor(content_x, y)
-        print(f"  settings: emergency mode")
+        if api_healthy:
+            print(f"  API: {Colors.GREEN}healthy{Colors.RESET}")
+        else:
+            print(f"  API: {Colors.YELLOW}not responding{Colors.RESET}")
     else:
-        move_cursor(content_x, y)
-        print(f"{Colors.RED}● server status: STOPPED{Colors.RESET}")
+        print(f"{Colors.RED}● web core: STOPPED{Colors.RESET}")
         y += 1
         move_cursor(content_x, y)
         print(f"  use 'start web core' to begin")
@@ -7181,7 +7241,7 @@ def show_server_logs():
                 break
             elif path:
                 view_log_file(path, desc)
-        elif key == 'q' or key == '\x1b' or key == '\x1b[D':  # q, ESC, or Left Arrow
+        elif key == '\x1b' or key == '\x1b[D':  # ESC or Left Arrow
             break
 
 def view_log_file(log_path, title):
@@ -7582,6 +7642,25 @@ def main():
             print("DEBUG: Starting UNIBOS main()")
             print(f"DEBUG: Terminal size: {get_terminal_size()}")
             print(f"DEBUG: TERMIOS available: {TERMIOS_AVAILABLE}")
+        
+        # Auto-check and fix web core before splash screen
+        try:
+            from server_manager import auto_fix_web_core, get_web_core_status
+            
+            # Check if web core needs fixing
+            status = get_web_core_status()
+            if not status.get('postgresql') or not status.get('running') or not status.get('api_healthy'):
+                # Show a brief message
+                print(f"{Colors.YELLOW}🔧 Checking services...{Colors.RESET}")
+                
+                # Run auto-recovery silently
+                auto_fix_web_core()
+                
+                # Clear the message
+                print("\r" + " " * 50 + "\r", end="")
+        except Exception:
+            # If server_manager not available or error, continue anyway
+            pass
         
         # Show splash screen
         show_splash_screen()

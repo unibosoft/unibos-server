@@ -9,7 +9,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from django.http import JsonResponse
 from .models import Role, UserRole, Department, PermissionRequest, AuditLog, SystemSetting, ScreenLock
-from apps.solitaire.models import SolitairePlayer, SolitaireGameSession, SolitaireActivity
+from apps.solitaire.models import SolitairePlayer, SolitaireGameSession, SolitaireActivity, SolitaireMoveHistory
 from apps.birlikteyiz.models import CronJob, EarthquakeDataSource
 import json
 from datetime import timedelta
@@ -843,15 +843,23 @@ def bulk_status_users(request):
 @login_required(login_url='/login/')
 @user_passes_test(is_admin, login_url='/login/')
 def solitaire_dashboard(request):
-    """Solitaire management dashboard"""
-    from django.db.models import Sum, Avg, Max
+    """Enhanced Solitaire management dashboard with real-time stats"""
+    from django.db.models import Sum, Avg, Max, Count, Q
     from datetime import timedelta
+    
+    now = timezone.now()
+    today = now.date()
     
     # Get statistics with proper null handling
     total_players = SolitairePlayer.objects.count()
     active_players = SolitairePlayer.objects.filter(
-        last_seen__gte=timezone.now() - timedelta(days=7)
+        last_seen__gte=now - timedelta(days=7)
     ).count()
+    
+    # Today's active players
+    today_players = SolitaireGameSession.objects.filter(
+        started_at__date=today
+    ).values('player').distinct().count()
     
     # Count games properly
     total_games = SolitaireGameSession.objects.filter(
@@ -864,15 +872,19 @@ def solitaire_dashboard(request):
     
     games_won = SolitaireGameSession.objects.filter(is_won=True).count()
     
-    # Recent activity - get last 10 sessions
-    recent_sessions = SolitaireGameSession.objects.select_related("player").order_by("-started_at")[:10]
+    # Today's games
+    today_games = SolitaireGameSession.objects.filter(started_at__date=today).count()
+    today_won = SolitaireGameSession.objects.filter(started_at__date=today, is_won=True).count()
     
-    # Active sessions - games started recently and not finished
+    # Recent activity - get last 20 sessions with real-time updates
+    recent_sessions = SolitaireGameSession.objects.select_related("player").order_by("-started_at")[:20]
+    
+    # Active sessions - games started recently and not finished (real-time tracking)
     active_sessions = SolitaireGameSession.objects.filter(
         is_completed=False,
         is_abandoned=False,
         is_won=False,
-        started_at__gte=timezone.now() - timedelta(hours=24)
+        started_at__gte=now - timedelta(hours=1)
     ).select_related("player").order_by("-started_at")
     
     # Top players - group by player properly
@@ -895,17 +907,39 @@ def solitaire_dashboard(request):
             "avg_score": player.avg_score or 0
         })
     
+    # Calculate additional real-time statistics
+    total_moves_today = SolitaireMoveHistory.objects.filter(
+        timestamp__date=today
+    ).count()
+    
+    avg_score_today = SolitaireGameSession.objects.filter(
+        started_at__date=today,
+        is_completed=True
+    ).aggregate(avg=Avg('score'))['avg'] or 0
+    
+    # Real-time dashboard link
+    realtime_dashboard_url = '/administration/solitaire/realtime/dashboard/'
+    
     context = {
         "total_players": total_players,
         "active_players": active_players,
+        "today_players": today_players,
         "total_games": total_games,
+        "today_games": today_games,
         "games_won": games_won,
+        "today_won": today_won,
         "win_rate": round((games_won / total_games * 100) if total_games > 0 else 0, 1),
+        "today_win_rate": round((today_won / today_games * 100) if today_games > 0 else 0, 1),
+        "total_moves_today": total_moves_today,
+        "avg_score_today": round(avg_score_today, 0),
         "recent_sessions": recent_sessions,
         "active_sessions": active_sessions,
         "active_sessions_count": active_sessions.count(),
         "top_players": top_players_list,
         "pending_requests_count": PermissionRequest.objects.filter(status="pending").count(),
+        "realtime_dashboard_url": realtime_dashboard_url,
+        "auto_refresh": True,  # Enable auto-refresh for real-time updates
+        "refresh_interval": 30,  # Refresh every 30 seconds
     }
     
     return render(request, "administration/solitaire/dashboard.html", context)

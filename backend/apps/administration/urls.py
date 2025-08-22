@@ -30,6 +30,9 @@ urlpatterns = [
     path('solitaire/players/', views.solitaire_players, name='solitaire_players'),
     path('solitaire/sessions/', views.solitaire_sessions, name='solitaire_sessions'),
     
+    # Enhanced Solitaire Dashboard
+    path('solitaire/realtime/', include('apps.solitaire.admin_urls')),
+    
     # Cron job management
     path('cron-jobs/', views.cron_jobs_admin, name='cron_jobs'),
 ]

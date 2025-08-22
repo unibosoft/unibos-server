@@ -1,225 +1,32 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solitaire Test</title>
     <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            background: #2d5016;
-            font-family: Arial, sans-serif;
-            color: white;
+        .test-card {
+            width: 100px;
+            height: 140px;
+            border: 2px solid red;
+            background: yellow;
+            margin: 10px;
+            display: inline-block;
         }
-        
-        .status {
-            background: rgba(0,0,0,0.5);
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        
-        .test-result {
-            margin: 10px 0;
-            padding: 10px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 3px;
-        }
-        
-        .success { color: #4CAF50; }
-        .error { color: #f44336; }
-        .info { color: #2196F3; }
     </style>
 </head>
 <body>
-    <div class="status">
-        <h1>Solitaire Game Debug Test</h1>
-        <div id="test-results"></div>
-    </div>
-
+    <h1>Test Cards</h1>
+    <div id="test-area"></div>
+    
     <script>
-        const results = document.getElementById('test-results');
-        
-        function log(message, type = 'info') {
-            const div = document.createElement('div');
-            div.className = `test-result ${type}`;
-            div.textContent = message;
-            results.appendChild(div);
-            console.log(message);
+        // Create test cards to make sure rendering works
+        const testArea = document.getElementById('test-area');
+        for (let i = 0; i < 7; i++) {
+            const card = document.createElement('div');
+            card.className = 'test-card';
+            card.textContent = 'Card ' + i;
+            testArea.appendChild(card);
         }
-        
-        // Test 1: Check if we can create game objects
-        try {
-            log('Test 1: Creating game state object...', 'info');
-            
-            const game = {
-                deck: [],
-                stock: [],
-                waste: [],
-                foundations: [[], [], [], []],
-                tableau: [[], [], [], [], [], [], []],
-                score: 0,
-                moves: 0,
-                time: 0
-            };
-            
-            log('✓ Game state object created successfully', 'success');
-        } catch (e) {
-            log('✗ Failed to create game state: ' + e.message, 'error');
-        }
-        
-        // Test 2: Create deck
-        try {
-            log('Test 2: Creating deck...', 'info');
-            
-            const suits = ['♠', '♥', '♦', '♣'];
-            const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-            const values = { A: 1, J: 11, Q: 12, K: 13 };
-            
-            const deck = [];
-            for (let s = 0; s < 4; s++) {
-                for (let r = 0; r < 13; r++) {
-                    deck.push({
-                        suit: s,
-                        rank: ranks[r],
-                        value: values[ranks[r]] || parseInt(ranks[r]),
-                        color: (s === 1 || s === 2) ? 'red' : 'black',
-                        faceUp: false
-                    });
-                }
-            }
-            
-            log(`✓ Deck created with ${deck.length} cards`, 'success');
-        } catch (e) {
-            log('✗ Failed to create deck: ' + e.message, 'error');
-        }
-        
-        // Test 3: Test DOM manipulation
-        try {
-            log('Test 3: Testing DOM creation...', 'info');
-            
-            const testDiv = document.createElement('div');
-            testDiv.className = 'card face-down';
-            testDiv.style.width = '71px';
-            testDiv.style.height = '96px';
-            testDiv.style.background = '#3a3a3a';
-            testDiv.style.position = 'relative';
-            testDiv.style.borderRadius = '8px';
-            testDiv.style.display = 'inline-block';
-            testDiv.style.margin = '5px';
-            
-            // Add unicorn emoji
-            const emoji = document.createElement('div');
-            emoji.textContent = '🦄';
-            emoji.style.position = 'absolute';
-            emoji.style.top = '50%';
-            emoji.style.left = '50%';
-            emoji.style.transform = 'translate(-50%, -50%)';
-            emoji.style.fontSize = '32px';
-            emoji.style.opacity = '0.15';
-            testDiv.appendChild(emoji);
-            
-            document.body.appendChild(testDiv);
-            
-            log('✓ Test card element created and added to DOM', 'success');
-        } catch (e) {
-            log('✗ Failed DOM manipulation: ' + e.message, 'error');
-        }
-        
-        // Test 4: Check for common JavaScript errors
-        try {
-            log('Test 4: Checking for syntax/runtime issues...', 'info');
-            
-            // Test array operations
-            const testArray = [1, 2, 3];
-            const popped = testArray.pop();
-            testArray.push(4);
-            
-            // Test object operations
-            const testObj = { a: 1, b: 2 };
-            const keys = Object.keys(testObj);
-            
-            // Test string operations
-            const testStr = 'test';
-            const upper = testStr.toUpperCase();
-            
-            log('✓ Basic JavaScript operations working', 'success');
-        } catch (e) {
-            log('✗ JavaScript error: ' + e.message, 'error');
-        }
-        
-        // Test 5: Check window.onload
-        window.addEventListener('load', () => {
-            log('✓ Window load event fired', 'success');
-        });
-        
-        // Test 6: Check if we can simulate game initialization
-        try {
-            log('Test 6: Simulating game initialization...', 'info');
-            
-            function initGame() {
-                const game = {
-                    deck: [],
-                    stock: [],
-                    waste: [],
-                    foundations: [[], [], [], []],
-                    tableau: [[], [], [], [], [], [], []]
-                };
-                
-                // Create deck
-                for (let s = 0; s < 4; s++) {
-                    for (let r = 0; r < 13; r++) {
-                        game.deck.push({
-                            suit: s,
-                            rank: ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'][r],
-                            value: r + 1,
-                            color: (s === 1 || s === 2) ? 'red' : 'black',
-                            faceUp: false
-                        });
-                    }
-                }
-                
-                // Shuffle
-                for (let i = game.deck.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [game.deck[i], game.deck[j]] = [game.deck[j], game.deck[i]];
-                }
-                
-                // Deal to tableau
-                let cardIndex = 0;
-                for (let col = 0; col < 7; col++) {
-                    for (let row = 0; row <= col; row++) {
-                        const card = game.deck[cardIndex++];
-                        card.faceUp = (row === col);
-                        game.tableau[col].push(card);
-                    }
-                }
-                
-                // Rest to stock
-                while (cardIndex < game.deck.length) {
-                    game.stock.push(game.deck[cardIndex++]);
-                }
-                
-                return game;
-            }
-            
-            const testGame = initGame();
-            log(`✓ Game initialized: ${testGame.stock.length} in stock, 7 tableau piles`, 'success');
-            
-            // Check tableau setup
-            for (let i = 0; i < 7; i++) {
-                if (testGame.tableau[i].length !== i + 1) {
-                    throw new Error(`Tableau ${i} has wrong number of cards`);
-                }
-            }
-            log('✓ Tableau correctly dealt', 'success');
-            
-        } catch (e) {
-            log('✗ Game initialization failed: ' + e.message, 'error');
-        }
-        
-        log('--- Debug test complete ---', 'info');
+        console.log('Test cards created');
     </script>
 </body>
 </html>

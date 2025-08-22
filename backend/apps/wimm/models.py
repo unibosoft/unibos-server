@@ -3,7 +3,7 @@ WIMM (Where Is My Money) - Financial Management Module
 Handles invoices, transactions, cash flow, and financial reporting
 """
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
 from apps.core.models import BaseModel, Item, Account
@@ -32,7 +32,7 @@ class TransactionCategory(BaseModel):
 
 class Transaction(BaseModel):
     """Financial transactions"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='transactions')
     
     # Transaction details
     transaction_type = models.CharField(max_length=10, choices=[
@@ -122,7 +122,7 @@ class Transaction(BaseModel):
 
 class Invoice(BaseModel):
     """Invoices for tracking business transactions"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='invoices')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='invoices')
     
     # Invoice type
     invoice_type = models.CharField(max_length=20, choices=[
@@ -225,7 +225,7 @@ class InvoiceItem(BaseModel):
 
 class Budget(BaseModel):
     """Budget planning and tracking"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='budgets')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='budgets')
     name = models.CharField(max_length=100)
     
     # Period
@@ -282,7 +282,7 @@ class Budget(BaseModel):
 
 class RecurringTransaction(BaseModel):
     """Templates for recurring transactions"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recurring_transactions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='recurring_transactions')
     name = models.CharField(max_length=100)
     
     # Base transaction details (copy from Transaction model)

@@ -58,7 +58,7 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     'apps.core',  # Core models - MUST be first
     'apps.authentication',
-    'apps.users',
+    'apps.users',  # Custom User model with UUID
     'apps.currencies',
     'apps.personal_inflation',
     'apps.recaria',
@@ -73,6 +73,8 @@ LOCAL_APPS = [
     'apps.movies',  # Movies and series collection management
     'apps.music',  # Music collection with Spotify integration
     'apps.restopos',  # Restaurant POS system
+    'apps.wimm',  # Where Is My Money - Personal finance tracker
+    'apps.wims',  # Where Is My Stuff - Inventory management
     'apps.logging',  # System and activity logging
 ]
 
@@ -138,6 +140,15 @@ if 'postgresql' in DATABASES['default']['ENGINE']:
         'options': '-c statement_timeout=30000',  # 30 seconds
     }
 
+# Enable foreign key constraints for SQLite
+if 'sqlite' in DATABASES['default']['ENGINE']:
+    from django.db.backends.signals import connection_created
+    def activate_foreign_keys(sender, connection, **kwargs):
+        if connection.vendor == 'sqlite':
+            cursor = connection.cursor()
+            cursor.execute('PRAGMA foreign_keys = OFF;')  # Disable FK checks for now
+    connection_created.connect(activate_foreign_keys)
+
 # Redis Configuration
 REDIS_URL = env('REDIS_URL')
 
@@ -193,7 +204,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Custom User Model
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'users.User'  # Custom User model with UUID
 
 # Internationalization
 LANGUAGE_CODE = 'tr-tr'

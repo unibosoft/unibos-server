@@ -1,0 +1,413 @@
+"""
+Solitaire Admin Dashboard - Real-time monitoring and analytics
+"""
+
+from django.shortcuts import render
+from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models import Count, Avg, Sum, Q, F
+from django.utils import timezone
+from django.http import JsonResponse
+from datetime import timedelta
+from .models import (
+    SolitaireGameSession, SolitairePlayer, SolitaireMoveHistory,
+    SolitaireStatistics, SolitaireActivity
+)
+import json
+
+
+@staff_member_required
+def solitaire_dashboard(request):
+    """Main dashboard view for solitaire monitoring"""
+    
+    # Time ranges for filtering
+    now = timezone.now()
+    today = now.date()
+    last_hour = now - timedelta(hours=1)
+    last_24h = now - timedelta(hours=24)
+    last_week = now - timedelta(days=7)
+    
+    # Active games (games started in last hour that aren't completed)
+    active_games = SolitaireGameSession.objects.filter(
+        started_at__gte=last_hour,
+        is_completed=False,
+        is_abandoned=False
+    ).select_related('player')
+    
+    # Today's statistics
+    today_stats = {
+        'total_games': SolitaireGameSession.objects.filter(started_at__date=today).count(),
+        'completed_games': SolitaireGameSession.objects.filter(
+            started_at__date=today,
+            is_completed=True
+        ).count(),
+        'won_games': SolitaireGameSession.objects.filter(
+            started_at__date=today,
+            is_won=True
+        ).count(),
+        'active_players': SolitaireGameSession.objects.filter(
+            started_at__date=today
+        ).values('player').distinct().count(),
+        'total_moves': SolitaireMoveHistory.objects.filter(
+            timestamp__date=today
+        ).count(),
+        'avg_score': SolitaireGameSession.objects.filter(
+            started_at__date=today,
+            is_completed=True
+        ).aggregate(avg=Avg('score'))['avg'] or 0,
+        'avg_time': SolitaireGameSession.objects.filter(
+            started_at__date=today,
+            is_completed=True
+        ).aggregate(avg=Avg('time_played'))['avg'] or 0,
+    }
+    
+    # Calculate win rate
+    if today_stats['completed_games'] > 0:
+        today_stats['win_rate'] = round(
+            (today_stats['won_games'] / today_stats['completed_games']) * 100, 1
+        )
+    else:
+        today_stats['win_rate'] = 0
+    
+    # Top players today
+    top_players_today = SolitaireGameSession.objects.filter(
+        started_at__date=today,
+        is_completed=True
+    ).values('player__display_name').annotate(
+        games_played=Count('id'),
+        games_won=Count('id', filter=Q(is_won=True)),
+        total_score=Sum('score'),
+        avg_score=Avg('score'),
+        total_moves=Sum('moves_count')
+    ).order_by('-total_score')[:10]
+    
+    # Recent games (last 20)
+    recent_games = SolitaireGameSession.objects.filter(
+        started_at__gte=last_24h
+    ).select_related('player').order_by('-started_at')[:20]
+    
+    # Hourly activity (last 24 hours)
+    hourly_activity = []
+    for i in range(24):
+        hour_start = now - timedelta(hours=i+1)
+        hour_end = now - timedelta(hours=i)
+        
+        games_count = SolitaireGameSession.objects.filter(
+            started_at__gte=hour_start,
+            started_at__lt=hour_end
+        ).count()
+        
+        moves_count = SolitaireMoveHistory.objects.filter(
+            timestamp__gte=hour_start,
+            timestamp__lt=hour_end
+        ).count()
+        
+        hourly_activity.append({
+            'hour': hour_end.strftime('%H:00'),
+            'games': games_count,
+            'moves': moves_count
+        })
+    
+    hourly_activity.reverse()
+    
+    # Best games of all time
+    best_games = SolitaireGameSession.objects.filter(
+        is_won=True
+    ).order_by('-score')[:10]
+    
+    # Fastest wins
+    fastest_wins = SolitaireGameSession.objects.filter(
+        is_won=True,
+        time_played__gt=0
+    ).order_by('time_played')[:10]
+    
+    # Most efficient wins (fewest moves)
+    efficient_wins = SolitaireGameSession.objects.filter(
+        is_won=True,
+        moves_count__gt=0
+    ).order_by('moves_count')[:10]
+    
+    # Game completion funnel
+    funnel = {
+        'started': SolitaireGameSession.objects.filter(started_at__date=today).count(),
+        'played_10_moves': SolitaireGameSession.objects.filter(
+            started_at__date=today,
+            moves_count__gte=10
+        ).count(),
+        'played_50_moves': SolitaireGameSession.objects.filter(
+            started_at__date=today,
+            moves_count__gte=50
+        ).count(),
+        'completed': SolitaireGameSession.objects.filter(
+            started_at__date=today,
+            is_completed=True
+        ).count(),
+        'won': SolitaireGameSession.objects.filter(
+            started_at__date=today,
+            is_won=True
+        ).count(),
+    }
+    
+    # Move type distribution (from recent games)
+    move_distribution = SolitaireMoveHistory.objects.filter(
+        timestamp__gte=last_24h
+    ).values('from_pile_type', 'to_pile_type').annotate(
+        count=Count('id')
+    ).order_by('-count')[:20]
+    
+    # Player retention (players who played multiple days)
+    week_players = SolitaireGameSession.objects.filter(
+        started_at__gte=last_week
+    ).values('player').annotate(
+        days_played=Count('started_at__date', distinct=True)
+    )
+    
+    retention_stats = {
+        'played_once': week_players.filter(days_played=1).count(),
+        'played_2_days': week_players.filter(days_played=2).count(),
+        'played_3_plus': week_players.filter(days_played__gte=3).count(),
+    }
+    
+    # Recent activities
+    recent_activities = SolitaireActivity.objects.filter(
+        timestamp__gte=last_hour
+    ).select_related('session__player').order_by('-timestamp')[:50]
+    
+    context = {
+        'active_games': active_games,
+        'today_stats': today_stats,
+        'top_players_today': top_players_today,
+        'recent_games': recent_games,
+        'hourly_activity': json.dumps(hourly_activity),
+        'best_games': best_games,
+        'fastest_wins': fastest_wins,
+        'efficient_wins': efficient_wins,
+        'funnel': funnel,
+        'move_distribution': move_distribution,
+        'retention_stats': retention_stats,
+        'recent_activities': recent_activities,
+        'refresh_interval': 30,  # seconds
+    }
+    
+    return render(request, 'admin/solitaire_dashboard.html', context)
+
+
+@staff_member_required
+def live_game_view(request, session_id):
+    """View a specific game in real-time"""
+    
+    try:
+        game_session = SolitaireGameSession.objects.select_related('player').get(
+            session_id=session_id
+        )
+        
+        # Get move history
+        moves = SolitaireMoveHistory.objects.filter(
+            session=game_session
+        ).order_by('move_number')
+        
+        # Get recent activities
+        activities = SolitaireActivity.objects.filter(
+            session=game_session
+        ).order_by('-timestamp')[:20]
+        
+        # Parse game state for visualization
+        game_state = game_session.game_state or {}
+        
+        # Calculate performance metrics
+        undo_count = moves.filter(is_undo=True).count()
+        auto_moves = moves.filter(is_auto_move=True).count()
+        total_moves = moves.count()
+        
+        # Calculate average time per move
+        if total_moves > 0:
+            avg_move_time = game_session.time_played / total_moves if game_session.time_played else 0
+        else:
+            avg_move_time = 0
+        
+        # Calculate efficiency (moves that contributed to score)
+        score_moves = moves.filter(score_change__gt=0).count()
+        efficiency = (score_moves / total_moves * 100) if total_moves > 0 else 0
+        
+        context = {
+            'session': game_session,
+            'move_history': moves,
+            'activities': activities,
+            'game_state': game_state,
+            'refresh_interval': 5,  # seconds
+            'undo_count': undo_count,
+            'auto_moves': auto_moves,
+            'avg_move_time': avg_move_time,
+            'efficiency': efficiency,
+        }
+        
+        return render(request, 'admin/live_game_view.html', context)
+        
+    except SolitaireGameSession.DoesNotExist:
+        return render(request, 'admin/game_not_found.html', {'session_id': session_id})
+
+
+@staff_member_required
+def player_profile(request, player_id):
+    """Detailed player profile and statistics"""
+    
+    try:
+        player = SolitairePlayer.objects.get(id=player_id)
+        
+        # Get player statistics
+        stats = SolitaireStatistics.objects.filter(user=player.user).first() if player.user else None
+        
+        # Recent games
+        recent_games = SolitaireGameSession.objects.filter(
+            player=player
+        ).order_by('-started_at')[:20]
+        
+        # Game performance over time
+        performance = SolitaireGameSession.objects.filter(
+            player=player,
+            is_completed=True
+        ).values('started_at__date').annotate(
+            games_played=Count('id'),
+            games_won=Count('id', filter=Q(is_won=True)),
+            avg_score=Avg('score'),
+            avg_moves=Avg('moves_count'),
+            avg_time=Avg('time_played')
+        ).order_by('-started_at__date')[:30]
+        
+        # Best achievements
+        achievements = {
+            'highest_score': SolitaireGameSession.objects.filter(
+                player=player,
+                is_completed=True
+            ).order_by('-score').first(),
+            'fastest_win': SolitaireGameSession.objects.filter(
+                player=player,
+                is_won=True,
+                time_played__gt=0
+            ).order_by('time_played').first(),
+            'most_efficient': SolitaireGameSession.objects.filter(
+                player=player,
+                is_won=True,
+                moves_count__gt=0
+            ).order_by('moves_count').first(),
+        }
+        
+        # Playing patterns
+        patterns = {
+            'favorite_time': SolitaireGameSession.objects.filter(
+                player=player
+            ).extra(select={'hour': 'EXTRACT(hour FROM started_at)'}).values('hour').annotate(
+                count=Count('id')
+            ).order_by('-count').first(),
+            'avg_session_length': SolitaireGameSession.objects.filter(
+                player=player,
+                is_completed=True
+            ).aggregate(avg=Avg('time_played'))['avg'] or 0,
+            'total_time_played': SolitaireGameSession.objects.filter(
+                player=player
+            ).aggregate(total=Sum('time_played'))['total'] or 0,
+        }
+        
+        context = {
+            'player': player,
+            'stats': stats,
+            'recent_games': recent_games,
+            'performance': performance,
+            'achievements': achievements,
+            'patterns': patterns,
+        }
+        
+        return render(request, 'admin/player_profile.html', context)
+        
+    except SolitairePlayer.DoesNotExist:
+        return render(request, 'admin/player_not_found.html', {'player_id': player_id})
+
+
+@staff_member_required
+def get_live_data(request):
+    """API endpoint for live data updates"""
+    now = timezone.now()
+    
+    # Get active games with real-time score and moves
+    active_games = []
+    for game in SolitaireGameSession.objects.filter(
+        is_completed=False,
+        is_abandoned=False
+    ).select_related('player').order_by('-started_at')[:10]:
+        active_games.append({
+            'session_id': game.session_id,
+            'player': game.player.display_name if game.player else 'Anonymous',
+            'started': game.started_at.isoformat(),
+            'score': game.score,
+            'moves': game.moves_count,
+            'time_played': game.time_played,
+            'ip_address': game.player.ip_address if game.player else ''
+        })
+    
+    # Get recent completed games
+    recent_games = []
+    for game in SolitaireGameSession.objects.filter(
+        Q(is_completed=True) | Q(is_abandoned=True)
+    ).select_related('player').order_by('-started_at')[:10]:
+        recent_games.append({
+            'session_id': game.session_id,
+            'player': game.player.display_name if game.player else 'Anonymous', 
+            'started': game.started_at.isoformat(),
+            'ended': game.ended_at.isoformat() if game.ended_at else None,
+            'score': game.score,
+            'moves': game.moves_count,
+            'time_played': game.time_played,
+            'is_won': game.is_won,
+            'is_abandoned': game.is_abandoned
+        })
+    
+    # Get today's stats
+    today = now.date()
+    today_sessions = SolitaireGameSession.objects.filter(started_at__date=today)
+    
+    stats = {
+        'total_games_today': today_sessions.count(),
+        'games_won_today': today_sessions.filter(is_won=True).count(),
+        'active_games_now': SolitaireGameSession.objects.filter(
+            is_completed=False,
+            is_abandoned=False
+        ).count(),
+        'total_moves_today': today_sessions.aggregate(
+            total=Sum('moves_count')
+        )['total'] or 0,
+        'avg_score_today': today_sessions.filter(
+            is_completed=True
+        ).aggregate(avg=Avg('score'))['avg'] or 0
+    }
+    
+    return JsonResponse({
+        'active_games': active_games,
+        'recent_games': recent_games,
+        'stats': stats,
+        'timestamp': now.isoformat()
+    })
+
+
+@staff_member_required
+def get_session_moves(request, session_id):
+    """API endpoint for getting session move history"""
+    try:
+        game_session = SolitaireGameSession.objects.get(session_id=session_id)
+        
+        moves = []
+        for move in SolitaireMoveHistory.objects.filter(session=game_session).order_by('move_number'):
+            moves.append({
+                'move_number': move.move_number,
+                'from_pile_type': move.from_pile_type,
+                'from_pile_index': move.from_pile_index,
+                'to_pile_type': move.to_pile_type,
+                'to_pile_index': move.to_pile_index,
+                'num_cards': move.num_cards,
+                'score_change': move.score_change,
+                'time_since_start': move.time_since_start,
+                'is_undo': move.is_undo,
+                'is_auto_move': move.is_auto_move,
+            })
+        
+        return JsonResponse({'moves': moves})
+    except SolitaireGameSession.DoesNotExist:
+        return JsonResponse({'error': 'Session not found'}, status=404)

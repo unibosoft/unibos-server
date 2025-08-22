@@ -327,3 +327,74 @@ class SolitaireActivity(models.Model):
     
     def __str__(self):
         return f"{self.get_action_display()} at {self.timestamp}"
+
+
+class SolitaireMoveHistory(models.Model):
+    """Track every single card movement in detail"""
+    
+    PILE_TYPES = [
+        ('stock', 'Stock'),
+        ('waste', 'Waste'),
+        ('tableau', 'Tableau'),
+        ('foundation', 'Foundation'),
+    ]
+    
+    session = models.ForeignKey(SolitaireGameSession, on_delete=models.CASCADE, related_name='move_history')
+    move_number = models.IntegerField()  # Sequential move number
+    
+    # Move details
+    from_pile_type = models.CharField(max_length=20, choices=PILE_TYPES)
+    from_pile_index = models.IntegerField(null=True, blank=True)  # For tableau/foundation index
+    to_pile_type = models.CharField(max_length=20, choices=PILE_TYPES)
+    to_pile_index = models.IntegerField(null=True, blank=True)  # For tableau/foundation index
+    
+    # Card details
+    cards = models.JSONField()  # List of cards moved [{suit, rank, face_up}]
+    num_cards = models.IntegerField(default=1)  # Number of cards moved
+    
+    # State tracking
+    score_before = models.IntegerField(default=0)
+    score_after = models.IntegerField(default=0)
+    score_change = models.IntegerField(default=0)
+    
+    # Timing
+    timestamp = models.DateTimeField(auto_now_add=True)
+    time_since_start = models.IntegerField(default=0)  # Seconds since game start
+    time_since_last_move = models.IntegerField(default=0)  # Seconds since last move
+    
+    # Additional context
+    is_undo = models.BooleanField(default=False)
+    is_auto_move = models.BooleanField(default=False)
+    revealed_card = models.JSONField(null=True, blank=True)  # Card revealed after move
+    
+    class Meta:
+        ordering = ['session', 'move_number']
+        unique_together = ['session', 'move_number']
+        indexes = [
+            models.Index(fields=['session', 'timestamp']),
+            models.Index(fields=['session', 'move_number']),
+        ]
+    
+    def __str__(self):
+        card_info = self.cards[0] if self.cards else {}
+        card_str = f"{card_info.get('rank', '?')}{card_info.get('suit', '?')}"
+        from_str = f"{self.from_pile_type}"
+        if self.from_pile_index is not None:
+            from_str += f"[{self.from_pile_index}]"
+        to_str = f"{self.to_pile_type}"
+        if self.to_pile_index is not None:
+            to_str += f"[{self.to_pile_index}]"
+        return f"Move #{self.move_number}: {card_str} from {from_str} to {to_str}"
+    
+    def get_card_display(self):
+        """Get formatted card display"""
+        if not self.cards:
+            return "No cards"
+        
+        suits = {'H': '♥', 'D': '♦', 'C': '♣', 'S': '♠'}
+        result = []
+        for card in self.cards:
+            suit = suits.get(card.get('suit', ''), card.get('suit', '?'))
+            rank = card.get('rank', '?')
+            result.append(f"{rank}{suit}")
+        return ", ".join(result)

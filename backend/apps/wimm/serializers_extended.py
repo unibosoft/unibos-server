@@ -3,7 +3,7 @@ Extended WIMM Serializers
 REST API serializers for comprehensive financial management
 """
 from rest_framework import serializers
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.db import transaction as db_transaction
 from decimal import Decimal
 from datetime import datetime, timedelta

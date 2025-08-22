@@ -4,18 +4,20 @@
 <div class="section">
     <!-- Statistics Overview -->
     <div class="section-header">
-        <h2>🃏 solitaire dashboard</h2>
+        <h2>🃏 solitaire dashboard - real-time monitoring</h2>
         <div class="section-controls">
+            <a href="{{ realtime_dashboard_url }}" class="btn-primary">📊 advanced dashboard</a>
             <a href="{% url 'administration:solitaire_players' %}" class="btn-secondary">view all players</a>
             <a href="{% url 'administration:solitaire_sessions' %}" class="btn-secondary">view all sessions</a>
         </div>
     </div>
     
-    <!-- Statistics Grid -->
+    <!-- Statistics Grid with Today's Stats -->
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-value">{{ total_players }}</div>
             <div class="stat-label">total players</div>
+            <div class="stat-sublabel">{{ today_players }} today</div>
         </div>
         <div class="stat-card">
             <div class="stat-value positive">{{ active_players }}</div>
@@ -24,30 +26,41 @@
         <div class="stat-card">
             <div class="stat-value">{{ total_games }}</div>
             <div class="stat-label">games played</div>
+            <div class="stat-sublabel">{{ today_games }} today</div>
         </div>
         <div class="stat-card">
             <div class="stat-value positive">{{ games_won }}</div>
             <div class="stat-label">games won</div>
+            <div class="stat-sublabel">{{ today_won }} today</div>
         </div>
         <div class="stat-card">
             <div class="stat-value">{{ win_rate }}%</div>
-            <div class="stat-label">win rate</div>
+            <div class="stat-label">overall win rate</div>
+            <div class="stat-sublabel">{{ today_win_rate }}% today</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">{{ active_sessions_count }}</div>
-            <div class="stat-label">active games</div>
+            <div class="stat-value active-games-count">{{ active_sessions_count }}</div>
+            <div class="stat-label">active games now</div>
+            <div class="stat-sublabel moves-today">{{ total_moves_today }} moves today</div>
         </div>
     </div>
 </div>
 
+<!-- Auto-refresh notice -->
+{% if auto_refresh %}
+<div class="info-message">
+    <span class="live-indicator"></span> auto-refresh every 5 seconds
+    <span class="refresh-time" style="margin-left: auto; font-size: 11px; color: #666;"></span>
+</div>
+{% endif %}
+
 <!-- Active Sessions -->
-{% if active_sessions %}
 <div class="section">
     <div class="section-header">
-        <h2>🎮 active games</h2>
+        <h2>🎮 active games <span class="active-games-count badge badge-pending" style="margin-left: 10px;">{{ active_count }}</span></h2>
     </div>
     <div class="content-box">
-        <table class="data-table">
+        <table class="data-table active-games">
             <thead>
                 <tr>
                     <th>player</th>
@@ -81,7 +94,6 @@
         </table>
     </div>
 </div>
-{% endif %}
 
 <!-- Recent Sessions -->
 <div class="section">
@@ -175,5 +187,146 @@
         </table>
     </div>
 </div>
+{% endif %}
+
+<!-- Auto-refresh Script -->
+{% if auto_refresh %}
+<script>
+    setTimeout(function() {
+        location.reload();
+    }, {{ refresh_interval }} * 1000);
+</script>
+<style>
+    .live-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #4CAF50;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+        margin-right: 5px;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.3; }
+        100% { opacity: 1; }
+    }
+    
+    .stat-sublabel {
+        font-size: 11px;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .info-message {
+        background: #E8F5E9;
+        color: #2E7D32;
+        padding: 10px 15px;
+        border-radius: 4px;
+        margin: 10px 0;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .updating {
+        opacity: 0.6;
+        transition: opacity 0.3s;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let updateInterval;
+    
+    function updateLiveData() {
+        // Add updating class to show it's refreshing
+        document.querySelectorAll('.module-content').forEach(el => el.classList.add('updating'));
+        
+        fetch('/administration/solitaire/realtime/api/live-data/')
+            .then(response => response.json())
+            .then(data => {
+                // Update active games
+                updateActiveGames(data.active_games);
+                
+                // Update stats
+                updateStats(data.stats);
+                
+                // Remove updating class
+                document.querySelectorAll('.module-content').forEach(el => el.classList.remove('updating'));
+                
+                // Update timestamp
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const timestampEl = document.querySelector('.refresh-time');
+                if (timestampEl) {
+                    timestampEl.textContent = `last updated: ${timeStr}`;
+                }
+            })
+            .catch(error => {
+                console.error('Error updating live data:', error);
+                document.querySelectorAll('.module-content').forEach(el => el.classList.remove('updating'));
+            });
+    }
+    
+    function updateActiveGames(games) {
+        const tbody = document.querySelector('.active-games tbody');
+        if (!tbody) return;
+        
+        // Clear existing rows except header
+        while (tbody.rows.length > 0) {
+            tbody.deleteRow(0);
+        }
+        
+        // Add new rows
+        games.forEach(game => {
+            const row = tbody.insertRow();
+            const startTime = new Date(game.started);
+            const now = new Date();
+            const duration = Math.floor((now - startTime) / 60000); // minutes
+            
+            row.innerHTML = `
+                <td>${game.player}</td>
+                <td>${game.ip_address}</td>
+                <td>${duration} dakika ago</td>
+                <td><strong>${game.score}</strong></td>
+                <td><strong>${game.moves}</strong></td>
+                <td><a href="/administration/solitaire/realtime/live/${game.session_id}/">view details</a></td>
+            `;
+        });
+        
+        if (games.length === 0) {
+            const row = tbody.insertRow();
+            row.innerHTML = '<td colspan="6" style="text-align: center; color: #999;">no active games</td>';
+        }
+    }
+    
+    function updateStats(stats) {
+        // Update moves today
+        const movesEl = document.querySelector('.moves-today');
+        if (movesEl) {
+            movesEl.textContent = stats.total_moves_today.toLocaleString() + ' moves today';
+        }
+        
+        // Update active games count
+        const activeCountEl = document.querySelector('.active-games-count');
+        if (activeCountEl) {
+            activeCountEl.textContent = stats.active_games_now;
+        }
+    }
+    
+    // Initial update
+    updateLiveData();
+    
+    // Update every 5 seconds for real-time feel
+    updateInterval = setInterval(updateLiveData, 5000);
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+        if (updateInterval) clearInterval(updateInterval);
+    });
+});
+</script>
 {% endif %}
 {% endblock %}

@@ -90,34 +90,59 @@ class SolitaireGame:
         self.selected_cards = []
         self.selected_from = None
         self.undo_stack = []
+        self.move_history = []
         
     def new_game(self):
-        """Start a new game"""
-        # Create deck
+        """Start a new game with proper Klondike Solitaire rules"""
+        # Reset all game state
+        self.stock = []
+        self.waste = []
+        self.foundations = {'spades': [], 'hearts': [], 'diamonds': [], 'clubs': []}
+        self.tableau = [[] for _ in range(7)]
+        self.moves = 0
+        self.score = 0
+        self.time = 0
+        self.selected_cards = []
+        self.selected_from = None
+        self.move_history = []
+        self.undo_stack = []
+        
+        # Create a fresh deck (52 cards, all face down)
         deck = []
         for suit in Card.SUITS.keys():
             for rank in Card.RANKS:
-                deck.append(Card(suit, rank, False))
+                deck.append(Card(suit, rank, False))  # All cards start face down
         
-        # Shuffle
+        # Shuffle the deck
         random.shuffle(deck)
         
-        # Deal tableau
-        for i in range(7):
-            for j in range(i, 7):
+        # Deal to tableau (Klondike rules)
+        # Column 0: 1 card (0 face down, 1 face up)
+        # Column 1: 2 cards (1 face down, 1 face up)
+        # Column 2: 3 cards (2 face down, 1 face up)
+        # ... and so on
+        for col in range(7):
+            for row in range(col + 1):
                 card = deck.pop()
-                if j == i:
-                    card.face_up = True  # Top card face up
-                self.tableau[j].append(card)
+                # Only the last card in each column is face up
+                if row == col:
+                    card.face_up = True
+                else:
+                    card.face_up = False
+                self.tableau[col].append(card)
         
-        # Remaining cards to stock
-        self.stock = deck
-        self.waste = []
-        self.foundations = {'spades': [], 'hearts': [], 'diamonds': [], 'clubs': []}
-        self.moves = 0
-        self.score = 0
-        self.selected_cards = []
-        self.selected_from = None
+        # Remaining cards go to stock (all face down)
+        self.stock = deck  # Should be 24 cards
+        for card in self.stock:
+            card.face_up = False
+        
+        # Log the game state
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"New game created: {len(self.stock)} cards in stock")
+        for i, pile in enumerate(self.tableau):
+            face_up_count = sum(1 for card in pile if card.face_up)
+            logger.debug(f"Tableau {i}: {len(pile)} cards, {face_up_count} face up")
     
     def draw_from_stock(self):
         """Draw cards from stock to waste"""
@@ -128,10 +153,9 @@ class SolitaireGame:
             for card in self.stock:
                 card.face_up = False
             self.score = max(0, self.score - 100)  # Penalty for recycling
-        elif self.stock:
-            # Clear waste pile before drawing new cards
-            self.waste = []
-            # Draw 3 cards (or remaining)
+        
+        # Draw 3 cards (or remaining) from stock to waste
+        if self.stock:
             for _ in range(min(3, len(self.stock))):
                 card = self.stock.pop()
                 card.face_up = True
@@ -339,7 +363,9 @@ class SolitaireGame:
             'moves': self.moves,
             'score': self.score,
             'time': self.time,
-            'is_won': self.is_won()
+            'is_won': self.is_won(),
+            'move_history': self.move_history,
+            'undo_stack': self.undo_stack
         }
     
     def from_dict(self, data):
@@ -353,6 +379,8 @@ class SolitaireGame:
         self.moves = data.get('moves', 0)
         self.score = data.get('score', 0)
         self.time = data.get('time', 0)
+        self.move_history = data.get('move_history', [])
+        self.undo_stack = data.get('undo_stack', [])
 
 
 def hash_password(password: str) -> str:
