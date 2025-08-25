@@ -519,9 +519,14 @@
         
         console.log('=== GAME STATE FROM BACKEND ===');
         console.log('Session ID:', sessionId);
+        console.log('Tab ID:', tabId);
         console.log('Initial game state:', initialGameState);
         console.log('Stock count:', initialGameState.stock ? initialGameState.stock.length : 0);
+        console.log('Waste count:', initialGameState.waste ? initialGameState.waste.length : 0);
         console.log('Tableau:', initialGameState.tableau ? initialGameState.tableau.map(p => p.length) : []);
+        console.log('Moves from backend:', initialGameState.moves);
+        console.log('Score from backend:', initialGameState.score);
+        console.log('Time from backend:', initialGameState.time);
         
         const suits = ['♠', '♥', '♦', '♣'];
         const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -1371,26 +1376,36 @@
             };
             
             try {
+                const savePayload = {
+                    session_id: sessionId,
+                    game_state: backendGameState,
+                    score: game.score,
+                    moves: game.moves,
+                    time: Math.floor((Date.now() - startTime) / 1000)
+                };
+                
+                console.log('Sync save - Session:', sessionId, 'Moves:', savePayload.moves, 'Score:', savePayload.score);
+                
                 const response = await fetch('/solitaire/api/save/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken')
                     },
-                    body: JSON.stringify({
-                        session_id: sessionId,
-                        game_state: backendGameState,
-                        score: game.score,
-                        moves: game.moves,
-                        time: Math.floor((Date.now() - startTime) / 1000)
-                    })
+                    body: JSON.stringify(savePayload)
                 });
+                
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('Sync save HTTP error:', response.status, text);
+                    throw new Error(`HTTP ${response.status}: ${text}`);
+                }
                 
                 const result = await response.json();
                 console.log('Game saved synchronously:', result);
                 return result;
             } catch (error) {
-                console.error('Failed to save game:', error);
+                console.error('Failed to save game synchronously:', error);
             }
         }
         
@@ -1553,11 +1568,14 @@
                 time: Math.floor((Date.now() - startTime) / 1000)
             };
             
-            console.log('Saving game state:', {
-                moves: saveData.moves,
-                score: saveData.score,
-                time: saveData.time
-            });
+            console.log('=== SAVING GAME STATE ===');
+            console.log('Session ID:', sessionId);
+            console.log('Moves:', saveData.moves);
+            console.log('Score:', saveData.score);
+            console.log('Time:', saveData.time);
+            console.log('Stock cards being saved:', backendGameState.stock.length);
+            console.log('Waste cards being saved:', backendGameState.waste.length);
+            console.log('Tableau being saved:', backendGameState.tableau.map(p => p.length));
             
             fetch('/solitaire/api/save/', {
                 method: 'POST',
@@ -1566,7 +1584,28 @@
                     'X-CSRFToken': getCookie('csrftoken')
                 },
                 body: JSON.stringify(saveData)
-            }).catch(err => console.log('Save error:', err));
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.error('✗ Save HTTP error:', response.status, response.statusText);
+                    return response.text().then(text => {
+                        console.error('Response body:', text);
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(result => {
+                if (result && result.success) {
+                    console.log('✓ Game saved successfully');
+                } else {
+                    console.error('✗ Save failed:', result);
+                }
+            })
+            .catch(err => {
+                console.error('✗ Save error:', err);
+                console.error('Save data was:', saveData);
+            });
         }
         
         // Get CSRF token

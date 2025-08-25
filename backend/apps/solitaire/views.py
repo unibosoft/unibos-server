@@ -268,8 +268,19 @@ def solitaire_api(request, action):
             
         elif action == 'save':
             # Save current game state
+            logger.info(f"SAVE ACTION: Received save request for session {session_id[:8]}")
+            logger.info(f"  Current DB state - Moves: {session.moves_count}, Score: {session.score}")
+            
             if 'game_state' in data:
-                session.save_game_state(data['game_state'])
+                game_state = data['game_state']
+                
+                # Log what we're receiving
+                logger.info(f"  Incoming state - Stock: {len(game_state.get('stock', []))}, "
+                           f"Waste: {len(game_state.get('waste', []))}, "
+                           f"Tableau: {[len(p) for p in game_state.get('tableau', [])]}")
+                logger.info(f"  Incoming - Moves: {data.get('moves', 0)}, Score: {data.get('score', 0)}")
+                
+                session.save_game_state(game_state)
                 session.moves_count = data.get('moves', session.moves_count)
                 session.score = data.get('score', session.score)
                 session.game_time = data.get('time', session.game_time)
@@ -334,6 +345,13 @@ def solitaire_api(request, action):
                     logger.info(f"Game WON! User: {request.user.username}, Score: {session.score}, Moves: {session.moves_count}")
                 
                 session.save()
+                
+                # Log what was saved
+                logger.info(f"  SAVED to DB - Moves: {session.moves_count}, Score: {session.score}")
+                saved_state = session.get_game_state()
+                logger.info(f"  Verification - Stock: {len(saved_state.get('stock', []))}, "
+                           f"Waste: {len(saved_state.get('waste', []))}, "
+                           f"Tableau: {[len(p) for p in saved_state.get('tableau', [])]}")
                 
                 # Also update SolitaireGameSession for admin panel tracking
                 player = get_or_create_player(request)

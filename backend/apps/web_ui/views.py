@@ -832,15 +832,31 @@ def solitaire_view(request):
     
     # IMPORTANT: Always try to get existing active session first
     # Don't create new session if one exists
+    logger.info(f"=== SOLITAIRE VIEW CALLED for user {request.user.username} ===")
+    logger.info(f"Tab ID: {tab_id}")
+    
     session = SolitaireSession.objects.filter(
         user=request.user,
         is_active=True
     ).order_by('-last_played').first()  # Get most recent active session
     
+    if session:
+        logger.info(f"✓ Found existing session: {session.session_id}")
+    else:
+        logger.info(f"✗ No active session found, will create new one")
+    
     # Get game state from existing session or create new one
     if session:
         # Use existing session - continue from where user left off
         logger.info(f"Found existing session {session.session_id} for user {request.user.username}")
+        
+        # Log raw database fields before processing
+        logger.info(f"RAW DB Fields for session {session.session_id}:")
+        logger.info(f"  stock_pile: {len(session.stock_pile) if session.stock_pile else 0} cards")
+        logger.info(f"  waste_pile: {len(session.waste_pile) if session.waste_pile else 0} cards")
+        logger.info(f"  tableau_piles: {[len(p) for p in session.tableau_piles] if session.tableau_piles else 'None'}")
+        logger.info(f"  moves_count: {session.moves_count}, score: {session.score}")
+        
         game_state = session.get_game_state()
         
         # Calculate actual elapsed time since game started
@@ -855,15 +871,26 @@ def solitaire_view(request):
         )
         
         if is_empty_state:
-            logger.warning(f"Session {session.session_id} has empty game state")
-            # Check session fields directly
-            logger.warning(f"Stock pile: {session.stock_pile}")
-            logger.warning(f"Waste pile: {session.waste_pile}")
-            logger.warning(f"Tableau piles: {session.tableau_piles}")
-            logger.warning(f"Moves count: {session.moves_count}")
-            
-            # Don't create a new game - this might be a timing issue
-            # The session might be in process of being saved from another tab
+            logger.warning(f"Session {session.session_id} has empty game state, will try to reconstruct")
+            # If game state is empty, try to reconstruct from saved fields
+            if session.stock_pile or session.waste_pile or session.tableau_piles:
+                logger.info("Reconstructing game state from session fields")
+                game_state = {
+                    'stock': session.stock_pile or [],
+                    'waste': session.waste_pile or [],
+                    'foundations': session.foundation_piles or {},
+                    'tableau': session.tableau_piles or [[] for _ in range(7)],
+                    'moves': session.moves_count,
+                    'score': session.score,
+                    'time': time_elapsed,
+                    'is_won': session.is_won
+                }
+                logger.info(f"Reconstructed state - Moves: {game_state['moves']}, Score: {game_state['score']}")
+                
+                # Save the reconstructed state back to the session
+                session.save_game_state(game_state)
+                session.save()
+                logger.info(f"Saved reconstructed state back to session")
         else:
             # Log the game state details
             logger.info(f"Game state - Stock: {len(game_state.get('stock', []))}, "
@@ -886,15 +913,26 @@ def solitaire_view(request):
         game_state['time'] = 0
         
         # Create session
+        new_session_id = str(uuid.uuid4())
         session = SolitaireSession.objects.create(
             user=request.user,
-            session_id=str(uuid.uuid4()),
+            session_id=new_session_id,
             is_active=True,
             last_played=timezone.now()
         )
+        
+        # Log game state before saving
+        logger.info(f"NEW GAME: About to save state for session {new_session_id}")
+        logger.info(f"  Stock: {len(game_state.get('stock', []))}, Waste: {len(game_state.get('waste', []))}")
+        logger.info(f"  Tableau: {[len(p) for p in game_state.get('tableau', [])]}")
+        
         session.save_game_state(game_state)
         session.save()
+        
+        # Verify what was saved
         logger.info(f"Created new session {session.session_id}")
+        logger.info(f"  Saved stock_pile: {len(session.stock_pile) if session.stock_pile else 0}")
+        logger.info(f"  Saved tableau_piles: {[len(p) for p in session.tableau_piles] if session.tableau_piles else 'None'}")
     
     context = {
         'has_screen_lock': screen_lock.is_enabled,

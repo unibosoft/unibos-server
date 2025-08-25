@@ -1,7 +1,7 @@
 {
-  "version": "v512",
-  "build_number": "20250825_2159",
-  "release_date": "2025-08-25 21:59:21 +03:00",
+  "version": "v514",
+  "build_number": "20250826_0033",
+  "release_date": "2025-08-26 00:33:47 +03:00",
   "author": "berk hatırlı",
   "location": "bitez, bodrum, muğla, türkiye",
   "description": "Bug Fix: Solitaire Admin Dashboard Fixes"
