@@ -364,8 +364,6 @@ def quick_deploy():
             print(f"{Colors.BOLD}{Colors.CYAN}⚡  quick deploy{Colors.RESET}")
             move_cursor(content_x + 2, 5)
             print(f"{Colors.RED}deployment cancelled{Colors.RESET}")
-            move_cursor(content_x + 2, lines - 4)
-            print(f"{Colors.BOLD}{Colors.CYAN}← esc/left arrow to return{Colors.RESET}")
             draw_footer()
             sys.stdout.flush()
             # Wait for ESC or left arrow to return
@@ -540,10 +538,7 @@ def quick_deploy():
                     else:
                         print(f"{Colors.YELLOW}• {op}{Colors.RESET}")
     
-    # Position the prompt properly
-    move_cursor(content_x + 2, lines - 4)
-    print(f"{Colors.BOLD}{Colors.CYAN}← esc/left arrow to return{Colors.RESET}")
-    
+    # Footer already has navigation hint
     draw_footer()
     sys.stdout.flush()
     
@@ -704,9 +699,6 @@ exit [lindex $result 3]
                 y += 2
                 move_cursor(content_x + 2, y)
                 print(f"{Colors.DIM}check your passphrase and try again{Colors.RESET}")
-    
-    move_cursor(content_x + 2, lines - 4)
-    print(f"{Colors.BOLD}{Colors.CYAN}← esc/left arrow to return{Colors.RESET}")
     
     draw_footer()
     sys.stdout.flush()
@@ -1011,9 +1003,6 @@ def deploy_backend():
                     else:
                         print(f"{Colors.YELLOW}• {op}{Colors.RESET}")
     
-    move_cursor(content_x + 2, lines - 4)
-    print(f"{Colors.BOLD}{Colors.CYAN}← esc/left arrow to return{Colors.RESET}")
-    
     draw_footer()
     sys.stdout.flush()
     
@@ -1118,9 +1107,6 @@ def deploy_cli():
                     else:
                         print(f"{Colors.YELLOW}• {op}{Colors.RESET}")
     
-    move_cursor(content_x + 2, lines - 4)
-    print(f"{Colors.BOLD}{Colors.CYAN}← esc/left arrow to return{Colors.RESET}")
-    
     draw_footer()
     sys.stdout.flush()
     
@@ -1217,9 +1203,6 @@ def show_system_info():
     except:
         move_cursor(content_x + 4, y)
         print("unable to get network info")
-    
-    move_cursor(content_x + 2, lines - 4)
-    print(f"{Colors.BOLD}{Colors.CYAN}← esc/left arrow to return{Colors.RESET}")
     
     draw_footer()
     sys.stdout.flush()
@@ -1444,9 +1427,6 @@ def show_server_status():
         y += 1
         move_cursor(content_x + 4, y)
         print(f"3. test connection: {Colors.DIM}ssh rocksteady{Colors.RESET}")
-    
-    move_cursor(content_x + 2, lines - 4)
-    print(f"{Colors.BOLD}{Colors.CYAN}← esc/left arrow to return{Colors.RESET}")
     
     draw_footer()
     sys.stdout.flush()
