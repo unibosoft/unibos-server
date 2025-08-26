@@ -415,7 +415,7 @@ def quick_deploy():
         y += 2
     
     move_cursor(content_x + 2, y)
-    print(f"{Colors.DIM}rsync -avz --exclude={{.git,venv,archive}} . rocksteady:~/unibos/{Colors.RESET}")
+    print(f"{Colors.DIM}rsync -avz (excluding git, venv, logs, etc.) . rocksteady:~/unibos/{Colors.RESET}")
     
     y += 2
     move_cursor(content_x + 2, y)
@@ -425,9 +425,9 @@ def quick_deploy():
     had_errors = False
     
     try:
-        # Now rsync should work without prompting
+        # Now rsync should work without prompting - use proper excludes
         result = subprocess.run(
-            "rsync -avz --exclude={.git,venv,__pycache__,archive,quarantine,*.sql,*.log,db.sqlite3,.DS_Store} . rocksteady:~/unibos/",
+            "rsync -avz --exclude=.git --exclude='*.pyc' --exclude=__pycache__ --exclude=venv --exclude=archive --exclude=quarantine --exclude='*.sql' --exclude='*.log' --exclude=db.sqlite3 --exclude=.DS_Store --exclude=node_modules --exclude='.env*' . rocksteady:~/unibos/",
             shell=True, capture_output=True, text=True, timeout=30
         )
         
@@ -743,16 +743,18 @@ def full_deployment():
     # Individual steps for better error reporting and progress display
     steps = [
         ("checking connection", "ssh -o ConnectTimeout=5 -o BatchMode=yes rocksteady echo 'connected' 2>&1"),
-        ("syncing files", "rsync -avz --exclude={.git,venv,__pycache__,archive,quarantine,*.sql,*.log,db.sqlite3,.DS_Store} . rocksteady:~/unibos/"),
+        ("syncing files", "rsync -avz --exclude=.git --exclude='*.pyc' --exclude=__pycache__ --exclude=venv --exclude=archive --exclude=quarantine --exclude='*.sql' --exclude='*.log' --exclude=db.sqlite3 --exclude=.DS_Store --exclude=node_modules --exclude='.env*' . rocksteady:~/unibos/"),
         ("creating directories", "ssh rocksteady 'cd ~/unibos/backend && mkdir -p logs staticfiles media && touch logs/django.log'"),
         ("setting up venv", "ssh rocksteady 'cd ~/unibos/backend && [ -d venv ] || python3 -m venv venv'"),
         ("upgrading pip", "ssh rocksteady 'cd ~/unibos/backend && ./venv/bin/python -m pip install --upgrade pip'"),
-        ("installing packages", "ssh rocksteady 'cd ~/unibos/backend && ./venv/bin/pip install Django==5.0.1 djangorestframework==3.14.0 psycopg2-binary==2.9.9 django-cors-headers==4.3.1 django-environ==0.11.2 redis==5.0.1 django-filter==23.5 djangorestframework-simplejwt==5.3.1 PyJWT==2.8.0 pyotp==2.9.0 whitenoise==6.6.0 user-agents==2.2.0 python-json-logger==2.0.7 django-prometheus==2.3.1'"),
-        ("creating env file", "ssh rocksteady 'cd ~/unibos/backend && [ -f .env ] || echo \"DATABASE_URL=sqlite:///db.sqlite3\" > .env'"),
+        ("installing packages", "ssh rocksteady 'cd ~/unibos/backend && if [ -f requirements_minimal.txt ]; then ./venv/bin/pip install -r requirements_minimal.txt; elif [ -f requirements-minimal.txt ]; then ./venv/bin/pip install -r requirements-minimal.txt; else ./venv/bin/pip install Django djangorestframework psycopg2-binary django-cors-headers whitenoise; fi'"),
+        ("creating env file", "ssh rocksteady 'cd ~/unibos/backend && [ -f .env ] || (echo \"DEBUG=False\" > .env && echo \"SECRET_KEY=$(python3 -c \"import secrets; print(secrets.token_urlsafe(50))\")\" >> .env && echo \"DATABASE_URL=sqlite:///db.sqlite3\" >> .env && echo \"ALLOWED_HOSTS=rocksteady,localhost,127.0.0.1\" >> .env)'"),
         ("running migrations", "ssh rocksteady 'cd ~/unibos/backend && ./venv/bin/python manage.py migrate --noinput || true'"),
         ("collecting static", "ssh rocksteady 'cd ~/unibos/backend && ./venv/bin/python manage.py collectstatic --noinput || true'"),
-        ("stopping old server", "ssh rocksteady 'pkill -f \"manage.py runserver\" 2>/dev/null; echo \"old server stopped\"'"),
-        ("starting server", "ssh rocksteady 'cd ~/unibos/backend && nohup ./venv/bin/python manage.py runserver 0.0.0.0:8000 </dev/null >logs/server.log 2>&1 & echo \"server started\"'"),
+        ("installing cli deps", "ssh rocksteady 'cd ~/unibos/src && if [ -f requirements.txt ]; then pip3 install --user -r requirements.txt 2>/dev/null || true; fi'"),
+        ("setting permissions", "ssh rocksteady 'cd ~/unibos && chmod +x unibos.sh rocksteady_deploy.sh *.sh 2>/dev/null || true'"),
+        ("stopping old server", "ssh rocksteady 'pkill -f \"manage.py runserver\" 2>/dev/null || true; echo \"old server stopped\"'"),
+        ("starting server", "ssh rocksteady 'cd ~/unibos/backend && nohup ./venv/bin/python manage.py runserver 0.0.0.0:8000 </dev/null >logs/server.log 2>&1 & sleep 2 && echo \"server started\"'"),
         ("verifying server", "ssh rocksteady 'sleep 3 && (pgrep -f \"manage.py runserver\" > /dev/null && echo \"server running on port 8000\" || echo \"server not detected\")'"),
     ]
     

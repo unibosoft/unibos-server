@@ -426,13 +426,14 @@ def get_navigation_breadcrumb():
                     parts.append(menu_state.version_sub)
         
         # Dev Tools
-        elif menu_state.in_submenu in ['version_manager', 'git', 'ai_builder', 'database_setup']:
+        elif menu_state.in_submenu in ['version_manager', 'git', 'ai_builder', 'database_setup', 'public_server']:
             parts.append("dev tools")
             name_map = {
                 'version_manager': 'version manager',
                 'git': 'git manager',
                 'ai_builder': 'ai builder',
-                'database_setup': 'database setup'
+                'database_setup': 'database setup',
+                'public_server': 'public server'
             }
             parts.append(name_map.get(menu_state.in_submenu, menu_state.in_submenu))
             
@@ -3388,8 +3389,9 @@ def main_loop():
             draw_main_screen()
 
 def database_setup_wizard():
-    """Launch database setup wizard in content area - exactly like version_manager"""
+    """Launch database setup wizard in content area - exactly like administration"""
     menu_state.in_submenu = 'database_setup'
+    menu_state.database_setup_index = 0  # Add index tracking
     
     # Clear screen and redraw everything to start fresh
     clear_screen()
@@ -3399,94 +3401,92 @@ def database_setup_wizard():
     menu_state.last_sidebar_cache_key = None
     draw_sidebar()
     
-    draw_database_setup_menu()
-    
-def draw_database_setup_menu():
-    """Draw database setup menu in content area with arrow navigation"""
-    selected_index = 0
-    
-    # Draw footer once at start
+    # Draw the menu once initially
+    draw_database_setup_content()
     draw_footer()
     
-    while menu_state.in_submenu == 'database_setup':
-        # ALWAYS clear content area first - this prevents ALL artifacts
-        clear_content_area()
+    # Main loop with timeout like administration
+    database_setup_menu_loop()
+    
+def draw_database_setup_content():
+    """Draw database setup menu content - called only when needed"""
+    clear_content_area()
+    
+    # Small delay to ensure clear is processed
+    time.sleep(0.002)
+    
+    cols, lines = get_terminal_size()
+    content_x = 27  # After sidebar (don't add extra offset)
+    content_width = cols - content_x - 1
+    start_y = 3  # Changed from 4 to 3 for single-line header
+    
+    # Check PostgreSQL status
+    try:
+        postgres_installed = subprocess.run(["which", "psql"], capture_output=True).returncode == 0
+        postgres_running = subprocess.run(["pg_isready"], capture_output=True).returncode == 0
+    except:
+        postgres_installed = False
+        postgres_running = False
         
-        # Small delay to ensure clear is processed
-        time.sleep(0.002)
-        
-        cols, lines = get_terminal_size()
-        content_x = 27  # After sidebar (don't add extra offset)
-        content_width = cols - content_x - 1
-        start_y = 3  # Changed from 4 to 3 for single-line header
-        
-        # Check PostgreSQL status
+    # Check Python packages - check in backend venv primarily
+    python_packages = False
+    
+    # First check if backend venv has psycopg2-binary
+    backend_venv_pip = Path(__file__).parent.parent / 'backend' / 'venv' / 'bin' / 'pip'
+    if backend_venv_pip.exists():
+        result = subprocess.run([str(backend_venv_pip), 'show', 'psycopg2-binary'], 
+                              capture_output=True, text=True)
+        if result.returncode == 0:
+            python_packages = True
+    
+    # Also check system Python as fallback
+    if not python_packages:
         try:
-            postgres_installed = subprocess.run(["which", "psql"], capture_output=True).returncode == 0
-            postgres_running = subprocess.run(["pg_isready"], capture_output=True).returncode == 0
-        except:
-            postgres_installed = False
-            postgres_running = False
-        
-        # Check Python packages - check in backend venv primarily
-        python_packages = False
-        
-        # First check if backend venv has psycopg2-binary
-        backend_venv_pip = Path(__file__).parent.parent / 'backend' / 'venv' / 'bin' / 'pip'
-        if backend_venv_pip.exists():
-            result = subprocess.run([str(backend_venv_pip), 'show', 'psycopg2-binary'], 
+            import psycopg2
+            python_packages = True
+        except ImportError:
+            # Check system pip
+            result = subprocess.run(['pip3', 'show', 'psycopg2-binary'], 
                                   capture_output=True, text=True)
             if result.returncode == 0:
                 python_packages = True
-        
-        # Also check system Python as fallback
-        if not python_packages:
-            try:
-                import psycopg2
-                python_packages = True
-            except ImportError:
-                # Check system pip
-                result = subprocess.run(['pip3', 'show', 'psycopg2-binary'], 
-                                      capture_output=True, text=True)
-                if result.returncode == 0:
-                    python_packages = True
-        
-        # Title
-        move_cursor(content_x + 2, start_y)
-        sys.stdout.write(f"{Colors.BOLD}{Colors.BLUE}🗄️  database setup{Colors.RESET}")
-        sys.stdout.flush()
-        
-        # System status - compact like web forge
-        y = start_y + 2
-        move_cursor(content_x + 2, y)
-        sys.stdout.write(f"{Colors.BOLD}system status:{Colors.RESET}")
+    
+    # Title
+    move_cursor(content_x + 2, start_y)
+    sys.stdout.write(f"{Colors.BOLD}{Colors.BLUE}🗄️  database setup{Colors.RESET}")
+    sys.stdout.flush()
+    
+    # System status - compact like web forge
+    y = start_y + 2
+    move_cursor(content_x + 2, y)
+    sys.stdout.write(f"{Colors.BOLD}system status:{Colors.RESET}")
+    sys.stdout.flush()
+    y += 1
+    
+    move_cursor(content_x + 4, y)
+    status = "✅ installed" if postgres_installed else "❌ not installed"
+    color = Colors.GREEN if postgres_installed else Colors.RED
+    sys.stdout.write(f"postgresql: {color}{status}{Colors.RESET}")
+    sys.stdout.flush()
+    y += 1
+    
+    if postgres_installed:
+        move_cursor(content_x + 4, y)
+        status = "✅ running" if postgres_running else "⚠️  stopped"
+        color = Colors.GREEN if postgres_running else Colors.YELLOW
+        sys.stdout.write(f"service: {color}{status}{Colors.RESET}")
         sys.stdout.flush()
         y += 1
-        
-        move_cursor(content_x + 4, y)
-        status = "✅ installed" if postgres_installed else "❌ not installed"
-        color = Colors.GREEN if postgres_installed else Colors.RED
-        sys.stdout.write(f"postgresql: {color}{status}{Colors.RESET}")
-        sys.stdout.flush()
-        y += 1
-        
-        if postgres_installed:
-            move_cursor(content_x + 4, y)
-            status = "✅ running" if postgres_running else "⚠️  stopped"
-            color = Colors.GREEN if postgres_running else Colors.YELLOW
-            sys.stdout.write(f"service: {color}{status}{Colors.RESET}")
-            sys.stdout.flush()
-            y += 1
-        
-        move_cursor(content_x + 4, y)
-        status = "✅ installed" if python_packages else "❌ not installed"
-        color = Colors.GREEN if python_packages else Colors.RED
-        sys.stdout.write(f"python packages: {color}{status}{Colors.RESET}")
-        sys.stdout.flush()
-        y += 2
-        
-        # Menu options with better grouping
-        options = [
+    
+    move_cursor(content_x + 4, y)
+    status = "✅ installed" if python_packages else "❌ not installed"
+    color = Colors.GREEN if python_packages else Colors.RED
+    sys.stdout.write(f"python packages: {color}{status}{Colors.RESET}")
+    sys.stdout.flush()
+    y += 2
+    
+    # Menu options with better grouping
+    options = [
             ("header", "🛠️ installation", ""),
             ("full_install", "  🚀 full installation", "postgresql + python"),
             ("python_only", "  📦 install python packages only", ""),
@@ -3501,92 +3501,104 @@ def draw_database_setup_menu():
             ("sqlite_mode", "  💾 continue with sqlite", ""),
             ("separator", "---", "---"),
             ("back", "← back to dev tools", "")
-        ]
+    ]
+    
+    # Draw options header
+    move_cursor(content_x + 2, y)
+    sys.stdout.write(f"{Colors.CYAN}options:{Colors.RESET}")
+    sys.stdout.flush()
+    y += 1
+    
+    actual_index = 0
+    for i, item in enumerate(options):
+        if len(item) == 3:
+            key, title, desc = item
+        else:
+            key, title = item
+            desc = ""
         
-        # Draw options with proper visual hierarchy
-        move_cursor(content_x + 2, y)
-        sys.stdout.write(f"{Colors.CYAN}options:{Colors.RESET}")
-        sys.stdout.flush()
-        y += 1
-        
-        actual_index = 0
-        for i, item in enumerate(options):
-            if len(item) == 3:
-                key, title, desc = item
-            else:
-                key, title = item
-                desc = ""
-            
-            move_cursor(content_x + 3, y)
-            sys.stdout.write('\033[K')  # Clear line
-            
-            if key == "separator":
-                sys.stdout.write(f"{Colors.DIM}{'─' * min(content_width - 8, 60)}{Colors.RESET}")
-                y += 1
-            elif key == "header":
-                if y > start_y + 3:  # Add space before headers except first
-                    y += 1
-                    move_cursor(content_x + 3, y)
-                sys.stdout.write(f"{Colors.BOLD}{Colors.YELLOW}{title}{Colors.RESET}")
-                y += 1
-            else:
-                # Regular option - check if selected
-                if actual_index == selected_index:
-                    # Orange background for selected
-                    sys.stdout.write(f"{Colors.BG_ORANGE}{Colors.BLACK}{Colors.BOLD} → {title:<40}{Colors.RESET}")
-                else:
-                    sys.stdout.write(f"   {title}")
-                
-                if desc:
-                    sys.stdout.write(f"  {Colors.DIM}{desc}{Colors.RESET}")
-                
-                actual_index += 1
-                y += 1
-            
-            sys.stdout.flush()
-        
-        # Navigation hint at bottom
-        y += 2
         move_cursor(content_x + 3, y)
-        sys.stdout.write(f"{Colors.DIM}↑↓ navigate | enter select | ←/esc/q back{Colors.RESET}")
-        sys.stdout.flush()
+        sys.stdout.write('\033[K')  # Clear line
         
-        # Get key input
-        key = get_single_key(timeout=None)
-        
-        # Count actual selectable items (not headers or separators)
-        selectable_options = [opt for opt in options if opt[0] not in ['header', 'separator']]
-        num_options = len(selectable_options)
-        
-        if key == '\x1b[A':  # Up arrow
-            selected_index = (selected_index - 1) % num_options
-        elif key == '\x1b[B':  # Down arrow
-            selected_index = (selected_index + 1) % num_options
-        elif key == '\r' or key == '\n' or key == '\x1b[C':  # Enter or Right arrow
-            option_key = selectable_options[selected_index][0]
-            if option_key == "back":
-                menu_state.in_submenu = None
-                draw_main_screen()
-                return
+        if key == "separator":
+            sys.stdout.write(f"{Colors.DIM}{'─' * min(content_width - 8, 60)}{Colors.RESET}")
+            y += 1
+        elif key == "header":
+            if y > start_y + 3:  # Add space before headers except first
+                y += 1
+                move_cursor(content_x + 3, y)
+            sys.stdout.write(f"{Colors.BOLD}{Colors.YELLOW}{title}{Colors.RESET}")
+            y += 1
+        else:
+            # Regular option - check if selected
+            if actual_index == selected_index:
+                # Orange background for selected
+                sys.stdout.write(f"{Colors.BG_ORANGE}{Colors.BLACK}{Colors.BOLD} → {title:<40}{Colors.RESET}")
             else:
-                handle_db_option(option_key)
-        elif key == '\x1b' or key == '\x1b[D':  # ESC or Left Arrow
+                sys.stdout.write(f"   {title}")
+            
+            if desc:
+                sys.stdout.write(f"  {Colors.DIM}{desc}{Colors.RESET}")
+            
+            actual_index += 1
+            y += 1
+        
+        sys.stdout.flush()
+    
+    # Navigation hint at bottom
+    y += 2
+    move_cursor(content_x + 3, y)
+    sys.stdout.write(f"{Colors.DIM}↑↓ navigate | enter select | ←/esc/q back{Colors.RESET}")
+    sys.stdout.flush()
+    
+    # Get key input
+    key = get_single_key(timeout=None)
+    
+    # Count actual selectable items (not headers or separators)
+    selectable_options = [opt for opt in options if opt[0] not in ['header', 'separator']]
+    num_options = len(selectable_options)
+    
+    if key == '\x1b[A':  # Up arrow
+        selected_index = (selected_index - 1) % num_options
+    elif key == '\x1b[B':  # Down arrow
+        selected_index = (selected_index + 1) % num_options
+    elif key == '\r' or key == '\n' or key == '\x1b[C':  # Enter or Right arrow
+        option_key = selectable_options[selected_index][0]
+        if option_key == "back":
             menu_state.in_submenu = None
             draw_main_screen()
             return
-        elif key == 'L' or key == 'l':  # Language menu
-            language_menu()
-            draw_header()
-            draw_sidebar()
-            draw_footer()
-            # Continue in database setup menu
+        else:
+            handle_db_option(option_key)
+    elif key == '\x1b' or key == '\x1b[D':  # ESC or Left Arrow
+        menu_state.in_submenu = None
+        draw_main_screen()
+        return
+    elif key == 'L' or key == 'l':  # Language menu
+        language_menu()
+        draw_header()
+        draw_sidebar()
+        draw_footer()
+        # Continue in database setup menu
 
 def handle_db_option(option):
     """Handle database setup options"""
-    clear_content_area()
+    # Clear the entire content area completely
     cols, lines = get_terminal_size()
     content_x = 27  # After sidebar (no extra offset)
-    y = 5  # Start higher
+    
+    # Clear from line 3 (after header) to footer
+    for y in range(3, lines - 1):
+        move_cursor(content_x, y)
+        # Clear from cursor to end of line
+        sys.stdout.write('\033[K')
+    sys.stdout.flush()
+    
+    # Small delay to ensure clearing is visible
+    time.sleep(0.05)
+    
+    # Start display from line 5
+    y = 5
     
     # Show what we're doing
     move_cursor(content_x + 2, y)
@@ -3668,6 +3680,7 @@ def handle_db_option(option):
         time.sleep(5)
         
     elif option == "test_connection":
+        move_cursor(content_x + 2, y)
         print(f"{Colors.CYAN}testing database connection...{Colors.RESET}")
         try:
             import psycopg2
@@ -3684,12 +3697,17 @@ def handle_db_option(option):
             y += 2
             move_cursor(content_x + 2, y)
             print(f"{Colors.RED}❌ connection failed{Colors.RESET}")
+        # Wait for user to see result
+        time.sleep(3)
     elif option == "sqlite_mode":
+        move_cursor(content_x + 2, y)
         print(f"{Colors.GREEN}✅ continuing with sqlite{Colors.RESET}")
         y += 2
         move_cursor(content_x + 2, y)
         print(f"{Colors.DIM}database: data/unibos.db{Colors.RESET}")
+        time.sleep(3)
     elif option == "python_only":
+        move_cursor(content_x + 2, y)
         print(f"{Colors.CYAN}installing python packages...{Colors.RESET}")
         y += 2
         
@@ -3718,6 +3736,7 @@ def handle_db_option(option):
         time.sleep(3)
         
     elif option == "postgres_only":
+        move_cursor(content_x + 2, y)
         print(f"{Colors.CYAN}installing postgresql...{Colors.RESET}")
         y += 2
         subprocess.run(['brew', 'install', 'postgresql@14'], capture_output=True)
@@ -3726,6 +3745,7 @@ def handle_db_option(option):
         time.sleep(3)
         
     elif option == "create_db":
+        move_cursor(content_x + 2, y)
         print(f"{Colors.CYAN}creating database...{Colors.RESET}")
         y += 2
         subprocess.run(['createdb', 'unibos'], capture_output=True)
@@ -3734,6 +3754,7 @@ def handle_db_option(option):
         time.sleep(3)
         
     elif option == "start_service":
+        move_cursor(content_x + 2, y)
         print(f"{Colors.CYAN}starting postgresql service...{Colors.RESET}")
         y += 2
         subprocess.run(['brew', 'services', 'start', 'postgresql@14'], capture_output=True)
@@ -3742,6 +3763,7 @@ def handle_db_option(option):
         time.sleep(3)
         
     else:
+        move_cursor(content_x + 2, y)
         print(f"{Colors.YELLOW}⚠️  option '{option}' coming soon{Colors.RESET}")
         time.sleep(2)
 
