@@ -604,6 +604,9 @@ def restart_recaria():
     y = 5
     steps = [
         ("checking connection", "ssh rocksteady 'echo connected' 2>&1"),
+        ("checking database", "ssh rocksteady 'PGPASSWORD=unibos_password psql -h localhost -U unibos_user -d unibos_central -c \"SELECT COUNT(*) FROM auth_user;\" 2>&1 | grep -E \"[0-9]+ row\" || echo \"DB not accessible\"' 2>&1"),
+        ("syncing local db", f"PGPASSWORD=unibos_password pg_dump -h localhost -U unibos_user -d unibos_db --clean --if-exists --no-owner --no-privileges 2>/dev/null | ssh rocksteady 'PGPASSWORD=unibos_password psql -h localhost -U unibos_user -d unibos_central' 2>&1 | grep -E 'CREATE|DROP|INSERT' | head -3 || echo 'DB sync completed'"),
+        ("verifying users", "ssh rocksteady 'PGPASSWORD=unibos_password psql -h localhost -U unibos_user -d unibos_central -t -c \"SELECT username FROM auth_user WHERE username='\\''berkhatirli'\\'';\" 2>&1' || echo 'User check'"),
         ("killing old processes", "ssh rocksteady 'pkill -f \"manage.py runserver\" 2>/dev/null; echo \"cleaned\"' 2>&1"),
         ("ensuring directories", "ssh rocksteady 'mkdir -p ~/unibos/backend/logs ~/unibos/backend/staticfiles ~/unibos/backend/media ~/unibos/backend/apps/users ~/unibos/backend/unibos_backend/settings' 2>&1"),
         ("checking backend files", "ls backend/manage.py backend/requirements.txt backend/apps/users/models.py 2>&1"),
@@ -616,11 +619,13 @@ def restart_recaria():
         ("installing core deps", "ssh rocksteady 'cd ~/unibos/backend && ./venv/bin/pip install -q django djangorestframework django-cors-headers psycopg2-binary' 2>&1"),
         ("installing extra deps", "ssh rocksteady 'cd ~/unibos/backend && ./venv/bin/pip install -q django-redis whitenoise django-environ python-json-logger' 2>&1"),
         ("running migrations", "ssh rocksteady 'cd ~/unibos/backend && ./venv/bin/python manage.py migrate --run-syncdb 2>&1 | head -10'"),
+        ("checking redis", "ssh rocksteady 'redis-cli ping 2>&1 || echo \"Redis not running - sessions may fail!\"' 2>&1"),
         ("killing old django", "ssh rocksteady 'pkill -f \"manage.py runserver\" 2>/dev/null; echo \"cleaned\"' 2>&1"),
         ("starting django", "ssh rocksteady 'cd ~/unibos/backend && nohup ./venv/bin/python manage.py runserver 0.0.0.0:8000 > server.log 2>&1 & echo \"Django process started with PID: $!\"' 2>&1"),
         ("waiting for startup", "sleep 5"),
         ("checking django process", "ssh rocksteady 'pgrep -f \"manage.py runserver\" > /dev/null && echo \"✅ django process running\" || echo \"❌ django not running\"' 2>&1"),
         ("verifying http service", "ssh rocksteady 'curl -I -s -m 5 http://localhost:8000/login/ | head -1' 2>&1"),
+        ("testing authentication", "ssh rocksteady 'curl -s -X POST http://localhost:8000/api/auth/login/ -H \"Content-Type: application/json\" -d \"{\\\"username\\\":\\\"berkhatirli\\\",\\\"password\\\":\\\"Bodrum2015*\\\"}\" 2>&1 | grep -o \"token\\|error\" | head -1' 2>&1"),
     ]
     
     success = True
