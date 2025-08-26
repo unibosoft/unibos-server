@@ -133,12 +133,24 @@ This document defines the rules and guidelines Claude should follow when working
 ### Directory Structure:
 ```
 /backend/           # Django backend
+  /unibos_backend/
+    /settings/      # Django settings (NOT single file!)
+      __init__.py
+      base.py       # Base settings
+      development.py # Dev settings (DEFAULT)
+      production.py  # Production settings
 /src/              # CLI source code
 /archive/          # Version archives
 /DEVELOPMENT_LOG.md # Development history
 /CLAUDE.md         # This file
 /add_dev_log.sh    # Log helper script
 ```
+
+### ⚠️ CRITICAL: Django Settings Structure
+- **Settings is a DIRECTORY**, not a single file!
+- Path: `/backend/unibos_backend/settings/`
+- Default: `unibos_backend.settings.development`
+- manage.py uses: `DJANGO_SETTINGS_MODULE='unibos_backend.settings.development'`
 
 ### Naming Conventions:
 - Python files: `snake_case.py`
