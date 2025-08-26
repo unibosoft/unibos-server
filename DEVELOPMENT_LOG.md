@@ -1363,3 +1363,8 @@ Each entry should follow this format:
 - Result: Version successfully upgraded with all deployment features working
 
 
+## [2025-08-26 17:39] UI/UX: Public Server Display Improvements
+- Fixed IP display to show actual public IP, removed duplicate navigation hint, improved error handling for server stop
+- Result: Cleaner deployment output with correct server URL
+
+

@@ -91,22 +91,22 @@ def version_context(request):
         # If still not found, use fallback
         if not version_data:
             version_data = {
-                "version": "v510",
-                "build_number": "20250823_1022",
-                "release_date": "2025-08-23"
+                "version": "v517",
+                "build_number": "20250826_1733",
+                "release_date": "2025-08-26"
             }
     except Exception as e:
         # Fallback version on any error
         version_data = {
-            "version": "v510",
-            "build_number": "20250823_1022",
-            "release_date": "2025-08-23"
+            "version": "v517",
+            "build_number": "20250826_1733",
+            "release_date": "2025-08-26"
         }
     
     return {
-        'version': version_data.get('version', 'v510'),
-        'build_number': version_data.get('build_number', '20250823_1022'),
-        'release_date': version_data.get('release_date', ''),
+        'version': version_data.get('version', 'v517'),
+        'build_number': version_data.get('build_number', '20250826_1733'),
+        'release_date': version_data.get('release_date', '2025-08-26'),
     }
 
 
