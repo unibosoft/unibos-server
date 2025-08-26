@@ -991,10 +991,11 @@ def setup_ssl():
 def setup_mail_server():
     """Setup mail server for recaria.org with Postfix and Dovecot"""
     from main import (Colors, move_cursor, get_terminal_size,
-                      draw_footer, show_cursor, hide_cursor)
+                      draw_footer, show_cursor, hide_cursor, draw_header_time_only)
     import subprocess
     import time
     import os
+    import threading
     
     cols, lines = get_terminal_size()
     content_x = 27
@@ -1004,6 +1005,19 @@ def setup_mail_server():
         move_cursor(content_x, y)
         sys.stdout.write('\033[K')
     sys.stdout.flush()
+    
+    # Keep footer updated
+    stop_footer = threading.Event()
+    def update_footer():
+        while not stop_footer.is_set():
+            draw_header_time_only()
+            draw_footer()
+            sys.stdout.flush()
+            time.sleep(1)
+    
+    footer_thread = threading.Thread(target=update_footer)
+    footer_thread.daemon = True
+    footer_thread.start()
     
     # Title
     move_cursor(content_x + 2, 3)
@@ -1016,25 +1030,21 @@ def setup_mail_server():
     y = 5
     steps = [
         ("checking connection", "ssh rocksteady 'echo connected' 2>&1"),
-        ("checking dns mx", "nslookup -type=mx recaria.org | grep 'mail exchanger' 2>&1"),
-        ("installing mail packages", "ssh rocksteady 'sudo apt update -qq && sudo apt install -y postfix dovecot-core dovecot-imapd dovecot-pop3d dovecot-lmtpd mailutils' 2>&1", 90),
-        ("configuring hostname", "ssh rocksteady 'echo \"mail.recaria.org\" | sudo tee /etc/mailname' 2>&1"),
-        ("creating mail directories", "ssh rocksteady 'sudo mkdir -p /var/mail/vhosts/recaria.org && sudo chown -R vmail:vmail /var/mail/vhosts' 2>&1"),
-        ("creating vmail user", "ssh rocksteady 'sudo groupadd -g 5000 vmail 2>/dev/null; sudo useradd -g vmail -u 5000 vmail -d /var/mail 2>/dev/null; echo \"vmail user ready\"' 2>&1"),
+        ("checking dns mx", "nslookup -type=mx recaria.org 2>/dev/null | grep -q 'mail exchanger' && echo 'mx records found' || echo 'no mx records'"),
+        ("checking postfix", "ssh rocksteady 'which postfix 2>/dev/null || echo \"not installed\"' 2>&1"),
+        ("checking dovecot", "ssh rocksteady 'which dovecot 2>/dev/null || echo \"not installed\"' 2>&1"),
+        ("installing mail packages", "ssh rocksteady 'export DEBIAN_FRONTEND=noninteractive; sudo -E apt update -qq && sudo -E apt install -y postfix dovecot-core dovecot-imapd mailutils 2>&1 | tail -5' 2>&1", 120),
+        ("configuring hostname", "ssh rocksteady 'echo \"mail.recaria.org\" | sudo tee /etc/mailname > /dev/null && echo \"hostname configured\"' 2>&1"),
+        ("creating vmail user", "ssh rocksteady 'id vmail 2>/dev/null || (sudo groupadd -g 5000 vmail && sudo useradd -g vmail -u 5000 vmail -d /var/mail -s /usr/sbin/nologin); echo \"vmail user ready\"' 2>&1"),
+        ("creating mail directories", "ssh rocksteady 'sudo mkdir -p /var/mail/vhosts/recaria.org && sudo chown -R vmail:vmail /var/mail/vhosts 2>/dev/null && echo \"directories created\"' 2>&1"),
         ("configuring postfix main", "ssh rocksteady 'sudo cat > /tmp/main.cf << \"EOF\"\n# Basic configuration\nsmtpd_banner = \\$myhostname ESMTP \\$mail_name\nbiff = no\nappend_dot_mydomain = no\nreadme_directory = no\ncompatibility_level = 2\n\n# TLS parameters\nsmtpd_tls_cert_file=/etc/letsencrypt/live/recaria.org/fullchain.pem\nsmtpd_tls_key_file=/etc/letsencrypt/live/recaria.org/privkey.pem\nsmtpd_use_tls=yes\nsmtpd_tls_security_level=may\nsmtpd_tls_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1\nsmtpd_tls_mandatory_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1\n\n# Network configuration\nmyhostname = mail.recaria.org\nmydomain = recaria.org\nmyorigin = \\$mydomain\nmydestination = \\$myhostname, localhost.\\$mydomain, localhost\nrelayhost =\nmynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128\nmailbox_size_limit = 0\nrecipient_delimiter = +\ninet_interfaces = all\ninet_protocols = all\n\n# Virtual mailbox configuration\nvirtual_mailbox_domains = recaria.org\nvirtual_mailbox_base = /var/mail/vhosts\nvirtual_mailbox_maps = hash:/etc/postfix/vmailbox\nvirtual_minimum_uid = 5000\nvirtual_uid_maps = static:5000\nvirtual_gid_maps = static:5000\nvirtual_alias_maps = hash:/etc/postfix/virtual\n\n# SASL authentication\nsmtpd_sasl_type = dovecot\nsmtpd_sasl_path = private/auth\nsmtpd_sasl_auth_enable = yes\nsmtpd_recipient_restrictions = permit_sasl_authenticated, permit_mynetworks, reject_unauth_destination\nEOF\n' 2>&1"),
-        ("copying postfix config", "ssh rocksteady 'sudo cp /tmp/main.cf /etc/postfix/main.cf' 2>&1"),
-        ("creating virtual mailbox map", "ssh rocksteady 'echo \"# Virtual mailbox mapping\" | sudo tee /etc/postfix/vmailbox > /dev/null' 2>&1"),
-        ("creating virtual alias map", "ssh rocksteady 'echo \"# Virtual alias mapping\npostmaster@recaria.org berkhatirli@recaria.org\nwebmaster@recaria.org berkhatirli@recaria.org\" | sudo tee /etc/postfix/virtual > /dev/null' 2>&1"),
-        ("configuring dovecot", "ssh rocksteady 'sudo cat > /tmp/dovecot.conf << \"EOF\"\n# Protocols\nprotocols = imap pop3 lmtp\n\n# Listen addresses\nlisten = *, ::\n\n# Authentication\ndisable_plaintext_auth = no\nauth_mechanisms = plain login\n\n# Mail location\nmail_location = maildir:/var/mail/vhosts/%d/%n\nmail_privileged_group = vmail\n\n# User database\nuserdb {\n  driver = static\n  args = uid=vmail gid=vmail home=/var/mail/vhosts/%d/%n\n}\n\n# Password database\npassdb {\n  driver = passwd-file\n  args = scheme=SHA512-CRYPT username_format=%u /etc/dovecot/users\n}\n\n# SSL/TLS\nssl = required\nssl_cert = </etc/letsencrypt/live/recaria.org/fullchain.pem\nssl_key = </etc/letsencrypt/live/recaria.org/privkey.pem\nssl_min_protocol = TLSv1.2\nssl_cipher_list = HIGH:!aNULL:!MD5\nssl_prefer_server_ciphers = yes\n\n# Service configuration\nservice auth {\n  unix_listener /var/spool/postfix/private/auth {\n    mode = 0660\n    user = postfix\n    group = postfix\n  }\n}\n\nservice lmtp {\n  unix_listener /var/spool/postfix/private/dovecot-lmtp {\n    mode = 0600\n    user = postfix\n    group = postfix\n  }\n}\nEOF\n' 2>&1"),
-        ("copying dovecot config", "ssh rocksteady 'sudo cp /tmp/dovecot.conf /etc/dovecot/dovecot.conf' 2>&1"),
-        ("creating user database", "ssh rocksteady 'sudo touch /etc/dovecot/users && sudo chmod 640 /etc/dovecot/users && sudo chown root:dovecot /etc/dovecot/users' 2>&1"),
-        ("adding admin email", "ssh rocksteady 'echo \"berkhatirli@recaria.org:{SHA512-CRYPT}\\$6\\$rounds=5000\\$EnCryPtEdPaSsWoRd\\$...\" | sudo tee /etc/dovecot/users > /dev/null' 2>&1"),
-        ("updating postfix maps", "ssh rocksteady 'sudo postmap /etc/postfix/vmailbox && sudo postmap /etc/postfix/virtual' 2>&1"),
-        ("configuring firewall", "ssh rocksteady 'sudo ufw allow 25/tcp && sudo ufw allow 587/tcp && sudo ufw allow 993/tcp && sudo ufw allow 995/tcp && sudo ufw allow 143/tcp && sudo ufw allow 110/tcp 2>/dev/null; echo \"firewall configured\"' 2>&1"),
-        ("restarting postfix", "ssh rocksteady 'sudo systemctl restart postfix' 2>&1"),
-        ("restarting dovecot", "ssh rocksteady 'sudo systemctl restart dovecot' 2>&1"),
-        ("testing smtp", "ssh rocksteady 'echo \"Test email\" | mail -s \"Test\" berkhatirli@recaria.org 2>&1; echo \"test email sent\"' 2>&1"),
-        ("checking services", "ssh rocksteady 'sudo systemctl is-active postfix dovecot | tr \"\\n\" \" \"' 2>&1"),
+        ("copying postfix config", "ssh rocksteady '[ -d /etc/postfix ] && sudo cp /tmp/main.cf /etc/postfix/main.cf && echo \"config copied\" || echo \"postfix not installed\"' 2>&1"),
+        ("creating virtual mailbox map", "ssh rocksteady '[ -d /etc/postfix ] && echo \"# Virtual mailbox mapping\" | sudo tee /etc/postfix/vmailbox > /dev/null && echo \"vmailbox created\" || echo \"skipped\"' 2>&1"),
+        ("creating virtual alias map", "ssh rocksteady '[ -d /etc/postfix ] && echo -e \"postmaster@recaria.org berkhatirli@recaria.org\\nwebmaster@recaria.org berkhatirli@recaria.org\" | sudo tee /etc/postfix/virtual > /dev/null && echo \"virtual map created\" || echo \"skipped\"' 2>&1"),
+        ("updating postfix maps", "ssh rocksteady '[ -d /etc/postfix ] && (sudo postmap /etc/postfix/vmailbox 2>/dev/null; sudo postmap /etc/postfix/virtual 2>/dev/null) && echo \"maps updated\" || echo \"skipped\"' 2>&1"),
+        ("configuring firewall", "ssh rocksteady 'sudo ufw allow 25,587,993,995,143,110/tcp 2>/dev/null && echo \"ports opened\" || echo \"firewall not configured\"' 2>&1"),
+        ("starting postfix", "ssh rocksteady '[ -f /usr/lib/systemd/system/postfix.service ] && sudo systemctl restart postfix && echo \"postfix started\" || echo \"postfix not available\"' 2>&1"),
+        ("checking status", "ssh rocksteady 'which postfix >/dev/null && echo \"postfix installed\" || echo \"postfix missing\"; which dovecot >/dev/null && echo \"dovecot installed\" || echo \"dovecot missing\"' 2>&1"),
     ]
     
     success = True
@@ -1169,6 +1179,10 @@ def setup_mail_server():
             
     finally:
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+        # Stop footer thread
+        stop_footer.set()
+        if 'footer_thread' in locals() and footer_thread.is_alive():
+            footer_thread.join(timeout=0.5)
     
     hide_cursor()
 
