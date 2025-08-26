@@ -24,6 +24,8 @@ class NavigationTrackingMiddleware(MiddlewareMixin):
             '/logout/',
             '/admin/',
             '/__debug__/',
+            '/administration/solitaire/realtime/',  # Skip realtime API endpoints
+            '/administration/solitaire/api/',  # Skip solitaire API endpoints
         ]
         
         # Check if current path should be tracked

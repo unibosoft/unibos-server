@@ -13,12 +13,15 @@ from django.utils import timezone
 from django.conf import settings
 from django.views.decorators.cache import never_cache
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from apps.administration.models import ScreenLock
 import json
 import os
+import logging
 from pathlib import Path
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 # Import VERSION info - First try backend/VERSION.json, then src/VERSION.json
 VERSION_DATA = None
@@ -796,6 +799,23 @@ def solitaire_view(request):
     from apps.solitaire.game import SolitaireGame
     import uuid
     import json
+    import logging
+    
+    # Set up logger at the beginning of the function
+    logger = logging.getLogger(__name__)
+    
+    # Check if user has exited solitaire and is trying to return
+    if request.session.get('solitaire_exited', False):
+        # User has properly exited, don't allow return via browser navigation
+        request.session['solitaire_exited'] = False  # Reset the flag
+        request.session.save()
+        
+        # Redirect to main page or last known page
+        return_url = request.session.get('last_unibos_page', '/')
+        logger.warning(f"Blocked attempt to return to solitaire via browser navigation by {request.user.username}")
+        
+        from django.shortcuts import redirect
+        return redirect(return_url)
     
     # Store the previous URL before entering solitaire (for returning after exit)
     # Use a tab-specific key based on a unique identifier
@@ -823,15 +843,15 @@ def solitaire_view(request):
         # Try to use the global last page or default to main
         request.session[f'pre_solitaire_url_{tab_id}'] = request.session.get('last_unibos_page', '/')
     
+    # Clear the exit flag when entering solitaire normally
+    if 'solitaire_exited' in request.session:
+        del request.session['solitaire_exited']
+    
     # Don't set global in_solitaire flag - allow multiple tabs
     request.session.save()
     
     # Get or create screen lock for user
     screen_lock, created = ScreenLock.objects.get_or_create(user=request.user)
-    
-    # Log for debugging
-    import logging
-    logger = logging.getLogger(__name__)
     
     # Log the request details
     is_duplicate_tab = not request.META.get('HTTP_REFERER', '').endswith('/solitaire/')
@@ -975,7 +995,40 @@ def solitaire_view(request):
     response['Apple-Cache-Control'] = 'no-cache'
     response['X-UA-Compatible'] = 'IE=edge,chrome=1'
     
+    # Security headers to prevent navigation
+    response['X-Frame-Options'] = 'DENY'
+    response['X-Content-Type-Options'] = 'nosniff'
+    response['Referrer-Policy'] = 'no-referrer'
+    
     return response
+
+
+@login_required(login_url='/login/')
+@csrf_protect
+def store_solitaire_return_url(request):
+    """Store the URL to return to after exiting solitaire"""
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            return_url = data.get('return_url')
+            tab_id = data.get('tab_id', '')
+            
+            if return_url:
+                # Store the return URL in session for this tab
+                request.session[f'pre_solitaire_url_{tab_id}'] = return_url
+                request.session['last_unibos_page'] = return_url  # Also store globally
+                request.session.save()
+                logger.info(f"Stored return URL from sessionStorage: {return_url} for tab {tab_id}")
+                
+                return JsonResponse({'success': True})
+            else:
+                return JsonResponse({'success': False, 'error': 'No URL provided'})
+        except Exception as e:
+            logger.error(f"Error storing return URL: {str(e)}")
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Method not allowed'})
 
 
 @login_required(login_url='/login/')
@@ -991,11 +1044,25 @@ def exit_solitaire(request):
             
             if not screen_lock.is_enabled:
                 # No screen lock, allow exit
-                # Get tab-specific return URL
-                return_url = request.session.get(f'pre_solitaire_url_{tab_id}', '/')
+                # Try to get return URL from multiple sources
+                # 1. First try tab-specific URL
+                return_url = request.session.get(f'pre_solitaire_url_{tab_id}')
+                # 2. Then try global last unibos page
+                if not return_url:
+                    return_url = request.session.get('last_unibos_page', '/')
+                # 3. Default to main page
+                if not return_url:
+                    return_url = '/'
+                    
                 # Clean up tab-specific session data
                 if f'pre_solitaire_url_{tab_id}' in request.session:
                     del request.session[f'pre_solitaire_url_{tab_id}']
+                
+                # Mark that user has properly exited solitaire
+                request.session['solitaire_exited'] = True
+                request.session.save()
+                    
+                logger.info(f"Solitaire exit - returning to: {return_url}")
                 return JsonResponse({
                     'success': True,
                     'redirect_url': return_url
@@ -1014,13 +1081,25 @@ def exit_solitaire(request):
                 screen_lock.last_unlocked = timezone.now()
                 screen_lock.save()
                 
-                # Get tab-specific return URL
-                return_url = request.session.get(f'pre_solitaire_url_{tab_id}', '/')
-                
+                # Try to get return URL from multiple sources
+                # 1. First try tab-specific URL  
+                return_url = request.session.get(f'pre_solitaire_url_{tab_id}')
+                # 2. Then try global last unibos page
+                if not return_url:
+                    return_url = request.session.get('last_unibos_page', '/')
+                # 3. Default to main page
+                if not return_url:
+                    return_url = '/'
+                    
                 # Clean up tab-specific session data
                 if f'pre_solitaire_url_{tab_id}' in request.session:
                     del request.session[f'pre_solitaire_url_{tab_id}']
                 
+                # Mark that user has properly exited solitaire
+                request.session['solitaire_exited'] = True
+                request.session.save()
+                    
+                logger.info(f"Solitaire exit with password - returning to: {return_url}")
                 return JsonResponse({
                     'success': True,
                     'redirect_url': return_url

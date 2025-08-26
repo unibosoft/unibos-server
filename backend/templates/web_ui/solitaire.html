@@ -474,23 +474,54 @@
         let allowNavigation = false; // Flag to control navigation warnings
         
         (function() {
-            // Push a new state to prevent back navigation
-            history.pushState(null, null, location.href);
+            // Enhanced security - prevent back navigation
+            // Replace current history entry
+            history.replaceState(null, null, location.href);
             
-            // Handle back button - show exit dialog
-            window.addEventListener('popstate', function(event) {
-                // Push state again to prevent navigation
+            // Push multiple states to make back navigation harder
+            for (let i = 0; i < 10; i++) {
                 history.pushState(null, null, location.href);
+            }
+            
+            // Aggressive back button handling
+            window.addEventListener('popstate', function(event) {
+                // Immediately push multiple states again
+                for (let i = 0; i < 3; i++) {
+                    history.pushState(null, null, location.href);
+                }
                 
-                // Show exit dialog instead of navigating
+                // Show exit dialog
                 if (typeof showScreenLockDialog === 'function') {
                     showScreenLockDialog();
                 }
+                
+                // Prevent any navigation
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                return false;
             });
             
-            // Allow page refresh with F5 (useful for duplicated tabs)
-            // But save game state first
+            // Also prevent navigation with hashchange
+            window.addEventListener('hashchange', function(event) {
+                window.location.hash = '';
+                event.preventDefault();
+                showScreenLockDialog();
+                return false;
+            });
+            
+            // Handle keyboard shortcuts
             document.addEventListener('keydown', function(e) {
+                // Block browser back navigation shortcuts
+                if ((e.altKey && e.key === 'ArrowLeft') || 
+                    (e.altKey && e.key === 'ArrowRight') ||
+                    (e.key === 'Backspace' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName))) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showScreenLockDialog();
+                    return false;
+                }
+                
+                // Allow F5 refresh but save state first
                 if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
                     // Save game state before refresh
                     if (typeof saveGameStateSync === 'function') {
@@ -498,13 +529,34 @@
                     }
                     // Allow refresh
                 }
+                
+                // Block Escape key navigation
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    showScreenLockDialog();
+                    return false;
+                }
             });
             
-            // Save game state when leaving, but don't prevent navigation for duplicated tabs
+            // Prevent navigation unless explicitly allowed
             window.addEventListener('beforeunload', function(e) {
-                // Always try to save game state before leaving
+                // Always try to save game state
                 if (typeof saveGameStateSync === 'function') {
                     saveGameStateSync();
+                }
+                
+                // If navigation is not allowed, show warning
+                if (!allowNavigation) {
+                    const message = 'You must enter password to exit solitaire!';
+                    e.preventDefault();
+                    e.returnValue = message;
+                    
+                    // Show screen lock dialog after a small delay
+                    setTimeout(function() {
+                        showScreenLockDialog();
+                    }, 100);
+                    
+                    return message;
                 }
                 
                 // Don't show warning - allow smooth duplicate tab functionality
@@ -2398,6 +2450,28 @@
         let wPressed = false;
         
         function showScreenLockDialog() {
+            // Create overlay if it doesn't exist
+            let overlay = document.getElementById('screenLockOverlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'screenLockOverlay';
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    width: 100vw;
+                    height: 100vh;
+                    background: rgba(0, 0, 0, 0.75);
+                    z-index: 9999;
+                    backdrop-filter: blur(3px);
+                    -webkit-backdrop-filter: blur(3px);
+                    display: block;
+                `;
+                document.body.appendChild(overlay);
+            }
+            
             // Create dialog if it doesn't exist
             let dialog = document.getElementById('screenLockDialog');
             if (!dialog) {
@@ -2411,50 +2485,63 @@
                     background: #2a2a2a;
                     border: 2px solid #ff6b35;
                     border-radius: 8px;
-                    padding: 20px;
-                    z-index: 10000;
+                    padding: 25px;
+                    z-index: 10001;
                     color: white;
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                    box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+                    min-width: 360px;
+                    max-width: 90vw;
                 `;
                 
                 dialog.innerHTML = `
                     <h3 style="margin-bottom: 15px; color: #ff6b35;">screen lock</h3>
-                    <p style="margin-bottom: 15px;">enter password to exit solitaire:</p>
+                    <p style="margin-bottom: 15px; color: #ccc;">enter password to exit solitaire:</p>
                     <input type="password" id="screenLockPassword" style="
                         width: 100%;
-                        padding: 8px;
+                        padding: 10px;
                         background: #1a1a1a;
                         border: 1px solid #444;
                         color: white;
                         border-radius: 4px;
                         margin-bottom: 15px;
+                        font-size: 14px;
+                        box-sizing: border-box;
                     " />
                     <div style="display: flex; gap: 10px;">
                         <button onclick="checkScreenLockPassword()" style="
                             flex: 1;
-                            padding: 8px;
+                            padding: 10px;
                             background: linear-gradient(to bottom, #ff6b35, #e55a2b);
                             border: 1px solid #d54521;
                             color: white;
                             border-radius: 4px;
                             cursor: pointer;
-                        ">unlock</button>
+                            font-size: 14px;
+                            font-weight: 500;
+                            transition: all 0.2s;
+                        " onmouseover="this.style.background='linear-gradient(to bottom, #ff7f4a, #f06a3a)'" 
+                           onmouseout="this.style.background='linear-gradient(to bottom, #ff6b35, #e55a2b)'">unlock</button>
                         <button onclick="closeScreenLockDialog()" style="
                             flex: 1;
-                            padding: 8px;
+                            padding: 10px;
                             background: #444;
                             border: 1px solid #555;
                             color: white;
                             border-radius: 4px;
                             cursor: pointer;
-                        ">cancel</button>
+                            font-size: 14px;
+                            font-weight: 500;
+                            transition: all 0.2s;
+                        " onmouseover="this.style.background='#555'" 
+                           onmouseout="this.style.background='#444'">cancel</button>
                     </div>
                 `;
                 
                 document.body.appendChild(dialog);
             }
             
+            overlay.style.display = 'block';
             dialog.style.display = 'block';
             // Clear any text that might be in the input (like 'q' or 'w')
             const passwordInput = document.getElementById('screenLockPassword');
@@ -2468,9 +2555,13 @@
         
         function closeScreenLockDialog() {
             const dialog = document.getElementById('screenLockDialog');
+            const overlay = document.getElementById('screenLockOverlay');
             if (dialog) {
                 dialog.style.display = 'none';
                 document.getElementById('screenLockPassword').value = '';
+            }
+            if (overlay) {
+                overlay.style.display = 'none';
             }
         }
         
@@ -2490,8 +2581,10 @@
                 if (data.success) {
                     // Allow navigation without warning
                     allowNavigation = true;
-                    // Exit solitaire and go back to main
-                    window.location.href = '/';
+                    
+                    // Clear solitaire from browser history
+                    // Use replace instead of href to prevent forward navigation
+                    window.location.replace(data.redirect_url || '/');
                 } else {
                     alert(data.error || 'incorrect password');
                     document.getElementById('screenLockPassword').value = '';
@@ -2566,10 +2659,52 @@
             }
         });
         
+        // Continuous history state protection
+        function maintainHistoryProtection() {
+            // Keep pushing states periodically to prevent back navigation
+            setInterval(function() {
+                if (history.length < 50) {
+                    history.pushState(null, null, location.href);
+                }
+            }, 1000);
+        }
+        
         // Initialize the game when the page loads
         window.addEventListener('DOMContentLoaded', function() {
             console.log('=== PAGE LOADED - INITIALIZING GAME ===');
             console.log('Initial game state from backend:', initialGameState);
+            
+            // Start continuous protection
+            maintainHistoryProtection();
+            
+            // Check if we have a stored URL from when user pressed QW
+            const storedUrl = sessionStorage.getItem('pre_solitaire_url');
+            if (storedUrl) {
+                console.log('Found stored URL from QW shortcut:', storedUrl);
+                // Send it to backend to store in session
+                fetch('/solitaire/store-return-url/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        return_url: storedUrl,
+                        tab_id: tabId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Return URL saved to backend');
+                        // Clear from sessionStorage after sending to backend
+                        sessionStorage.removeItem('pre_solitaire_url');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error saving return URL:', error);
+                });
+            }
             
             // Initialize the game object first!
             initializeGameObject();

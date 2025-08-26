@@ -1,0 +1,183 @@
+{% extends "web_ui/base_with_header.html" %}
+{% load static %}
+
+{% block title %}recaria - ultima online inspired mmorpg{% endblock %}
+
+{% block content %}
+<div class="module-container">
+    <div class="module-header">
+        <span class="module-icon">{{ module_icon }}</span>
+        <h1>{{ module_name }}</h1>
+        <span class="module-status">coming soon</span>
+    </div>
+    
+    <div class="module-content">
+        <div class="info-box">
+            <p>{{ description }}</p>
+        </div>
+        
+        <div class="features-grid">
+            <h2>planned features</h2>
+            <div class="feature-cards">
+                {% for feature in features %}
+                <div class="feature-card">
+                    <span class="feature-icon">⚔️</span>
+                    <span class="feature-name">{{ feature }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <h2>world statistics</h2>
+            <div class="stat-cards">
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.total_characters }}</div>
+                    <div class="stat-label">characters created</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.active_guilds }}</div>
+                    <div class="stat-label">active guilds</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.ongoing_battles }}</div>
+                    <div class="stat-label">ongoing battles</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.trade_listings }}</div>
+                    <div class="stat-label">trade listings</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="coming-soon-notice">
+            <h3>🚧 under development</h3>
+            <p>the recaria mmorpg system is currently being developed. check back soon for updates!</p>
+            <p class="sub-text">expected features: character creation, skill system, pvp battles, trading, guilds, and more!</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.module-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.module-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.module-icon {
+    font-size: 32px;
+}
+
+.module-header h1 {
+    color: #ff6b35;
+    margin: 0;
+    flex: 1;
+}
+
+.module-status {
+    background: #444;
+    color: #ffa500;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+.info-box {
+    background: rgba(255, 107, 53, 0.1);
+    border: 1px solid rgba(255, 107, 53, 0.3);
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 30px;
+}
+
+.features-grid h2,
+.stats-grid h2 {
+    color: #ff6b35;
+    margin-bottom: 20px;
+}
+
+.feature-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.feature-card {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.feature-icon {
+    font-size: 20px;
+}
+
+.stat-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: #4caf50;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: #999;
+    font-size: 12px;
+    text-transform: lowercase;
+}
+
+.coming-soon-notice {
+    background: rgba(255, 165, 0, 0.1);
+    border: 2px solid rgba(255, 165, 0, 0.3);
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    margin-top: 30px;
+}
+
+.coming-soon-notice h3 {
+    color: #ffa500;
+    margin-bottom: 15px;
+}
+
+.coming-soon-notice p {
+    color: #ccc;
+    margin-bottom: 10px;
+}
+
+.coming-soon-notice .sub-text {
+    color: #999;
+    font-size: 14px;
+    font-style: italic;
+}
+</style>
+{% endblock %}

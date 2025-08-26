@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🪐 unibos v515 - unicorn bodrum operating system
+🪐 unibos v516 - unicorn bodrum operating system
 Simplified Web Forge + Lowercase UI + Single Server Architecture
 
 Author: berk hatırlı - bitez, bodrum, muğla, türkiye
-Version: v515_20250826_0152
+Version: v516_20250826_1618
 Purpose: Professional terminal UI with multi-module support"""
 
 import os
@@ -128,9 +128,9 @@ except ImportError:
 
 # Version information
 VERSION_INFO = {
-    "version": "v515",
-    "build": "20250826_0152", 
-    "build_date": "2025-08-26 01:52:53 +03:00",
+    "version": "v516",
+    "build": "20250826_1618", 
+    "build_date": "2025-08-26 16:18:04 +03:00",
     "author": "berk hatırlı",
     "location": "bitez, bodrum, muğla, türkiye, dünya, güneş sistemi, samanyolu, yerel galaksi grubu, evren"
 }
@@ -707,16 +707,18 @@ def draw_footer(only_time=False):
     # Draw navigation hints in gray
     print(f"{Colors.BG_DARK}{Colors.DIM}{nav_text}{Colors.RESET}", end='', flush=True)
     
-    # Get location
+    # Get location and hostname from system info
+    from system_info import get_hostname
     location_text = "bitez, bodrum"
+    hostname = get_hostname()
     
     # Get status LED
     status = get_system_status()
     status_text = "online"
     
-    # Build right side text: location | online (date removed - now in header)
-    right_side = f"{location_text} | {status_text} {status}"
-    right_side_len = len(f"{location_text} | {status_text} ") + 1  # +1 for LED
+    # Build right side text: hostname | location | online
+    right_side = f"{hostname} | {location_text} | {status_text} {status}"
+    right_side_len = len(f"{hostname} | {location_text} | {status_text} ") + 1  # +1 for LED
     
     # Calculate position for right-aligned text
     right_pos = cols - right_side_len - 2
@@ -724,7 +726,7 @@ def draw_footer(only_time=False):
     
     # Draw right side info
     move_cursor(right_pos, footer_start)
-    print(f"{Colors.BG_DARK}{Colors.WHITE}{location_text} | {status_text} {status}{Colors.RESET}", end='', flush=True)
+    print(f"{Colors.BG_DARK}{Colors.WHITE}{hostname} | {location_text} | {status_text} {status}{Colors.RESET}", end='', flush=True)
 
 def initialize_menu_items():
     """Initialize menu items for sidebar - CENTRALIZED"""
@@ -777,6 +779,7 @@ def initialize_menu_items():
     menu_state.dev_tools = [
         ("ai_builder", f"🤖 ai builder", "ai-powered development", True, lambda: handle_dev_tool_launch('ai_builder')),
         ("database_setup", "🗄️  database setup", "postgresql installer", True, database_setup_wizard),
+        ("public_server", "🌐 public server", "deploy to ubuntu/oracle vm", True, lambda: handle_dev_tool_launch('public_server')),
         ("sd_card", f"💾 {t('sd_card')}", t('sd_operations'), True, None),
         ("version_manager", "📊 version manager", "archive & git tools", True, version_manager_menu),
     ]
@@ -2325,6 +2328,12 @@ def handle_dev_tool_launch(tool_key):
         ai_builder_menu()
         # CRITICAL: Ensure state is cleared after menu exits
         menu_state.in_submenu = None
+    elif tool_key == 'public_server':
+        # Launch public server menu
+        from public_server_menu_proper import public_server_menu
+        public_server_menu()
+        # State is managed inside the menu function
+        menu_state.in_submenu = None
     elif tool_key == 'version_manager':
         menu_state.in_submenu = tool_key
         version_manager_menu()
@@ -3396,6 +3405,9 @@ def draw_database_setup_menu():
     """Draw database setup menu in content area with arrow navigation"""
     selected_index = 0
     
+    # Draw footer once at start
+    draw_footer()
+    
     while menu_state.in_submenu == 'database_setup':
         # ALWAYS clear content area first - this prevents ALL artifacts
         clear_content_area()
@@ -3416,12 +3428,28 @@ def draw_database_setup_menu():
             postgres_installed = False
             postgres_running = False
         
-        # Check Python packages
-        try:
-            import psycopg2
-            python_packages = True
-        except:
-            python_packages = False
+        # Check Python packages - check in backend venv primarily
+        python_packages = False
+        
+        # First check if backend venv has psycopg2-binary
+        backend_venv_pip = Path(__file__).parent.parent / 'backend' / 'venv' / 'bin' / 'pip'
+        if backend_venv_pip.exists():
+            result = subprocess.run([str(backend_venv_pip), 'show', 'psycopg2-binary'], 
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                python_packages = True
+        
+        # Also check system Python as fallback
+        if not python_packages:
+            try:
+                import psycopg2
+                python_packages = True
+            except ImportError:
+                # Check system pip
+                result = subprocess.run(['pip3', 'show', 'psycopg2-binary'], 
+                                      capture_output=True, text=True)
+                if result.returncode == 0:
+                    python_packages = True
         
         # Title
         move_cursor(content_x + 2, start_y)
@@ -3550,6 +3578,7 @@ def draw_database_setup_menu():
             language_menu()
             draw_header()
             draw_sidebar()
+            draw_footer()
             # Continue in database setup menu
 
 def handle_db_option(option):
@@ -3594,11 +3623,25 @@ def handle_db_option(option):
         print(f"{Colors.CYAN}2. installing python packages...{Colors.RESET}")
         y += 1
         
+        # Check if backend venv exists, create if not
+        backend_venv = Path(__file__).parent.parent / 'backend' / 'venv'
+        backend_pip = backend_venv / 'bin' / 'pip'
+        
+        if not backend_venv.exists():
+            move_cursor(content_x + 4, y)
+            print(f"{Colors.DIM}creating virtual environment...{Colors.RESET}")
+            subprocess.run(['python3', '-m', 'venv', str(backend_venv)], capture_output=True)
+            y += 1
+        
         packages = ['psycopg2-binary', 'django']
         for pkg in packages:
             move_cursor(content_x + 4, y)
             print(f"{Colors.DIM}installing {pkg}...{Colors.RESET}")
-            subprocess.run(['pip3', 'install', pkg], capture_output=True)
+            # Install in backend venv if it exists, otherwise system
+            if backend_pip.exists():
+                subprocess.run([str(backend_pip), 'install', pkg], capture_output=True)
+            else:
+                subprocess.run(['pip3', 'install', pkg], capture_output=True)
             y += 1
         
         move_cursor(content_x + 4, y)
@@ -3649,11 +3692,26 @@ def handle_db_option(option):
     elif option == "python_only":
         print(f"{Colors.CYAN}installing python packages...{Colors.RESET}")
         y += 2
+        
+        # Check if backend venv exists, create if not
+        backend_venv = Path(__file__).parent.parent / 'backend' / 'venv'
+        backend_pip = backend_venv / 'bin' / 'pip'
+        
+        if not backend_venv.exists():
+            move_cursor(content_x + 2, y)
+            print(f"{Colors.DIM}creating virtual environment...{Colors.RESET}")
+            subprocess.run(['python3', '-m', 'venv', str(backend_venv)], capture_output=True)
+            y += 1
+        
         packages = ['psycopg2-binary', 'django', 'djangorestframework']
         for pkg in packages:
             move_cursor(content_x + 2, y)
             print(f"{Colors.DIM}pip install {pkg}...{Colors.RESET}")
-            subprocess.run(['pip3', 'install', pkg], capture_output=True)
+            # Install in backend venv if it exists, otherwise system
+            if backend_pip.exists():
+                subprocess.run([str(backend_pip), 'install', pkg], capture_output=True)
+            else:
+                subprocess.run(['pip3', 'install', pkg], capture_output=True)
             y += 1
         move_cursor(content_x + 2, y)
         print(f"{Colors.GREEN}✓ packages installed{Colors.RESET}")

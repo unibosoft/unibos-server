@@ -91,7 +91,13 @@
                         {% endif %}
                     </td>
                     <td>{{ session.player.ip_address }}</td>
-                    <td>{{ session.started_at|timesince }} ago</td>
+                    <td class="active-duration-cell" data-started="{{ session.started_at|date:'c' }}" data-time-played="{{ session.time_played|default:0 }}">
+                        {% if session.time_played %}
+                            {{ session.time_played|floatformat:0 }}s
+                        {% else %}
+                            calculating...
+                        {% endif %}
+                    </td>
                     <td>{{ session.score }}</td>
                     <td>{{ session.moves_count }}</td>
                     <td>
@@ -442,10 +448,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add new rows
         games.forEach(game => {
             const row = tbody.insertRow();
-            const startTime = new Date(game.started);
-            const now = new Date();
-            const durationSeconds = Math.floor((now - startTime) / 1000); // seconds
-            const durationText = formatDuration(durationSeconds);
+            // Use the actual time_played value from backend, or calculate from start time
+            let durationText;
+            if (game.time_played !== undefined && game.time_played > 0) {
+                durationText = formatDurationCompact(game.time_played);
+            } else {
+                const startTime = new Date(game.started);
+                const now = new Date();
+                const durationSeconds = Math.floor((now - startTime) / 1000);
+                durationText = formatDurationCompact(durationSeconds);
+            }
             
             row.innerHTML = `
                 <td><input type="checkbox" class="session-checkbox active-checkbox" data-session-id="${game.session_id}" /></td>
@@ -572,11 +584,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Format all duration cells on page load
+    // Format all duration cells on page load for recent sessions
     document.querySelectorAll('.duration-cell').forEach(cell => {
         const duration = parseFloat(cell.dataset.duration);
         if (!isNaN(duration) && duration > 0) {
             cell.textContent = formatDurationCompact(duration);
+        }
+    });
+    
+    // Format active games duration on page load
+    document.querySelectorAll('.active-duration-cell').forEach(cell => {
+        const timePlayed = parseFloat(cell.dataset.timePlayed);
+        if (!isNaN(timePlayed) && timePlayed > 0) {
+            // Use the stored time_played value if available
+            cell.textContent = formatDurationCompact(timePlayed);
+        } else {
+            // Calculate from started time
+            const started = cell.dataset.started;
+            if (started) {
+                const startTime = new Date(started).getTime();
+                const now = Date.now();
+                const duration = Math.floor((now - startTime) / 1000);
+                cell.textContent = formatDurationCompact(duration);
+            }
         }
     });
     

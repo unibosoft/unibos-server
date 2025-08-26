@@ -784,7 +784,7 @@
     <div class="footer">
         <div class="footer-left">
             <span>esc: back | tab: navigate | enter: select</span>
-            <span><span id="footer-date">{{ current_date }}</span> - {{ location }} - <span id="footer-time">{{ current_time }}</span></span>
+            <span>{{ hostname }} | <span id="footer-date">{{ current_date }}</span> - {{ location }} - <span id="footer-time">{{ current_time }}</span></span>
         </div>
         <div class="footer-right">
             <div class="status-indicator">
@@ -807,8 +807,13 @@
                     console.log('Saving solitaire game before minimize...');
                     await saveGameStateSync();
                 }
+            } else {
+                // Save current page URL to session storage before going to solitaire
+                const currentUrl = window.location.href;
+                sessionStorage.setItem('pre_solitaire_url', currentUrl);
+                console.log('Saved current page for return:', currentUrl);
             }
-            // Redirect to solitaire game instead of minimizing sidebar
+            // Redirect to solitaire game (screen saver mode)
             window.location.href = '{% url "web_ui:solitaire" %}';
         }
         

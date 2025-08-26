@@ -548,7 +548,7 @@
     <div class="footer">
         <div class="footer-left">
             <span>esc: back | tab: navigate | enter: select</span>
-            <span>{{ current_date }} {{ current_time }}</span>
+            <span>{{ hostname }} | {{ current_date }} {{ current_time }}</span>
         </div>
         <div class="footer-right">
             <span>{{ location }}</span>
@@ -565,7 +565,13 @@
         let isFullscreen = false;
         
         function toggleMinimize() {
-            // Redirect to solitaire game instead of minimizing sidebar
+            // Save current page URL to session storage before going to solitaire
+            if (!window.location.pathname.includes('/solitaire/')) {
+                const currentUrl = window.location.href;
+                sessionStorage.setItem('pre_solitaire_url', currentUrl);
+                console.log('Saved current page for return:', currentUrl);
+            }
+            // Redirect to solitaire game (screen saver mode)
             window.location.href = '{% url "web_ui:solitaire" %}';
         }
         

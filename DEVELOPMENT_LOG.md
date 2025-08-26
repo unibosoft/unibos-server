@@ -1218,3 +1218,108 @@ Each entry should follow this format:
 - Result: Tool launch handlers now properly manage submenu state
 
 
+## [2025-08-26 02:12] Bug Fix: Solitaire Screen Saver Navigation Fix
+- Fixed solitaire screen saver functionality to properly track and return to the previous page when exiting. Added store_solitaire_return_url endpoint to handle sessionStorage data and modified exit_solitaire to use the stored redirect URL.
+- Result: Users can now press QW from any UNIBOS page to enter solitaire and will return to that exact page when exiting with password
+
+
+## [2025-08-26 02:18] Bug Fix: Solitaire Admin Duration Display Consistency
+- Fixed duration display inconsistency between active games and recent sessions in admin dashboard. Both now show actual game duration using formatDurationCompact. Also fixed middleware to skip tracking API endpoints to prevent redirect issues.
+- Result: Active games and recent sessions now show consistent duration formats (1m 45s, 15m 20s, etc)
+
+
+## [2025-08-26 02:24] UI/UX: Screen Lock Dialog CSS Fixed
+- Fixed CSS issues in solitaire screen lock dialog popup. Added proper overlay background, improved button and input styling, and ensured consistent appearance across browsers.
+- Result: Popup dialog now displays correctly with proper overlay and polished styling
+
+
+## [2025-08-26 02:28] UI/UX: Screen Lock Dialog Overlay Fixed
+- Fixed overlay background not covering full screen in solitaire screen lock dialog. Changed overlay to use 100vw/100vh with proper z-index layering. Dialog now displays correctly with full-screen overlay.
+- Result: Screen lock dialog overlay now properly covers entire viewport
+
+
+## [2025-08-26 03:03] Bug Fix: Recaria Module Namespace Error Fixed
+- Fixed NoReverseMatch error for recaria module. Created views.py with RecariaDashboardView, added proper URL configuration with app_name, and created dashboard template. Also added birlikteyiz to main URLs and fixed duplicate namespace warnings.
+- Result: Recaria and Birlikteyiz modules now properly accessible from web UI
+
+
+## [2025-08-26 03:08] Bug Fix: Personal Inflation Module Namespace Fixed
+- Fixed NoReverseMatch error for personal_inflation module. Created views.py with PersonalInflationDashboardView, added proper URL configuration with app_name, created dashboard template with Turkish content, and resolved namespace conflicts.
+- Result: Personal Inflation module now accessible from web UI with proper Turkish localization
+
+
+## [2025-08-26 03:11] Bug Fix: Solitaire View Logger Error Fixed
+- Fixed UnboundLocalError in solitaire_view where logger was used before being defined. Moved logger initialization to the beginning of the function and removed duplicate import.
+- Result: Solitaire view now loads without logger errors
+
+
+## [2025-08-26 03:16] Security: Enhanced Solitaire Screen Lock Security
+- Implemented aggressive browser back button blocking for solitaire screen lock. Added multiple history states, popstate/hashchange event handlers, keyboard shortcut blocking (Alt+Arrow, Backspace, Escape), beforeunload protection, and security headers. Continuous protection with periodic history state injection.
+- Result: Solitaire screen lock now prevents all browser navigation methods - back button, keyboard shortcuts, and hash changes
+
+
+## [2025-08-26 04:07] Security: Prevent Forward Navigation to Solitaire After Exit
+- Added session-based protection to prevent browser forward navigation back to solitaire after proper exit. When user exits with password, a session flag is set and solitaire page is removed from history using location.replace(). Any attempt to navigate back triggers redirect to main page.
+- Result: Browser forward button cannot return to solitaire after password exit - complete bi-directional navigation protection
+
+
+## [2025-08-26 04:25] Dev Tools: Public Server Deployment Module
+- Added comprehensive public server deployment system to dev tools. Includes automated Ubuntu/Oracle VM deployment, centralized PostgreSQL configuration, SSH-based remote management, database synchronization, and cross-platform compatibility. Production settings configured for rocksteady server.
+- Result: Public server deployment ready for Ubuntu/Oracle VM with centralized database support
+
+
+## [2025-08-26 04:30] Deployment: Optimized Rocksteady Deployment
+- Created streamlined deployment scripts with proper exclusions. Added .rsync-exclude file to prevent archive, quarantine, SQL files, logs, and other unnecessary files from being deployed. Single command deployment with ./deploy.sh.
+- Result: Clean deployment to rocksteady without unnecessary files
+
+
+## [2025-08-26 04:34] Bug Fix: Public Server Module Import Error Handling
+- Added graceful fallback for missing psycopg2 and paramiko modules. Created install_cli_deps.sh script for easy dependency installation in virtual environment. Module now works without these dependencies but shows warnings.
+- Result: Public server module now handles missing dependencies gracefully
+
+
+## [2025-08-26 04:51] Modules: Public Server Menu System
+- Converted public server module to proper submenu structure like version manager with content displayed on right side. Added deployment options, database management, sync, backup, logs, and configuration menus.
+- Result: Public server now uses consistent menu UI with arrow navigation and proper layout
+
+
+## [2025-08-26 04:58] Bug Fix: Public Server Menu Remote Deployment
+- Fixed public server menu to properly work from Mac deploying to rocksteady Ubuntu VM. Updated all references to use SSH config alias 'rocksteady' and proper rsync commands.
+- Result: Menu now correctly handles Mac to Ubuntu deployment workflow
+
+
+## [2025-08-26 05:04] UI/UX: Public Server Menu UI Fixes
+- Fixed public server menu to properly display sidebar like other admin menus. Changed title to lowercase 'public server management'. Added proper navigation with arrow keys (right/enter to select, left/esc to go back).
+- Result: Menu now has consistent UI with sidebar and proper navigation
+
+
+## [2025-08-26 05:09] Modules: Public Server Menu Complete Rewrite
+- Completely rewrote public server menu following administration_menu.py structure exactly. Fixed submenu display issues, navigation problems, and content area positioning.
+- Result: Menu now works identically to administration and version manager menus
+
+
+## [2025-08-26 05:17] Modules: Public Server Enhanced Monitoring
+- Fixed emoji spacing, added detailed descriptions for all menu items, implemented real SSH-based rocksteady status checking with system info, service status, and memory/uptime monitoring. Created rocksteady_monitor.sh helper script.
+- Result: Server status now shows real data from rocksteady via SSH
+
+
+## [2025-08-26 05:31] Bug Fix: Fixed Public Server menu content flickering
+- Removed unnecessary clear_screen() and header redraws in navigation. Added SSH passphrase support for secure key authentication
+- Result: ✅ Navigation stable, SSH passphrase input working
+
+
+## [2025-08-26 16:08] System Info: Central system information module
+- Created system_info.py module to centrally manage hostname and environment detection
+- Result: Hostname now displayed in footer across CLI and web UI
+
+
+## [2025-08-26 16:14] Bug Fix: Database setup UI fixes
+- Fixed missing footer in database setup menu and corrected Python package detection for psycopg2-binary
+- Result: Footer now displays, package status shows correctly
+
+
+## [2025-08-26 16:17] Bug Fix: Database setup package detection
+- Fixed Python package detection to check backend venv instead of system Python
+- Result: Now correctly shows installed status for packages in backend/venv
+
+

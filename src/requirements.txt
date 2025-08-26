@@ -22,3 +22,7 @@ alembic
 
 # System Information
 psutil==6.0.0
+
+# Deployment & Remote Management
+paramiko==3.4.0
+scp==0.14.5

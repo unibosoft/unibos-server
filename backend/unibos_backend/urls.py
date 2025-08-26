@@ -36,9 +36,10 @@ urlpatterns = [
     path(f'{API_V1_PREFIX}auth/', include('apps.authentication.urls')),
     path(f'{API_V1_PREFIX}users/', include('apps.users.urls')),
     path(f'{API_V1_PREFIX}currencies/', include('apps.currencies.urls')),
-    path(f'{API_V1_PREFIX}inflation/', include('apps.personal_inflation.urls')),
-    path(f'{API_V1_PREFIX}recaria/', include('apps.recaria.urls')),
-    path(f'{API_V1_PREFIX}birlikteyiz/', include('apps.birlikteyiz.urls')),
+    # path(f'{API_V1_PREFIX}inflation/', include('apps.personal_inflation.urls')),
+    # API URLs don't need namespace since they're already defined in main URLs
+    # path(f'{API_V1_PREFIX}recaria/', include('apps.recaria.urls')),
+    # path(f'{API_V1_PREFIX}birlikteyiz/', include('apps.birlikteyiz.urls')),
     path(f'{API_V1_PREFIX}wimm/', include('apps.wimm.urls')),
     path(f'{API_V1_PREFIX}wims/', include('apps.wims.urls')),
     path(f'{API_V1_PREFIX}cctv/', include('apps.cctv.urls', namespace='cctv-api')),
@@ -63,6 +64,15 @@ urlpatterns = [
     
     # RestoPOS Module - Restaurant POS System
     path('restopos/', include('apps.restopos.urls', namespace='restopos')),
+    
+    # Personal Inflation Module - Personal consumption tracking
+    path('personal-inflation/', include('apps.personal_inflation.urls', namespace='personal_inflation')),
+    
+    # Recaria Module - MMORPG System
+    path('recaria/', include('apps.recaria.urls', namespace='recaria')),
+    
+    # Birlikteyiz Module - Emergency Mesh Network
+    path('birlikteyiz/', include('apps.birlikteyiz.urls', namespace='birlikteyiz')),
     
     # WebSocket URLs (handled by ASGI)
     # ws/currencies/ - Real-time currency updates

@@ -6,7 +6,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     MainView, ModuleView, ToolView, APIStatusView, 
-    LoginView, ProfileView, SettingsView, logout_view, solitaire_view, exit_solitaire
+    LoginView, ProfileView, SettingsView, logout_view, solitaire_view, exit_solitaire,
+    store_solitaire_return_url
 )
 from .api_views import (
     SessionLogViewSet,
@@ -39,6 +40,7 @@ urlpatterns = [
     # Solitaire (screen lock minimize)
     path('solitaire/', solitaire_view, name='solitaire'),
     path('solitaire/exit/', exit_solitaire, name='exit_solitaire'),
+    path('solitaire/store-return-url/', store_solitaire_return_url, name='store_solitaire_return_url'),
     
     # Module views
     path('module/<str:module_id>/', ModuleView.as_view(), name='module'),

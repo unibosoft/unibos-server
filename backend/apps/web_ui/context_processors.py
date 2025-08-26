@@ -115,6 +115,25 @@ def unibos_context(request):
     General UNIBOS context data
     """
     from datetime import datetime
+    import sys
+    from pathlib import Path
+    
+    # Add src directory to path to import system_info
+    src_path = Path(__file__).parent.parent.parent.parent / 'src'
+    if str(src_path) not in sys.path:
+        sys.path.insert(0, str(src_path))
+    
+    # Import system info
+    try:
+        from system_info import system_info
+        hostname = system_info.hostname
+        environment = system_info.environment
+        display_name = system_info.display_name
+    except ImportError:
+        import socket
+        hostname = socket.gethostname()
+        environment = 'unknown'
+        display_name = hostname
     
     # Check online status
     def check_online_status():
@@ -131,4 +150,7 @@ def unibos_context(request):
         'location': 'bitez, bodrum',
         'online_status': check_online_status(),
         'user': request.user if request.user.is_authenticated else None,
+        'hostname': hostname,
+        'environment': environment,
+        'display_name': display_name,
     }
