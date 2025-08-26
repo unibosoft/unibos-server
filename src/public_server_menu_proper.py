@@ -802,12 +802,20 @@ def setup_ssl():
     y = 5
     steps = [
         ("checking connection", "ssh rocksteady 'echo connected' 2>&1"),
+        ("checking dns", "nslookup recaria.org | grep -A2 'Answer' 2>&1"),
         ("checking nginx", "ssh rocksteady 'which nginx || echo \"nginx not installed\"' 2>&1"),
         ("checking certbot", "ssh rocksteady 'which certbot || echo \"certbot not installed\"' 2>&1"),
-        ("installing certbot", "ssh rocksteady 'sudo apt update && sudo apt install -y certbot python3-certbot-nginx' 2>&1", 60),
-        ("stopping nginx", "ssh rocksteady 'sudo systemctl stop nginx' 2>&1"),
-        ("obtaining certificate", "ssh rocksteady 'sudo certbot certonly --standalone -d recaria.org -d www.recaria.org --non-interactive --agree-tos --email berkhatirli@gmail.com' 2>&1", 60),
-        ("creating ssl config", "ssh rocksteady 'cat > /tmp/recaria-ssl.conf << \"EOF\"\nserver {\n    listen 80;\n    server_name recaria.org www.recaria.org;\n    return 301 https://\\$server_name\\$request_uri;\n}\n\nserver {\n    listen 443 ssl http2;\n    server_name recaria.org www.recaria.org;\n    \n    ssl_certificate /etc/letsencrypt/live/recaria.org/fullchain.pem;\n    ssl_certificate_key /etc/letsencrypt/live/recaria.org/privkey.pem;\n    \n    ssl_protocols TLSv1.2 TLSv1.3;\n    ssl_ciphers HIGH:!aNULL:!MD5;\n    ssl_prefer_server_ciphers off;\n    \n    add_header Strict-Transport-Security \"max-age=31536000\" always;\n    \n    location / {\n        proxy_pass http://127.0.0.1:8000;\n        proxy_set_header Host \\$host;\n        proxy_set_header X-Real-IP \\$remote_addr;\n        proxy_set_header X-Forwarded-For \\$proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto \\$scheme;\n    }\n    \n    location /static/ {\n        alias /home/berkhatirli/unibos/backend/staticfiles/;\n    }\n    \n    location /media/ {\n        alias /home/berkhatirli/unibos/backend/media/;\n    }\n}\nEOF\n' 2>&1"),
+        ("installing packages", "ssh rocksteady 'sudo apt update && sudo apt install -y nginx certbot python3-certbot-nginx' 2>&1", 60),
+        ("checking certificate", "ssh rocksteady 'sudo ls /etc/letsencrypt/live/recaria.org/fullchain.pem 2>/dev/null && echo \"exists\" || echo \"not found\"' 2>&1"),
+        ("stopping nginx", "ssh rocksteady 'sudo systemctl stop nginx 2>/dev/null || true' 2>&1"),
+        ("creating http config", "ssh rocksteady 'cat > /tmp/recaria-http.conf << \"EOF\"\nserver {\n    listen 80;\n    server_name recaria.org www.recaria.org;\n    \n    location / {\n        proxy_pass http://127.0.0.1:8000;\n        proxy_set_header Host \\$host;\n        proxy_set_header X-Real-IP \\$remote_addr;\n        proxy_set_header X-Forwarded-For \\$proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto \\$scheme;\n    }\n    \n    location /static/ {\n        alias /home/berkhatirli/unibos/backend/staticfiles/;\n    }\n    \n    location /media/ {\n        alias /home/berkhatirli/unibos/backend/media/;\n    }\n}\nEOF\n' 2>&1"),
+        ("copying http config", "ssh rocksteady 'sudo cp /tmp/recaria-http.conf /etc/nginx/sites-available/recaria.org' 2>&1"),
+        ("enabling site", "ssh rocksteady 'sudo ln -sf /etc/nginx/sites-available/recaria.org /etc/nginx/sites-enabled/' 2>&1"),
+        ("removing default", "ssh rocksteady 'sudo rm -f /etc/nginx/sites-enabled/default' 2>&1"),
+        ("testing nginx", "ssh rocksteady 'sudo nginx -t' 2>&1"),
+        ("starting nginx", "ssh rocksteady 'sudo systemctl restart nginx' 2>&1"),
+        ("obtaining certificate", "ssh rocksteady 'sudo certbot certonly --webroot -w /home/berkhatirli/unibos/backend/staticfiles -d recaria.org -d www.recaria.org --non-interactive --agree-tos --email berkhatirli@gmail.com' 2>&1", 90),
+        ("creating ssl config", "ssh rocksteady 'if [ -f /etc/letsencrypt/live/recaria.org/fullchain.pem ]; then cat > /tmp/recaria-ssl.conf << \"EOF\"\nserver {\n    listen 80;\n    server_name recaria.org www.recaria.org;\n    return 301 https://\\$server_name\\$request_uri;\n}\n\nserver {\n    listen 443 ssl http2;\n    server_name recaria.org www.recaria.org;\n    \n    ssl_certificate /etc/letsencrypt/live/recaria.org/fullchain.pem;\n    ssl_certificate_key /etc/letsencrypt/live/recaria.org/privkey.pem;\n    \n    ssl_protocols TLSv1.2 TLSv1.3;\n    ssl_ciphers HIGH:!aNULL:!MD5;\n    ssl_prefer_server_ciphers off;\n    \n    add_header Strict-Transport-Security \"max-age=31536000\" always;\n    \n    location / {\n        proxy_pass http://127.0.0.1:8000;\n        proxy_set_header Host \\$host;\n        proxy_set_header X-Real-IP \\$remote_addr;\n        proxy_set_header X-Forwarded-For \\$proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto \\$scheme;\n    }\n    \n    location /static/ {\n        alias /home/berkhatirli/unibos/backend/staticfiles/;\n    }\n    \n    location /media/ {\n        alias /home/berkhatirli/unibos/backend/media/;\n    }\n}\nEOF\n; else echo \"no certificate found\"; fi' 2>&1"),
         ("copying nginx config", "ssh rocksteady 'sudo cp /tmp/recaria-ssl.conf /etc/nginx/sites-available/recaria.org' 2>&1"),
         ("enabling site", "ssh rocksteady 'sudo ln -sf /etc/nginx/sites-available/recaria.org /etc/nginx/sites-enabled/' 2>&1"),
         ("testing nginx config", "ssh rocksteady 'sudo nginx -t' 2>&1"),
@@ -841,6 +849,22 @@ def setup_ssl():
                     y += 1
                     move_cursor(content_x + 6, y)
                     print(f"{Colors.YELLOW}certbot will be installed{Colors.RESET}")
+                elif "checking certificate" in step_name:
+                    if "exists" in result.stdout:
+                        y += 1
+                        move_cursor(content_x + 6, y)
+                        print(f"{Colors.GREEN}certificate found{Colors.RESET}")
+                    else:
+                        y += 1
+                        move_cursor(content_x + 6, y)
+                        print(f"{Colors.YELLOW}will obtain new certificate{Colors.RESET}")
+                elif "checking dns" in step_name:
+                    y += 1
+                    move_cursor(content_x + 6, y)
+                    if "Answer" in result.stdout or "address" in result.stdout.lower():
+                        print(f"{Colors.GREEN}dns configured correctly{Colors.RESET}")
+                    else:
+                        print(f"{Colors.YELLOW}dns may need configuration{Colors.RESET}")
                 elif "obtaining certificate" in step_name:
                     if "Successfully received certificate" in result.stdout or "Certificate not yet due" in result.stdout:
                         y += 1
