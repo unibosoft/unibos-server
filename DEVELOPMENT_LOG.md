@@ -1388,3 +1388,8 @@ Each entry should follow this format:
 - Result: Cleaner interface without redundant instructions
 
 
+## [2025-08-26 18:11] Database: Database sync feature and user import
+- Added bidirectional database sync between local and rocksteady. Imported 13 users from old Unicorn database backup containing user with asli@vamosbodrum.com email
+- Result: Successfully added db sync menu option and imported all historical users to PostgreSQL
+
+
