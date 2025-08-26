@@ -770,15 +770,21 @@ def full_deployment():
     max_width = cols - content_x - 6  # Available width for text
     critical_failure = False
     
+    # Track display lines for scrolling
+    display_lines = []
+    max_display_lines = lines - 12  # Leave space for header, footer, and summary
+    
     for i, (step_name, command) in enumerate(steps):
-        if y > lines - 10:  # Leave more space for errors and footer
-            # Clear some space by scrolling
-            for clear_y in range(7, 10):
-                move_cursor(content_x, clear_y)
+        # If we've reached the display limit, start scrolling
+        if len(display_lines) >= max_display_lines:
+            # Remove first item and shift everything up
+            display_lines.pop(0)
+            # Redraw all visible lines
+            for idx, line_text in enumerate(display_lines):
+                move_cursor(content_x + 2, 7 + idx)
                 sys.stdout.write('\033[K')
-            move_cursor(content_x + 2, 7)
-            print(f"{Colors.DIM}... (previous steps above) ...{Colors.RESET}")
-            y = 9
+                sys.stdout.write(line_text)
+            y = 7 + len(display_lines)
         
         move_cursor(content_x + 2, y)
         # Clear line first
@@ -808,15 +814,21 @@ def full_deployment():
         sys.stdout.write('\033[K')
         
         if result.returncode == 0:
-            print(f"{Colors.GREEN}✓ {step_name}{Colors.RESET}")
+            status_text = f"{Colors.GREEN}✓ {step_name}{Colors.RESET}"
+            print(status_text)
+            display_lines.append(status_text)
             success_count += 1
         else:
             # Special handling for stopping old server - not an error if no process exists
             if step_name == "stopping old server":
-                print(f"{Colors.GREEN}✓ {step_name}{Colors.RESET}")
+                status_text = f"{Colors.GREEN}✓ {step_name}{Colors.RESET}"
+                print(status_text)
+                display_lines.append(status_text)
                 success_count += 1
             else:
-                print(f"{Colors.RED}✗ {step_name}{Colors.RESET}")
+                status_text = f"{Colors.RED}✗ {step_name}{Colors.RESET}"
+                print(status_text)
+                display_lines.append(status_text)
                 fail_count += 1
                 
                 # Collect error for display
@@ -866,28 +878,28 @@ def full_deployment():
                 display_text = display_text[:max_width - 5] + "..."
             print(f"{Colors.RED}• {display_text}{Colors.RESET}")
     
-    # Summary - always show
-    y = min(y + 2, lines - 8)
-    move_cursor(content_x + 2, y)
+    # Summary - fixed position at bottom of content area
+    summary_y = lines - 10  # Fixed position for summary
+    move_cursor(content_x + 2, summary_y)
     sys.stdout.write('\033[K')
     if fail_count == 0:
         print(f"{Colors.GREEN}✅ deployment successful! ({success_count}/{len(steps)} steps){Colors.RESET}")
-        y += 2
-        move_cursor(content_x + 2, y)
-        print(f"{Colors.CYAN}access unibos at:{Colors.RESET}")
-        y += 1
-        move_cursor(content_x + 4, y)
+        move_cursor(content_x + 2, summary_y + 2)
+        sys.stdout.write('\033[K')
+        print(f"{Colors.CYAN}server is accessible at:{Colors.RESET}")
+        move_cursor(content_x + 4, summary_y + 3)
+        sys.stdout.write('\033[K')
         print(f"{Colors.BOLD}http://158.178.201.117:8000{Colors.RESET}")
     elif critical_failure:
         print(f"{Colors.RED}⛔ deployment failed - fix connection first{Colors.RESET}")
     else:
         print(f"{Colors.YELLOW}⚠️ deployment completed with {fail_count} minor error(s){Colors.RESET}")
-        if fail_count <= 2:  # If only server start errors
-            y += 2
-            move_cursor(content_x + 2, y)
+        if fail_count <= 2:  # If only minor errors
+            move_cursor(content_x + 2, summary_y + 2)
+            sys.stdout.write('\033[K')
             print(f"{Colors.CYAN}server may still be accessible at:{Colors.RESET}")
-            y += 1
-            move_cursor(content_x + 4, y)
+            move_cursor(content_x + 4, summary_y + 3)
+            sys.stdout.write('\033[K')
             print(f"{Colors.BOLD}http://158.178.201.117:8000{Colors.RESET}")
     
     # Ensure everything is displayed
