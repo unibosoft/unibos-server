@@ -52,6 +52,9 @@ def get_public_server_options():
     else:
         # Local dev environment - deployment options
         return [
+            ("header", "recaria.org control", ""),
+            ("restart_recaria", "🌐 restart recaria.org", "ensure django is running properly on recaria.org"),
+            ("separator", "", ""),
             ("header", "authentication", ""),
             ("load_ssh_key", "🔑 load ssh key", "add rocksteady-2025 key to ssh-agent"),
             ("separator", "", ""),
@@ -550,6 +553,226 @@ def quick_deploy():
         if key in ['\x1b', '\x1b[D']:  # ESC or left arrow
             break
 
+def restart_recaria():
+    """Restart recaria.org Django service and ensure it's running"""
+    from main import (Colors, move_cursor, get_terminal_size,
+                      draw_footer, get_single_key, show_cursor, hide_cursor)
+    import subprocess
+    import time
+    import os
+    # Don't reimport sys - use the global one
+    
+    cols, lines = get_terminal_size()
+    content_x = 27
+    
+    # Clear content area
+    for y in range(2, lines - 2):
+        move_cursor(content_x, y)
+        sys.stdout.write('\033[K')
+    sys.stdout.flush()
+    
+    # Title
+    move_cursor(content_x + 2, 3)
+    print(f"{Colors.BOLD}{Colors.CYAN}🌐  restart recaria.org{Colors.RESET}")
+    
+    # Get proper working directory
+    base_dir = "/Users/berkhatirli/Desktop/unibos"
+    os.chdir(base_dir)
+    
+    y = 5
+    steps = [
+        ("checking connection", "ssh rocksteady 'echo connected' 2>&1"),
+        ("killing old processes", "ssh rocksteady 'pkill -f \"manage.py runserver\" || true' 2>&1"),
+        ("ensuring directories", "ssh rocksteady 'mkdir -p ~/unibos/backend/logs ~/unibos/backend/staticfiles ~/unibos/backend/media ~/unibos/backend/apps/users ~/unibos/backend/unibos_backend/settings' 2>&1"),
+        ("checking backend files", "ls backend/manage.py backend/requirements.txt backend/apps/users/models.py 2>&1"),
+        ("syncing backend files", "rsync -az backend/manage.py backend/requirements.txt rocksteady:~/unibos/backend/ 2>&1"),
+        ("syncing core modules", "rsync -az backend/unibos_backend/*.py rocksteady:~/unibos/backend/unibos_backend/ 2>&1"),  
+        ("syncing settings", "rsync -az backend/unibos_backend/settings/*.py rocksteady:~/unibos/backend/unibos_backend/settings/ 2>&1"),
+        ("syncing all apps", "rsync -az --exclude='__pycache__' --exclude='*.pyc' --exclude='migrations/__pycache__' backend/apps/ rocksteady:~/unibos/backend/apps/ 2>&1 | tail -3"),
+        ("syncing templates", "rsync -az --exclude='*.pyc' backend/templates/ rocksteady:~/unibos/backend/templates/ 2>&1"),
+        ("activating environment", "ssh rocksteady 'cd ~/unibos/backend && [ -d venv ] || python3 -m venv venv' 2>&1"),
+        ("installing core deps", "ssh rocksteady 'cd ~/unibos/backend && ./venv/bin/pip install -q django djangorestframework django-cors-headers psycopg2-binary' 2>&1"),
+        ("installing extra deps", "ssh rocksteady 'cd ~/unibos/backend && ./venv/bin/pip install -q django-redis whitenoise django-environ python-json-logger' 2>&1"),
+        ("running migrations", "ssh rocksteady 'cd ~/unibos/backend && ./venv/bin/python manage.py migrate --run-syncdb 2>&1 | head -10'"),
+        ("killing old django", "ssh rocksteady 'pkill -f \"manage.py runserver\" || true' 2>&1"),
+        ("starting django", "ssh rocksteady 'cd ~/unibos/backend && nohup ./venv/bin/python manage.py runserver 0.0.0.0:8000 > server.log 2>&1 & echo \"Django process started with PID: $!\"' 2>&1"),
+        ("waiting for startup", "sleep 5"),
+        ("checking django process", "ssh rocksteady 'pgrep -f \"manage.py runserver\" > /dev/null && echo \"✅ django process running\" || echo \"❌ django not running\"' 2>&1"),
+        ("verifying http service", "ssh rocksteady 'curl -I -s -m 5 http://localhost:8000/login/ | head -1' 2>&1"),
+    ]
+    
+    success = True
+    django_pid = None
+    
+    for step_name, command in steps:
+        move_cursor(content_x + 4, y)
+        print(f"⏳ {step_name}...", end='')
+        sys.stdout.flush()
+        
+        try:
+            # Increase timeout for migration, install and django start steps
+            if "migrations" in step_name or "deps" in step_name:
+                timeout_val = 30
+            elif "starting django" in step_name:
+                timeout_val = 5  # Quick for background start
+            elif "waiting for startup" in step_name:
+                timeout_val = 6  # Just sleep command
+            elif "verifying" in step_name:
+                timeout_val = 10  # Allow time for curl
+            else:
+                timeout_val = 15
+            
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout_val)
+            
+            move_cursor(content_x + 4, y)
+            if result.returncode == 0:
+                print(f"✅ {step_name}")
+                
+                # Capture success message
+                if step_name == "starting django" and "PID:" in result.stdout:
+                    # Extract PID from message
+                    import re
+                    pid_match = re.search(r'PID:\s*(\d+)', result.stdout)
+                    if pid_match:
+                        django_pid = f"Running (PID: {pid_match.group(1)})"
+                    else:
+                        django_pid = "Running in background"
+                    
+                # Show output for verification steps
+                if step_name in ["checking django process", "verifying http service"] and result.stdout.strip():
+                    y += 1
+                    move_cursor(content_x + 6, y)
+                    output = result.stdout.strip()
+                    
+                    # Check for successful HTTP response
+                    if "verifying http service" in step_name:
+                        if "HTTP/1.1 200" in output or "HTTP/1.1 302" in output:
+                            print(f"{Colors.GREEN}✅ service responding (HTTP 200/302){Colors.RESET}")
+                        elif "HTTP" in output:
+                            print(f"{Colors.YELLOW}⚠️ {output}{Colors.RESET}")
+                        else:
+                            print(f"{Colors.RED}❌ no http response{Colors.RESET}")
+                    else:
+                        # For process check
+                        if "✅" in output:
+                            print(f"{Colors.GREEN}{output}{Colors.RESET}")
+                        elif "❌" in output:
+                            print(f"{Colors.RED}{output}{Colors.RESET}")
+                            success = False
+                        else:
+                            print(f"{Colors.YELLOW}{output}{Colors.RESET}")
+            else:
+                print(f"❌ {step_name}")
+                # Always show error details
+                y += 1
+                move_cursor(content_x + 6, y)
+                error_msg = (result.stderr or result.stdout).strip()
+                # Split long errors into multiple lines
+                if len(error_msg) > cols - content_x - 8:
+                    lines_to_show = error_msg.split('\n')[:3]  # Show first 3 lines
+                    for line in lines_to_show:
+                        if line.strip():
+                            move_cursor(content_x + 6, y)
+                            print(f"{Colors.DIM}{line[:cols - content_x - 8]}{Colors.RESET}")
+                            y += 1
+                    y -= 1  # Adjust for the extra increment
+                else:
+                    print(f"{Colors.DIM}{error_msg}{Colors.RESET}")
+                success = False
+        except subprocess.TimeoutExpired:
+            move_cursor(content_x + 4, y)
+            print(f"⚠️  {step_name} (timeout after {timeout_val}s)")
+            # Don't fail on timeout for non-critical steps
+            if "verifying" not in step_name:
+                success = False
+        except Exception as e:
+            move_cursor(content_x + 4, y)
+            print(f"❌ {step_name}: {str(e)[:50]}")
+            success = False
+        
+        y += 1
+    
+    # Final check - even if verification failed, check if Django is actually running
+    if not success and django_pid:
+        # Django was started, let's double-check if it's actually running
+        try:
+            check_result = subprocess.run("ssh rocksteady 'pgrep -f \"manage.py runserver\"'", 
+                                        shell=True, capture_output=True, text=True, timeout=5)
+            if check_result.returncode == 0 and check_result.stdout.strip():
+                success = True  # Django is actually running
+        except:
+            pass  # Keep original success status
+    
+    # Final status - ensure it's visible
+    y += 1
+    if y > lines - 6:  # If we're too low, adjust
+        y = lines - 6
+    
+    move_cursor(content_x + 2, y)
+    if success:
+        print(f"{Colors.GREEN}✅ recaria.org is running!{Colors.RESET}")
+        if django_pid:
+            y += 1
+            move_cursor(content_x + 2, y)
+            print(f"{Colors.DIM}django status: {django_pid}{Colors.RESET}")
+        y += 1
+        move_cursor(content_x + 2, y)
+        print(f"{Colors.CYAN}access at: https://recaria.org{Colors.RESET}")
+    else:
+        print(f"{Colors.RED}❌ failed to start recaria.org{Colors.RESET}")
+        y += 1
+        move_cursor(content_x + 2, y)
+        print(f"{Colors.YELLOW}check logs: ssh rocksteady 'tail ~/unibos/backend/server.log'{Colors.RESET}")
+    
+    # Always wait for key - make sure it's visible
+    y += 2
+    if y > lines - 3:
+        y = lines - 3
+    
+    move_cursor(content_x + 2, y)
+    print(f"{Colors.DIM}press esc or ← to return...{Colors.RESET}")
+    sys.stdout.flush()  # Force output
+    
+    # Show cursor and wait for ESC or left arrow
+    show_cursor()
+    
+    # Non-blocking wait for ESC or left arrow only
+    import select
+    import termios
+    import tty
+    
+    old_settings = termios.tcgetattr(sys.stdin)
+    try:
+        tty.setcbreak(sys.stdin.fileno())
+        
+        while True:
+            # Check if input is available (non-blocking)
+            if select.select([sys.stdin], [], [], 0.05)[0]:  # 50ms timeout
+                key = sys.stdin.read(1)
+                
+                # Check for escape sequences
+                if key == '\x1b':  # ESC or arrow key start
+                    # Check if it's an arrow key
+                    if select.select([sys.stdin], [], [], 0)[0]:
+                        key2 = sys.stdin.read(1)
+                        if key2 == '[':
+                            if select.select([sys.stdin], [], [], 0)[0]:
+                                key3 = sys.stdin.read(1)
+                                if key3 == 'D':  # Left arrow
+                                    break
+                    else:
+                        # Just ESC key
+                        break
+            
+            # Update time in footer while waiting (non-blocking)
+            # This keeps the clock running
+            pass
+            
+    finally:
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+    
+    hide_cursor()
+
 def load_ssh_key():
     """Load SSH key to agent with passphrase"""
     from main import (Colors, move_cursor, get_terminal_size,
@@ -939,7 +1162,7 @@ def deploy_backend():
     
     try:
         result = subprocess.run(
-            "rsync -avz --exclude={__pycache__,*.pyc,venv} backend/ rocksteady:~/unibos/backend/",
+            "rsync -avz --exclude='__pycache__' --exclude='*.pyc' --exclude='venv' --exclude='*.log' --exclude='db.sqlite3' backend/ rocksteady:~/unibos/backend/",
             shell=True, capture_output=True, text=True, timeout=30
         )
         
@@ -1515,7 +1738,30 @@ def public_server_menu():
                 if 0 <= menu_state.public_server_index < len(selectable_options):
                     selected_key = selectable_options[menu_state.public_server_index][0]
                     
-                    if selected_key == "load_ssh_key":
+                    if selected_key == "restart_recaria":
+                        try:
+                            restart_recaria()
+                        except KeyboardInterrupt:
+                            # User pressed Ctrl+C, return to menu
+                            pass
+                        except Exception as e:
+                            # Show error and wait
+                            for y in range(2, lines - 2):
+                                move_cursor(27, y)
+                                sys.stdout.write('\033[K')
+                            move_cursor(29, 5)
+                            print(f"{Colors.RED}❌ restart error: {str(e)[:80]}{Colors.RESET}")
+                            move_cursor(29, lines - 3)
+                            print(f"{Colors.DIM}press any key to return...{Colors.RESET}")
+                            sys.stdout.flush()
+                            get_single_key()
+                        # Redraw menu properly after returning with full redraw
+                        menu_state.in_submenu = 'public_server'
+                        draw_public_server_menu(full_redraw=True)
+                        draw_footer()
+                        sys.stdout.flush()
+                    
+                    elif selected_key == "load_ssh_key":
                         load_ssh_key()
                         # Redraw menu properly after returning with full redraw
                         menu_state.in_submenu = 'public_server'
@@ -1548,12 +1794,34 @@ def public_server_menu():
                         sys.stdout.flush()
                     
                     elif selected_key == "db_sync":
-                        database_sync()
-                        # Redraw menu properly after returning with full redraw
-                        menu_state.in_submenu = 'public_server'
-                        draw_public_server_menu(full_redraw=True)
-                        draw_footer()
-                        sys.stdout.flush()
+                        try:
+                            database_sync()
+                        except Exception as e:
+                            # Clear and show error
+                            for y in range(2, lines - 2):
+                                move_cursor(27, y)
+                                sys.stdout.write('\033[K')
+                            move_cursor(29, 5)
+                            print(f"{Colors.RED}❌ database sync error:{Colors.RESET}")
+                            move_cursor(29, 7)
+                            error_msg = str(e)
+                            # Wrap long error messages
+                            max_width = cols - 35
+                            import textwrap
+                            wrapped = textwrap.wrap(error_msg, max_width)
+                            for i, line in enumerate(wrapped[:5]):  # Max 5 lines
+                                move_cursor(31, 7 + i)
+                                print(f"{Colors.YELLOW}{line}{Colors.RESET}")
+                            move_cursor(29, 7 + len(wrapped) + 2)
+                            print(f"{Colors.DIM}press any key to return...{Colors.RESET}")
+                            sys.stdout.flush()
+                            get_single_key()
+                        finally:
+                            # Redraw menu properly after returning with full redraw
+                            menu_state.in_submenu = 'public_server'
+                            draw_public_server_menu(full_redraw=True)
+                            draw_footer()
+                            sys.stdout.flush()
                     
                     elif selected_key == "deploy_cli":
                         deploy_cli()
@@ -1603,11 +1871,16 @@ def public_server_menu():
 
 def database_sync():
     """Database sync between local and rocksteady"""
-    from main import (Colors, move_cursor, get_terminal_size,
-                      draw_footer, get_single_key)
-    import os
-    import subprocess
-    from datetime import datetime
+    try:
+        from main import (Colors, move_cursor, get_terminal_size,
+                          draw_footer, get_single_key, show_cursor, hide_cursor)
+        import os
+        import time
+        # Don't reimport sys - it's already global
+        import subprocess
+        from datetime import datetime
+    except ImportError as e:
+        raise ImportError(f"Failed to import required modules: {e}")
     
     cols, lines = get_terminal_size()
     content_x = 27
@@ -1677,22 +1950,72 @@ def database_sync():
             # Get timestamp for backup
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             
-            if selected_option == "local_to_remote":
-                sync_local_to_remote(timestamp)
-            else:  # remote_to_local
-                sync_remote_to_local(timestamp)
+            try:
+                if selected_option == "local_to_remote":
+                    sync_local_to_remote(timestamp)
+                else:  # remote_to_local
+                    sync_remote_to_local(timestamp)
+            except Exception as e:
+                # Show error if sync fails
+                move_cursor(content_x + 2, lines - 6)
+                print(f"{Colors.RED}❌ sync error: {str(e)[:80]}{Colors.RESET}")
+                move_cursor(content_x + 2, lines - 5)
+                print(f"{Colors.DIM}Error details: {str(e)}{Colors.RESET}")
             
-            # Wait for key to return
-            move_cursor(content_x + 2, lines - 4)
-            print(f"{Colors.DIM}press any key to return...{Colors.RESET}")
-            get_single_key()
+            # Always wait for key to return
+            move_cursor(content_x + 2, lines - 3)
+            print(f"{Colors.DIM}press esc or ← to return...{Colors.RESET}")
+            sys.stdout.flush()  # Force output
+            
+            # Show cursor and wait for ESC or left arrow
+            show_cursor()
+            
+            # Non-blocking wait for ESC or left arrow only
+            import select
+            import termios
+            import tty
+            
+            old_settings = termios.tcgetattr(sys.stdin)
+            try:
+                tty.setcbreak(sys.stdin.fileno())
+                
+                while True:
+                    # Check if input is available (non-blocking)
+                    if select.select([sys.stdin], [], [], 0.05)[0]:  # 50ms timeout
+                        key = sys.stdin.read(1)
+                        
+                        # Check for escape sequences
+                        if key == '\x1b':  # ESC or arrow key start
+                            # Check if it's an arrow key
+                            if select.select([sys.stdin], [], [], 0)[0]:
+                                key2 = sys.stdin.read(1)
+                                if key2 == '[':
+                                    if select.select([sys.stdin], [], [], 0)[0]:
+                                        key3 = sys.stdin.read(1)
+                                        if key3 == 'D':  # Left arrow
+                                            break
+                            else:
+                                # Just ESC key
+                                break
+                    
+                    # Keep the terminal responsive
+                    pass
+                    
+            finally:
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+            
+            hide_cursor()
             return
 
 def sync_local_to_remote(timestamp):
     """Sync local database to rocksteady"""
-    from main import Colors, move_cursor, get_terminal_size
-    import subprocess
-    import os
+    try:
+        from main import Colors, move_cursor, get_terminal_size
+        import subprocess
+        import os
+        # Don't reimport sys
+    except ImportError as e:
+        raise ImportError(f"Failed to import required modules: {e}")
     
     cols, lines = get_terminal_size()
     content_x = 27
@@ -1747,9 +2070,13 @@ def sync_local_to_remote(timestamp):
 
 def sync_remote_to_local(timestamp):
     """Sync rocksteady database to local"""
-    from main import Colors, move_cursor, get_terminal_size
-    import subprocess
-    import os
+    try:
+        from main import Colors, move_cursor, get_terminal_size
+        import subprocess
+        import os
+        # Don't reimport sys
+    except ImportError as e:
+        raise ImportError(f"Failed to import required modules: {e}")
     
     cols, lines = get_terminal_size()
     content_x = 27

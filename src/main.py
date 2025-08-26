@@ -680,7 +680,7 @@ def draw_footer(only_time=False):
     
     # Navigation hints on footer line - STANDARDIZED FORMAT
     move_cursor(2, footer_start)  # Single line footer
-    nav_text = "↑↓ navigate | → select | tab switch | L language | M minimize | q quit"
+    nav_text = "↑↓ navigate | enter/→ select | esc/← back | tab switch | L language | M minimize | q quit"
     
     # Draw navigation hints in gray
     print(f"{Colors.BG_DARK}{Colors.DIM}{nav_text}{Colors.RESET}", end='', flush=True)
