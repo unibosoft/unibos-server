@@ -59,6 +59,17 @@ CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 X_FRAME_OPTIONS = 'DENY'
 
+# Email Configuration for recaria.org
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'mail.recaria.org'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+EMAIL_HOST_USER = 'berk@recaria.org'
+EMAIL_HOST_PASSWORD = 'Recaria2025Mail!'
+DEFAULT_FROM_EMAIL = 'berk@recaria.org'
+SERVER_EMAIL = 'berk@recaria.org'
+
 # Import other settings from base
 try:
     from ..settings import *

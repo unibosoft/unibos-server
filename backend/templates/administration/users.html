@@ -147,10 +147,10 @@
                         <a href="{% url 'administration:user_detail' user.id %}" class="action-link">View</a>
                         <a href="{% url 'administration:user_detail' user.id %}" class="action-link">Edit</a>
                         {% if not user.is_superuser and user != request.user %}
-                        <a href="#" onclick="toggleUserStatus({{ user.id }})" class="action-link">
+                        <a href="#" onclick="toggleUserStatus('{{ user.id }}'); return false;" class="action-link">
                             {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
                         </a>
-                        <a href="#" onclick="deleteUser({{ user.id }}, '{{ user.username }}')" class="action-link delete-link">Delete</a>
+                        <a href="#" onclick="deleteUser('{{ user.id }}', '{{ user.username }}'); return false;" class="action-link delete-link">Delete</a>
                         {% endif %}
                     </td>
                 </tr>
@@ -440,15 +440,35 @@ function deleteUser(userId, username) {
                     'X-CSRFToken': '{{ csrf_token }}',
                     'Content-Type': 'application/json'
                 }
-            }).then(response => {
-                if (response.ok) {
-                    location.reload();
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showPopup(
+                        '✅ user deleted',
+                        `successfully deleted user "${username}"`,
+                        function() {
+                            location.reload();
+                        }
+                    );
                 } else {
-                    alert('Error deleting user');
+                    showPopup(
+                        '❌ deletion failed',
+                        data.error || 'failed to delete user',
+                        function() {}
+                    );
                 }
+            })
+            .catch(error => {
+                console.error('Delete error:', error);
+                showPopup(
+                    '❌ error',
+                    `error deleting user: ${error}`,
+                    function() {}
+                );
             });
         },
-        userNames
+        [username]  // Single username in array for popup display
     );
 }
 
@@ -489,12 +509,46 @@ function bulkDelete() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ user_ids: selectedUsers })
-            }).then(response => {
-                if (response.ok) {
-                    location.reload();
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.deleted_count > 0) {
+                        showPopup(
+                            '✅ deletion complete',
+                            `successfully deleted ${data.deleted_count} user${data.deleted_count > 1 ? 's' : ''}`,
+                            function() {
+                                if (data.skipped_users && data.skipped_users.length > 0) {
+                                    showPopup(
+                                        '⚠️ protected users',
+                                        `skipped protected users: ${data.skipped_users.join(', ')}`,
+                                        function() {
+                                            location.reload();
+                                        }
+                                    );
+                                } else {
+                                    location.reload();
+                                }
+                            }
+                        );
+                    } else {
+                        location.reload();
+                    }
                 } else {
-                    alert('Error deleting users');
+                    showPopup(
+                        '❌ deletion failed', 
+                        data.error || 'failed to delete users',
+                        function() {}
+                    );
                 }
+            })
+            .catch(error => {
+                console.error('Bulk delete error:', error);
+                showPopup(
+                    '❌ error',
+                    `error deleting users: ${error}`,
+                    function() {}
+                );
             });
         },
         userNames

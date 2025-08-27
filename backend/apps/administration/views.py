@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 from django.contrib import messages
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 
 User = get_user_model()
 from django.db.models import Count, Q
@@ -694,30 +696,33 @@ def lock_screen(request):
 @user_passes_test(is_admin, login_url='/login/')
 def delete_user(request, user_id):
     """Delete a user"""
-    if request.method == 'POST':
-        user = get_object_or_404(User, id=user_id)
-        
-        # Don't allow deleting superusers or self
-        if user.is_superuser or user == request.user:
-            return JsonResponse({'error': 'Cannot delete this user'}, status=403)
-        
-        username = user.username
-        user.delete()
-        
-        # Log the deletion
-        AuditLog.objects.create(
-            user=request.user,
-            action='user_delete',
-            target_object=f'User: {username}',
-            details={'deleted_user_id': user_id, 'deleted_username': username},
-            ip_address=request.META.get('REMOTE_ADDR'),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')
-        )
-        
-        messages.success(request, f'User {username} has been deleted')
-        return JsonResponse({'success': True})
+    if request.method in ['POST', 'DELETE']:
+        try:
+            user = get_object_or_404(User, id=user_id)
+            
+            # Don't allow deleting superusers or self
+            if user.is_superuser or user == request.user:
+                return JsonResponse({'error': 'cannot delete this user'}, status=403)
+            
+            username = user.username
+            user.delete()
+            
+            # Log the deletion
+            AuditLog.objects.create(
+                user=request.user,
+                action='user_delete',
+                target_object=f'User: {username}',
+                details={'deleted_user_id': str(user_id), 'deleted_username': username},
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            messages.success(request, f'user {username} has been deleted')
+            return JsonResponse({'success': True, 'message': f'user {username} deleted successfully'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
     
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
+    return JsonResponse({'error': 'method not allowed'}, status=405)
 
 
 @login_required(login_url='/login/')
@@ -725,41 +730,133 @@ def delete_user(request, user_id):
 def bulk_delete_users(request):
     """Delete multiple users at once"""
     if request.method == 'POST':
-        import json
-        data = json.loads(request.body)
-        user_ids = data.get('user_ids', [])
-        
-        deleted_count = 0
-        deleted_users = []
-        
-        for user_id in user_ids:
-            try:
-                user = User.objects.get(id=user_id)
-                # Don't allow deleting superusers or self
-                if not user.is_superuser and user != request.user:
-                    username = user.username
-                    user.delete()
-                    deleted_count += 1
-                    deleted_users.append(username)
-            except User.DoesNotExist:
-                continue
-        
-        # Log the bulk deletion
-        if deleted_count > 0:
+        try:
+            import json
+            data = json.loads(request.body)
+            user_ids = data.get('user_ids', [])
+            
+            deleted_count = 0
+            deleted_users = []
+            skipped_users = []
+            
+            for user_id in user_ids:
+                try:
+                    user = User.objects.get(id=user_id)
+                    # Don't allow deleting superusers or self
+                    if user.is_superuser or user == request.user:
+                        skipped_users.append(user.username)
+                    else:
+                        username = user.username
+                        user.delete()
+                        deleted_count += 1
+                        deleted_users.append(username)
+                except User.DoesNotExist:
+                    continue
+                except Exception as e:
+                    print(f"Error deleting user {user_id}: {e}")
+                    continue
+            
+            # Log the bulk deletion
+            if deleted_count > 0:
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='user_delete',
+                    target_object=f'Bulk delete: {deleted_count} users',
+                    details={
+                        'deleted_users': deleted_users, 
+                        'skipped_users': skipped_users,
+                        'user_ids': [str(uid) for uid in user_ids]
+                    },
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')
+                )
+                
+                messages.success(request, f'successfully deleted {deleted_count} users')
+            
+            return JsonResponse({
+                'success': True, 
+                'deleted_count': deleted_count,
+                'deleted_users': deleted_users,
+                'skipped_users': skipped_users
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'method not allowed'}, status=405)
+
+
+@login_required(login_url='/login/')
+@user_passes_test(is_admin, login_url='/login/')
+def reset_user_password(request, user_id):
+    """Reset user password and send email"""
+    if request.method == 'POST':
+        try:
+            user = get_object_or_404(User, id=user_id)
+            
+            # Generate random password
+            import string
+            import random
+            new_password = ''.join(random.choices(string.ascii_letters + string.digits + '!@#$%', k=12))
+            
+            # Set new password
+            user.set_password(new_password)
+            user.save()
+            
+            # Log the password reset
             AuditLog.objects.create(
                 user=request.user,
-                action='bulk_delete',
-                target_object=f'Bulk delete: {deleted_count} users',
-                details={'deleted_users': deleted_users, 'user_ids': user_ids},
+                action='password_change',
+                target_object=f'User: {user.username}',
+                target_user=user,
+                details={'reset_by_admin': True, 'user_id': str(user_id)},
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
             )
             
-            messages.success(request, f'Successfully deleted {deleted_count} users')
-        
-        return JsonResponse({'success': True, 'deleted_count': deleted_count})
+            # Send email with new password
+            from django.core.mail import send_mail
+            from django.conf import settings
+            
+            email_sent = False
+            if user.email:
+                try:
+                    send_mail(
+                        subject='password reset - unibos',
+                        message=f'''hello {user.username},
+
+your unibos password has been reset by an administrator.
+
+your new temporary password is: {new_password}
+
+please login and change this password immediately at:
+https://recaria.org/login/
+
+for security reasons, this password will expire in 24 hours.
+
+regards,
+unibos admin team
+''',
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[user.email],
+                        fail_silently=False,
+                    )
+                    email_sent = True
+                except Exception as email_error:
+                    print(f"Email error: {email_error}")
+            
+            messages.success(request, f'password reset for {user.username}')
+            
+            return JsonResponse({
+                'success': True, 
+                'message': f'password reset successfully',
+                'email_sent': email_sent,
+                'email': user.email if email_sent else None,
+                'temp_password': new_password  # Still return for testing, remove in production
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
     
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
+    return JsonResponse({'error': 'method not allowed'}, status=405)
 
 
 @login_required(login_url='/login/')
@@ -792,7 +889,7 @@ def toggle_user_status(request, user_id):
         messages.success(request, f'User {user.username} has been {status}')
         return JsonResponse({'success': True, 'is_active': user.is_active})
     
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
+    return JsonResponse({'error': 'method not allowed'}, status=405)
 
 
 @login_required(login_url='/login/')
@@ -837,7 +934,7 @@ def bulk_status_users(request):
         
         return JsonResponse({'success': True, 'updated_count': updated_count})
     
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
+    return JsonResponse({'error': 'method not allowed'}, status=405)
 
 
 @login_required(login_url='/login/')

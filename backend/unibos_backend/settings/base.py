@@ -363,6 +363,17 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'localhost'  # Will use recaria.org mail server
+EMAIL_PORT = 25
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = False
+EMAIL_HOST_USER = 'berk@recaria.org'
+EMAIL_HOST_PASSWORD = 'Recaria2025Mail!'
+DEFAULT_FROM_EMAIL = 'berk@recaria.org'
+SERVER_EMAIL = 'berk@recaria.org'
+
 # Security Settings
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True

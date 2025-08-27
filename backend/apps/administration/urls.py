@@ -8,6 +8,7 @@ urlpatterns = [
     path('users/', views.users_list, name='users'),
     path('users/<uuid:user_id>/', views.user_detail, name='user_detail'),
     path('users/<uuid:user_id>/delete/', views.delete_user, name='delete_user'),
+    path('users/<uuid:user_id>/reset-password/', views.reset_user_password, name='reset_user_password'),
     path('users/<uuid:user_id>/toggle-status/', views.toggle_user_status, name='toggle_user_status'),
     path('users/bulk-delete/', views.bulk_delete_users, name='bulk_delete_users'),
     path('users/bulk-status/', views.bulk_status_users, name='bulk_status_users'),
