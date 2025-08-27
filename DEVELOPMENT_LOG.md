@@ -1516,3 +1516,8 @@ Each entry should follow this format:
 - Result: Login should now work with berkhatirli / Admin123!
 
 
+## [2025-08-27 17:13] Backend: Production login and security fixes
+- Fixed gunicorn service crashes, restored original login UI, increased rate limits
+- Result: Login working with berkhatirli/Admin123!
+
+
