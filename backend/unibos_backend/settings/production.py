@@ -32,7 +32,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Security
+# Import base settings FIRST
+from .base import *
+
+# Security - AFTER base import to override
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-production-key-change-this!')
 SECURE_SSL_REDIRECT = False
 # HTTPS is enabled, so enable secure cookies
@@ -43,7 +46,7 @@ CSRF_COOKIE_HTTPONLY = False   # Changed to False to allow JavaScript access
 SESSION_COOKIE_SAMESITE = 'Lax'
 X_FRAME_OPTIONS = 'DENY'
 
-# CSRF trusted origins for HTTPS
+# CSRF trusted origins for HTTPS - AFTER base import to ensure it's not overridden
 CSRF_TRUSTED_ORIGINS = [
     'https://recaria.org',
     'https://www.recaria.org',
@@ -51,10 +54,9 @@ CSRF_TRUSTED_ORIGINS = [
     'http://www.recaria.org',
     'https://158.178.201.117',
     'http://158.178.201.117:8000',
+    'http://localhost:8000',
+    'https://localhost:8000',
 ]
-
-# Import base settings FIRST
-from .base import *
 
 # Email Configuration for recaria.org - AFTER base import
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

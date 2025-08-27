@@ -1511,3 +1511,8 @@ Each entry should follow this format:
 - Result: System now runs professionally with gunicorn and systemd services
 
 
+## [2025-08-27 15:59] Bug Fix: Remote login authentication
+- Fixed login form issues - disabled JavaScript handler that was preventing normal form submission, added method=POST and action to form tag
+- Result: Login should now work with berkhatirli / Admin123!
+
+
