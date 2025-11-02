@@ -534,12 +534,48 @@ generate_commit_message() {
     echo "$changes"
 }
 
+# Push current version before creating new one
+push_current_version() {
+    local current=$(get_current_version)
+
+    print_color "$YELLOW" "\n🔖 Pushing current version tag (v${current})..."
+
+    # Check if tag exists
+    if git tag | grep -q "^v${current}$"; then
+        print_color "$BLUE" "   Tag v${current} already exists locally"
+    else
+        # Create tag for current version
+        git tag "v${current}" 2>/dev/null || true
+        print_color "$GREEN" "   ✓ Created tag v${current}"
+    fi
+
+    # Push current commits to main
+    git checkout main 2>/dev/null || true
+    if git diff-index --quiet HEAD --; then
+        print_color "$BLUE" "   No uncommitted changes to push"
+    else
+        print_color "$YELLOW" "   Warning: Uncommitted changes exist, skipping push"
+        return 1
+    fi
+
+    # Push main branch
+    git push origin main 2>/dev/null || print_color "$YELLOW" "   ⚠️  Main already up to date"
+
+    # Push tag
+    git push origin "v${current}" 2>/dev/null || print_color "$BLUE" "   Tag v${current} already pushed"
+
+    print_color "$GREEN" "✅ Current version (v${current}) pushed to remote"
+}
+
 # Quick release
 quick_release() {
     local next_version=$(calculate_next_version)
-    
+
     print_header "Quick Release - v${next_version}"
-    
+
+    # Push current version first
+    push_current_version
+
     # Check for uncommitted changes
     if [[ -n $(git status -s) ]]; then
         print_color "$CYAN" "\n📊 Analyzing changes..."
