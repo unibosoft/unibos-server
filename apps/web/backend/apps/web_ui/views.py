@@ -662,6 +662,9 @@ class LoginView(TemplateView):
             context['server_location'] = 'recaria.org'
         else:
             context['server_location'] = 'local'
+
+        # Pass next parameter to template
+        context['next'] = self.request.GET.get('next', '')
         return context
     
     def post(self, request, *args, **kwargs):
@@ -687,7 +690,7 @@ class LoginView(TemplateView):
         if user is not None:
             # Login successful
             login(request, user)
-            
+
             # Return JSON response for AJAX
             if request.content_type == 'application/json':
                 return JsonResponse({
@@ -699,6 +702,10 @@ class LoginView(TemplateView):
                     }
                 })
             else:
+                # Check for next parameter
+                next_url = request.POST.get('next') or request.GET.get('next')
+                if next_url:
+                    return redirect(next_url)
                 return redirect('web_ui:main')
         else:
             # Login failed
