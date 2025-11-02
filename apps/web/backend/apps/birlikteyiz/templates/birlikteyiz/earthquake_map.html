@@ -27,6 +27,11 @@
     overflow: hidden;
 }
 
+/* Dark mode filter for map tiles */
+.map-tiles-dark {
+    filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}
+
 .leaflet-control-zoom a {
     background: #1a1a1a;
     color: var(--gray);
@@ -195,11 +200,12 @@ function initializeEarthquakeMap() {
             map.invalidateSize();
         }, 100);
 
-    // Add dark tile layer
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20
+    // Add OpenStreetMap tile layer (dark style via filter)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        subdomains: ['a', 'b', 'c'],
+        maxZoom: 19,
+        className: 'map-tiles-dark'
     }).addTo(map);
 
     console.log('Tile layer added');
