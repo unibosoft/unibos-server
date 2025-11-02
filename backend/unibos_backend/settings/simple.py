@@ -58,11 +58,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'unibos_backend.wsgi.application'
 
-# Database
+# Database - PostgreSQL
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'unibos_db',
+        'USER': 'unibos_user',
+        'PASSWORD': 'unibos_password',
+        'HOST': 'localhost',
+        'PORT': '5432',
+        'CONN_MAX_AGE': 60,
+        'OPTIONS': {
+            'connect_timeout': 10,
+        }
     }
 }
 

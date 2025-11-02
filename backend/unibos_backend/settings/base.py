@@ -46,6 +46,7 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     'rest_framework',
+    'rest_framework.authtoken',  # Token authentication support
     'rest_framework_simplejwt',
     'corsheaders',
     'django_filters',
@@ -134,22 +135,12 @@ DATABASES = {
     'default': env.db(),
 }
 
-# Add connection pooling for PostgreSQL
-if 'postgresql' in DATABASES['default']['ENGINE']:
-    DATABASES['default']['CONN_MAX_AGE'] = 60
-    DATABASES['default']['OPTIONS'] = {
-        'connect_timeout': 10,
-        'options': '-c statement_timeout=30000',  # 30 seconds
-    }
-
-# Enable foreign key constraints for SQLite
-if 'sqlite' in DATABASES['default']['ENGINE']:
-    from django.db.backends.signals import connection_created
-    def activate_foreign_keys(sender, connection, **kwargs):
-        if connection.vendor == 'sqlite':
-            cursor = connection.cursor()
-            cursor.execute('PRAGMA foreign_keys = OFF;')  # Disable FK checks for now
-    connection_created.connect(activate_foreign_keys)
+# PostgreSQL connection pooling
+DATABASES['default']['CONN_MAX_AGE'] = 60
+DATABASES['default']['OPTIONS'] = {
+    'connect_timeout': 10,
+    'options': '-c statement_timeout=30000',  # 30 seconds
+}
 
 # Redis Configuration
 REDIS_URL = env('REDIS_URL')

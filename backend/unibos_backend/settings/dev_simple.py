@@ -20,11 +20,19 @@ INSTALLED_APPS = [app for app in INSTALLED_APPS if app not in [
 # Remove prometheus middleware
 MIDDLEWARE = [m for m in MIDDLEWARE if 'prometheus' not in m]
 
-# Simple SQLite database
+# PostgreSQL database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'unibos_db',
+        'USER': 'unibos_user',
+        'PASSWORD': 'unibos_password',
+        'HOST': 'localhost',
+        'PORT': '5432',
+        'CONN_MAX_AGE': 60,
+        'OPTIONS': {
+            'connect_timeout': 10,
+        }
     }
 }
 

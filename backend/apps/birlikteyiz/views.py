@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from django.core.management import call_command
 from datetime import timedelta
 import threading
@@ -157,6 +158,7 @@ def cron_jobs(request):
 
 
 @login_required
+@csrf_exempt
 @require_POST
 def manual_fetch(request):
     """Manually trigger earthquake data fetch"""

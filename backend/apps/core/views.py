@@ -28,10 +28,9 @@ def login_view(request):
         
         # Create or get token
         token, created = Token.objects.get_or_create(user=user)
-        
+
         # Ensure user has a profile
-        if not hasattr(user, 'profile'):
-            UserProfile.objects.create(user=user)
+        profile, created = UserProfile.objects.get_or_create(user=user)
         
         # Return user data with token
         user_serializer = UserSerializer(user)

@@ -1,7 +1,7 @@
 #\!/bin/bash
-# UNIBOS Backend Emergency Start Script - Quick SQLite-based startup
+# UNIBOS Backend Emergency Start Script - PostgreSQL with minimal dependencies
 
-echo "🚀 Starting UNIBOS Backend (Emergency Mode)..."
+echo "🚀 Starting UNIBOS Backend (Emergency Mode - PostgreSQL)..."
 
 # Colors for output
 RED='\033[0;31m'

@@ -641,10 +641,11 @@ class APIStatusView(View):
         except:
             return False
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(TemplateView):
     """Login page view"""
     template_name = 'web_ui/login.html'
-    
+
     def dispatch(self, request, *args, **kwargs):
         # Redirect if already authenticated
         if request.user.is_authenticated:

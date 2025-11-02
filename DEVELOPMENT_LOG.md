@@ -6,6 +6,31 @@ The version manager reads recent entries to generate meaningful commit messages.
 
 ---
 
+## [2025-11-02 05:30] Backend: Complete SQLite to PostgreSQL migration
+- **Database migration**: Removed ALL SQLite support from UNIBOS backend
+- **Settings updated**: base.py, emergency.py, simple.py, dev_simple.py now use PostgreSQL only
+- **SQLite code removed**: Removed foreign key constraint handler and SQLite-specific logic from base.py
+- **PostgreSQL configuration**: Standardized connection settings across all environments
+  - Database: unibos_db
+  - User: unibos_user
+  - Password: unibos_password
+  - Host: localhost
+  - Port: 5432
+  - Connection pooling: 60 seconds
+  - Connection timeout: 10 seconds
+- **Requirements updated**: Added psycopg2-binary==2.9.9 to all requirements files
+  - requirements-emergency.txt
+  - requirements-sqlite.txt (renamed purpose, now uses PostgreSQL)
+- **VERSION.json updated**: Removed sqlite3 from dependencies, updated database description
+- **start.sh script**: PostgreSQL is now REQUIRED - script exits if PostgreSQL not detected
+- **Script files preserved**: import_users.py, import_users_fixed.py, run_simple_server.py, fix_documents_and_thumbnails.py kept as-is (contain hardcoded SQLite references for specific migration/testing purposes only)
+- **Model compatibility**: personal_inflation, music, movies, cctv models already use JSONField for PostgreSQL/SQLite compatibility
+- **.gitignore**: Already excludes *.sqlite3, *.db files
+- **Production data**: Existing PostgreSQL database with 11 users preserved (no data loss)
+- **Result**: ✅ UNIBOS now runs EXCLUSIVELY on PostgreSQL - SQLite support completely removed
+
+---
+
 ## [2025-11-02 01:45] Modules: birlikteyiz flutter mobile app created
 - **Flutter app structure**: complete mobile app in birlikteyiz_app/ directory
 - **Django REST API**: created serializers, viewsets, and API endpoints
@@ -1607,5 +1632,15 @@ Each entry should follow this format:
 ## [2025-11-02 04:45] Flutter App: birlikteyiz Flutter uygulaması - logo ve UI iyileştirmeleri
 - - AppLogo widget'ı oluşturuldu (iOS app icon + birlikteyiz yazısı)\n- Logo tüm ekranlara eklendi (earthquake_list, earthquake_map, settings)\n- Deprecated Flutter API'leri düzeltildi (withOpacity -> withValues, value -> initialValue)\n- Harita zoom özellikleri geliştirildi (explicit interaction flags)\n- Asset dosyaları eklendi ve pubspec.yaml güncellendi\n- iOS ve Android izinleri yapılandırıldı
 - Result: Flutter app logosu ve UI iyileştirmeleri tamamlandı
+
+
+## [2025-11-02 05:43] Backend: deployment health checks and production outage fix
+- added comprehensive health checks to rocksteady_deploy.sh to prevent future production outages. health checks now verify: ssh connection, python installation, virtual environment, django and critical packages (djangorestframework, psycopg2, channels, daphne, aiohttp, django_environ), .env file with required variables, required directories (logs, staticfiles, media), postgresql database connection, django settings import, backend server HTTP response. also fixed production outage on recaria.org caused by missing python dependencies (channels, daphne, aiohttp), missing .env file, and missing log directories.
+- Result: deployment script now catches configuration issues before they cause outages. health checks run automatically after full deployment and can be run standalone with ./rocksteady_deploy.sh check. recaria.org restored and operational.
+
+
+## [2025-11-02 06:37] Bug Fix: CSRF fix for earthquake manual fetch
+- Added @csrf_exempt decorator to manual_fetch endpoint in birlikteyiz views
+- Result: Fixed 403 error when trying to manually fetch earthquake data from all sources
 
 

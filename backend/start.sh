@@ -46,13 +46,16 @@ pip install --quiet --upgrade pip
 SETTINGS_MODULE=""
 REQUIREMENTS_FILE=""
 
-# Check for PostgreSQL
+# Check for PostgreSQL (REQUIRED)
 if command_exists psql && psql -U postgres -c '\l' >/dev/null 2>&1; then
     POSTGRES_AVAILABLE=true
     echo -e "${GREEN}✓ PostgreSQL detected${NC}"
 else
     POSTGRES_AVAILABLE=false
-    echo -e "${YELLOW}⚠ PostgreSQL not available${NC}"
+    echo -e "${RED}❌ PostgreSQL not available${NC}"
+    echo -e "${RED}PostgreSQL is required to run UNIBOS backend.${NC}"
+    echo "Please install and start PostgreSQL before running this script."
+    exit 1
 fi
 
 # Check for Redis
@@ -65,23 +68,14 @@ else
 fi
 
 # Select appropriate settings and requirements
-if [ "$POSTGRES_AVAILABLE" = true ] && [ "$REDIS_AVAILABLE" = true ]; then
+if [ "$REDIS_AVAILABLE" = true ]; then
     SETTINGS_MODULE="unibos_backend.settings.development"
     REQUIREMENTS_FILE="requirements.txt"
-    echo -e "${GREEN}✓ Using full development settings${NC}"
-elif [ "$REDIS_AVAILABLE" = false ] && [ "$POSTGRES_AVAILABLE" = true ]; then
+    echo -e "${GREEN}✓ Using full development settings (PostgreSQL + Redis)${NC}"
+else
     SETTINGS_MODULE="unibos_backend.settings.dev_no_redis"
     REQUIREMENTS_FILE="requirements-minimal.txt"
-    echo -e "${YELLOW}⚠ Using settings without Redis${NC}"
-else
-    SETTINGS_MODULE="unibos_backend.settings.emergency"
-    # Use SQLite-specific requirements that don't include psycopg2
-    if [ -f "requirements-sqlite.txt" ]; then
-        REQUIREMENTS_FILE="requirements-sqlite.txt"
-    else
-        REQUIREMENTS_FILE="requirements-emergency.txt"
-    fi
-    echo -e "${YELLOW}⚠ Using emergency settings (SQLite only)${NC}"
+    echo -e "${YELLOW}⚠ Using settings without Redis (PostgreSQL only)${NC}"
 fi
 
 # Install appropriate requirements

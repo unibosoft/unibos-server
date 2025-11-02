@@ -16,20 +16,31 @@ UNIBOS Rocksteady Deployment Tool
 Usage: ./rocksteady_deploy.sh [action]
 
 Actions:
-  deploy       - Full deployment (default)
-  quick        - Quick sync without setup
-  setup-db     - Setup PostgreSQL database
-  setup-deps   - Install Python dependencies
-  setup-env    - Create .env file
-  check        - Check server status
-  clean        - Clean and reinstall everything
-  help         - Show this help
+  deploy       - full deployment with health checks (default)
+  quick        - quick sync without full setup
+  setup-db     - setup PostgreSQL database only
+  setup-deps   - install Python dependencies only
+  setup-env    - create .env file only
+  check        - comprehensive health check of server
+  clean        - clean and reinstall everything
+  help         - show this help
+
+Health Checks:
+  All deployments now include comprehensive health checks that verify:
+  - SSH connection and Python installation
+  - virtual environment and Django installation
+  - critical Python packages (djangorestframework, psycopg2, channels, etc.)
+  - .env file with required variables
+  - required directories (logs, staticfiles, media)
+  - PostgreSQL database connection
+  - Django settings can be imported
+  - backend server is running and responding to HTTP requests
 
 Examples:
-  ./rocksteady_deploy.sh           # Full deployment
-  ./rocksteady_deploy.sh quick     # Quick sync only
-  ./rocksteady_deploy.sh setup-db  # Setup database only
-  ./rocksteady_deploy.sh check     # Check server status
+  ./rocksteady_deploy.sh           # full deployment with health checks
+  ./rocksteady_deploy.sh quick     # quick sync only
+  ./rocksteady_deploy.sh setup-db  # setup database only
+  ./rocksteady_deploy.sh check     # run health checks only
 EOF
 }
 
@@ -61,8 +72,9 @@ sync_files() {
     # Use .rsyncignore file for exclusions
     if [ -f ".rsyncignore" ]; then
         print_info "Using .rsyncignore file for safe deployment"
-        if rsync -avz --exclude-from=.rsyncignore --delete-excluded . $ROCKSTEADY_HOST:$ROCKSTEADY_DIR/; then
-            print_success "Files synced successfully (archive protected)"
+        # CRITICAL: Removed --delete-excluded to prevent deletion of venv and other important files
+        if rsync -avz --exclude-from=.rsyncignore . $ROCKSTEADY_HOST:$ROCKSTEADY_DIR/; then
+            print_success "Files synced successfully (archive and venv protected)"
             return 0
         else
             print_error "File sync failed"
@@ -242,57 +254,185 @@ start_backend() {
     fi
 }
 
-# Check server status
-check_status() {
-    print_step "Checking server status..."
-    
+# Comprehensive health check
+health_check() {
+    print_step "Running comprehensive health checks..."
+
+    local FAILED=0
     echo ""
+
+    # Check SSH connection
     echo "SSH Connection:"
     if test_ssh_connection; then
-        echo "  ✅ Connected"
+        print_success "  connected"
     else
-        echo "  ❌ Not connected"
+        print_error "  not connected"
         return 1
     fi
-    
+
+    # Check Python version
     echo ""
     echo "Python:"
-    run_on_rocksteady "$PYTHON_VERSION --version"
-    
+    if run_on_rocksteady "$PYTHON_VERSION --version" 2>&1 | grep -q "Python 3"; then
+        local PY_VERSION=$(run_on_rocksteady "$PYTHON_VERSION --version" 2>&1)
+        print_success "  $PY_VERSION"
+    else
+        print_error "  python3 not found"
+        FAILED=1
+    fi
+
+    # Check virtual environment
+    echo ""
+    echo "Virtual Environment:"
+    if run_on_rocksteady "[ -d $ROCKSTEADY_DIR/backend/$VENV_DIR ]"; then
+        print_success "  venv exists at $ROCKSTEADY_DIR/backend/$VENV_DIR"
+    else
+        print_error "  venv not found"
+        FAILED=1
+    fi
+
+    # Check Django installation
     echo ""
     echo "Django:"
-    if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && [ -d $VENV_DIR ] && ./$VENV_DIR/bin/python -c 'import django; print(f\"  ✅ Django {django.__version__}\")'"; then
-        :
+    if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/python -c 'import django; print(django.__version__)' 2>/dev/null"; then
+        local DJANGO_VERSION=$(run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/python -c 'import django; print(django.__version__)' 2>/dev/null")
+        print_success "  Django $DJANGO_VERSION installed"
     else
-        echo "  ❌ Django not installed"
+        print_error "  Django not installed or import failed"
+        FAILED=1
     fi
-    
+
+    # Check critical Python packages
+    echo ""
+    echo "Critical Packages:"
+    local PACKAGES=("djangorestframework" "psycopg2" "channels" "daphne" "aiohttp" "django_environ")
+    for pkg in "${PACKAGES[@]}"; do
+        if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/python -c 'import $pkg' 2>/dev/null"; then
+            print_success "  $pkg installed"
+        else
+            print_warning "  $pkg not installed"
+            FAILED=1
+        fi
+    done
+
+    # Check .env file
+    echo ""
+    echo "Environment Configuration:"
+    if run_on_rocksteady "[ -f $ROCKSTEADY_DIR/backend/.env ]"; then
+        print_success "  .env file exists"
+
+        # Check critical env vars
+        local ENV_VARS=("SECRET_KEY" "DB_NAME" "DB_USER" "DB_PASSWORD" "ALLOWED_HOSTS")
+        for var in "${ENV_VARS[@]}"; do
+            if run_on_rocksteady "grep -q '^$var=' $ROCKSTEADY_DIR/backend/.env"; then
+                print_success "    $var configured"
+            else
+                print_warning "    $var missing"
+                FAILED=1
+            fi
+        done
+    else
+        print_error "  .env file not found"
+        FAILED=1
+    fi
+
+    # Check required directories
+    echo ""
+    echo "Required Directories:"
+    local DIRS=("logs" "staticfiles" "media")
+    for dir in "${DIRS[@]}"; do
+        if run_on_rocksteady "[ -d $ROCKSTEADY_DIR/backend/$dir ]"; then
+            print_success "  $dir/ exists"
+        else
+            print_warning "  $dir/ missing"
+            FAILED=1
+        fi
+    done
+
+    # Check PostgreSQL
     echo ""
     echo "Database:"
-    if run_on_rocksteady "PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c 'SELECT version();' >/dev/null 2>&1"; then
-        echo "  ✅ PostgreSQL connected"
+    if run_on_rocksteady "command -v psql >/dev/null 2>&1"; then
+        print_success "  PostgreSQL client installed"
+
+        if run_on_rocksteady "PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c 'SELECT 1;' >/dev/null 2>&1"; then
+            print_success "  Database connection successful"
+        else
+            print_error "  Cannot connect to database"
+            FAILED=1
+        fi
     else
-        echo "  ❌ PostgreSQL not connected"
+        print_error "  PostgreSQL not installed"
+        FAILED=1
     fi
-    
+
+    # Check Django settings can be imported
+    echo ""
+    echo "Django Settings:"
+    if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/python -c 'import os; os.environ.setdefault(\"DJANGO_SETTINGS_MODULE\", \"unibos_backend.settings.development\"); import django; django.setup()' 2>/dev/null"; then
+        print_success "  Settings import successful"
+    else
+        print_error "  Settings import failed"
+        run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/python -c 'import os; os.environ.setdefault(\"DJANGO_SETTINGS_MODULE\", \"unibos_backend.settings.development\"); import django; django.setup()' 2>&1 | tail -10"
+        FAILED=1
+    fi
+
+    # Check backend server status
     echo ""
     echo "Backend Server:"
     if run_on_rocksteady "pgrep -f 'manage.py runserver' >/dev/null"; then
-        echo "  ✅ Running on port $DJANGO_PORT"
+        print_success "  Process running (port $DJANGO_PORT)"
+
+        # Try HTTP request
+        if run_on_rocksteady "curl -s -o /dev/null -w '%{http_code}' http://localhost:$DJANGO_PORT 2>/dev/null | grep -q '200\|301\|302'"; then
+            print_success "  HTTP server responding"
+        else
+            print_warning "  Server process running but not responding to HTTP"
+            FAILED=1
+        fi
     else
-        echo "  ❌ Not running"
+        print_error "  Not running"
+        FAILED=1
     fi
-    
+
+    # Check nginx if exists
     echo ""
-    echo "Project Location: $ROCKSTEADY_HOST:$ROCKSTEADY_DIR"
+    echo "Nginx (optional):"
+    if run_on_rocksteady "command -v nginx >/dev/null 2>&1"; then
+        if run_on_rocksteady "systemctl is-active nginx >/dev/null 2>&1"; then
+            print_success "  nginx running"
+        else
+            print_warning "  nginx installed but not running"
+        fi
+    else
+        print_info "  nginx not installed (optional)"
+    fi
+
     echo ""
+    if [ $FAILED -eq 0 ]; then
+        print_success "All health checks passed!"
+        echo ""
+        echo "Access the application at:"
+        echo "  http://$ROCKSTEADY_HOST:$DJANGO_PORT"
+        return 0
+    else
+        print_error "Some health checks failed!"
+        echo ""
+        echo "Please review the errors above and fix them."
+        return 1
+    fi
+}
+
+# Check server status (simple version for backwards compatibility)
+check_status() {
+    health_check
 }
 
 # Full deployment
 full_deploy() {
     echo "🚀 Starting full deployment to $ROCKSTEADY_HOST"
     echo ""
-    
+
     check_connection || exit 1
     sync_files || exit 1
     setup_directories || exit 1
@@ -302,13 +442,29 @@ full_deploy() {
     run_migrations || exit 1
     collect_static || exit 1
     start_backend || exit 1
-    
+
+    # Wait for server to start
+    print_step "Waiting for server to start..."
+    sleep 3
+
     echo ""
-    print_success "Deployment complete!"
+    print_success "Deployment steps completed!"
     echo ""
-    echo "Access the application at:"
-    echo "  http://$ROCKSTEADY_HOST:$DJANGO_PORT"
-    echo ""
+
+    # Run health checks
+    echo "═══════════════════════════════════════════"
+    echo "Running post-deployment health checks..."
+    echo "═══════════════════════════════════════════"
+    if health_check; then
+        echo ""
+        print_success "Deployment successful and all checks passed!"
+        return 0
+    else
+        echo ""
+        print_error "Deployment completed but health checks failed!"
+        print_warning "Please review the issues above before using the system."
+        return 1
+    fi
 }
 
 # Quick deployment (sync only)
