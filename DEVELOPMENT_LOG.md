@@ -1829,3 +1829,25 @@ Affected Elements:
 - Result: Map now displays correctly within container bounds. Color scheme is more professional and consistent with overall design. Deployed to recaria.org.
 
 
+## [2025-11-03 02:05] Bug Fix: earthquake map tiles - fixed tile loading on remote
+- Fixed map tiles not loading properly on remote server (recaria.org):
+
+Problem:
+- CartoDB dark tiles were showing fragmented/broken on remote
+- Tiles not loading completely
+- Map appearing with missing sections
+
+Solution:
+- Switched from CartoDB to OpenStreetMap standard tile provider
+- OSM is more reliable and has better HTTPS/CORS support
+- Added CSS filter to darken tiles for dark mode appearance
+- Filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7)
+
+Technical Changes:
+- Tile URL: https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
+- Subdomains: a, b, c
+- Max zoom: 19
+- Added className: 'map-tiles-dark' for CSS targeting
+- Result: Map tiles now load reliably on remote server. Dark mode appearance maintained through CSS filters. Deployed to recaria.org.
+
+
