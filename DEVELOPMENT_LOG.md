@@ -1755,3 +1755,33 @@ Path Pattern Updates:
 - Result: All path references now consistent with monorepo structure. ~50 files updated across scripts, docs, and source code. System fully aligned with new architecture.
 
 
+## [2025-11-02 12:35] Archive Cleanup: Cleaned Flutter build artifacts from v526, v527, v528 archives
+- Removed Flutter build artifacts causing archive size anomalies:
+
+Version v526:
+- Removed birlikteyiz_app/build/ (1.5GB)
+- Removed .dart_tool, .flutter-plugins, android/build, ios/build, ios/Pods
+- Size: 1.7GB → 83MB (95% reduction)
+
+Version v527:
+- Removed birlikteyiz_app/build/ (1.5GB)
+- Removed additional Flutter artifacts
+- Size: 1.7GB → 87MB (95% reduction)
+
+Version v528:
+- Removed apps/mobile/birlikteyiz/build/ (1.5GB)
+- Removed all Flutter build artifacts
+- Size: 1.7GB → 30MB (98% reduction!)
+
+Analysis:
+- v523-v525: Normal size ~66-67MB (pre-monorepo)
+- v526-v527: Now 83-87MB (monorepo overhead + cleaned)
+- v528: Only 30MB (clean monorepo, better ignore rules)
+
+Version Analyzer:
+- Anomalies resolved
+- All archives now within normal size range
+- Future archives will automatically exclude Flutter build files
+- Result: Archive size anomalies fixed. v526/v527/v528 cleaned from 1.7GB each to 83MB/87MB/30MB respectively. Flutter build artifacts successfully removed.
+
+

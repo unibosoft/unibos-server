@@ -39,8 +39,10 @@ class VersionManagerView(LoginRequiredMixin, BaseUIView):
         # Perform real-time scan of archive directory
         import os
         import glob
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-        archive_path = os.path.join(base_dir, "archive", "versions")
+        # Path from: apps/web/backend/apps/version_manager/views.py
+        # Need to go up 6 levels to reach unibos root
+        base_dir = Path(__file__).parent.parent.parent.parent.parent.parent
+        archive_path = base_dir / "archive" / "versions"
         
         # Get all version directories and calculate real-time stats
         version_dirs = sorted(glob.glob(f"{archive_path}/unibos_v*"))
@@ -158,7 +160,7 @@ class VersionManagerView(LoginRequiredMixin, BaseUIView):
             'anomaly_count': anomaly_count,
             'latest_scan': latest_scan,
             'latest_git': latest_git,
-            'archive_path': '/Users/berkhatirli/Desktop/unibos/archive/versions/',
+            'archive_path': str(archive_path),
         })
         
         return context
@@ -171,16 +173,22 @@ class ArchiveAnalyzerView(LoginRequiredMixin, BaseUIView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
+
+        # Calculate dynamic archive path
+        # Path from: apps/web/backend/apps/version_manager/views.py
+        # Need to go up 6 levels to reach unibos root
+        base_dir = Path(__file__).parent.parent.parent.parent.parent.parent
+        archive_path = base_dir / "archive" / "versions"
+
         # Get all archives ordered by version
         archives = VersionArchive.objects.all()
-        
+
         # Calculate statistics if we have data
         if archives.exists():
             sizes = [a.size_bytes for a in archives]
             mean_size = statistics.mean(sizes)
             stdev_size = statistics.stdev(sizes) if len(sizes) > 1 else 0
-            
+
             # Update Z-scores and anomalies
             for archive in archives:
                 if stdev_size > 0:
@@ -189,12 +197,12 @@ class ArchiveAnalyzerView(LoginRequiredMixin, BaseUIView):
                 else:
                     archive.z_score = 0
                     archive.is_anomaly = False
-        
+
         context.update({
             'archives': archives,
-            'archive_path': '/Users/berkhatirli/Desktop/unibos/archive/versions/',
+            'archive_path': str(archive_path),
         })
-        
+
         return context
 
 
@@ -250,9 +258,10 @@ class StartScanView(LoginRequiredMixin, View):
         """Perform the actual scanning with detailed logging"""
         # Use correct path to unibos project root
         import os
-        # backend/apps/version_manager/views.py -> go up 3 levels to get to unibos root
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-        archive_path = os.path.join(base_dir, "archive", "versions")
+        # Path from: apps/web/backend/apps/version_manager/views.py
+        # Need to go up 6 levels to reach unibos root
+        base_dir = Path(__file__).parent.parent.parent.parent.parent.parent
+        archive_path = base_dir / "archive" / "versions"
         session_id = scan_session.id
         
         try:
@@ -550,8 +559,11 @@ class GitStatusView(LoginRequiredMixin, View):
     
     def get(self, request):
         """Fetch and return git status"""
-        repo_path = '/Users/berkhatirli/Desktop/unibos'
-        
+        # Calculate repo path dynamically
+        # Path from: apps/web/backend/apps/version_manager/views.py
+        # Need to go up 6 levels to reach unibos root
+        repo_path = str(Path(__file__).parent.parent.parent.parent.parent.parent)
+
         try:
             # Get branch name
             branch_result = subprocess.run(
