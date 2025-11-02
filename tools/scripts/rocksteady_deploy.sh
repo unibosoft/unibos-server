@@ -91,7 +91,7 @@ sync_files() {
 setup_directories() {
     print_step "Setting up directories..."
     
-    if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && mkdir -p $REQUIRED_DIRS && touch logs/django.log"; then
+    if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && mkdir -p $REQUIRED_DIRS && touch logs/django.log"; then
         print_success "Directories created"
         return 0
     else
@@ -104,12 +104,12 @@ setup_directories() {
 setup_venv() {
     print_step "Setting up Python virtual environment..."
     
-    if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && $PYTHON_VERSION -m venv $VENV_DIR"; then
+    if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && $PYTHON_VERSION -m venv $VENV_DIR"; then
         print_success "Virtual environment created"
         
         # Upgrade pip
         print_step "Upgrading pip..."
-        if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/python -m pip install --upgrade pip"; then
+        if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/python -m pip install --upgrade pip"; then
             print_success "Pip upgraded"
             return 0
         else
@@ -127,9 +127,9 @@ install_dependencies() {
     print_step "Installing Python dependencies..."
     
     # Try minimal requirements first if file exists
-    if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && [ -f requirements_minimal.txt ]"; then
+    if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && [ -f requirements_minimal.txt ]"; then
         print_info "Installing from requirements_minimal.txt..."
-        if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/pip install -r requirements_minimal.txt"; then
+        if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/pip install -r requirements_minimal.txt"; then
             print_success "Dependencies installed from requirements_minimal.txt"
             return 0
         fi
@@ -137,12 +137,12 @@ install_dependencies() {
     
     # Fallback to individual packages
     print_info "Installing packages individually..."
-    if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/pip install $ALL_PACKAGES"; then
+    if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/pip install $ALL_PACKAGES"; then
         print_success "All packages installed"
         return 0
     else
         print_warning "Some packages may have failed, trying core packages only..."
-        if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/pip install $CORE_PACKAGES $DB_PACKAGES"; then
+        if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/pip install $CORE_PACKAGES $DB_PACKAGES"; then
             print_success "Core packages installed"
             return 0
         else
@@ -158,7 +158,7 @@ setup_env_file() {
     
     # Generate .env content and write to remote
     ENV_CONTENT=$(generate_env_content)
-    if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && cat > .env << 'EOF'
+    if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && cat > .env << 'EOF'
 $ENV_CONTENT
 EOF"; then
         print_success ".env file created"
@@ -215,7 +215,7 @@ EOF
 run_migrations() {
     print_step "Running Django migrations..."
     
-    if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/python manage.py migrate --noinput"; then
+    if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/python manage.py migrate --noinput"; then
         print_success "Migrations completed"
         return 0
     else
@@ -228,7 +228,7 @@ run_migrations() {
 collect_static() {
     print_step "Collecting static files..."
     
-    if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/python manage.py collectstatic --noinput"; then
+    if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/python manage.py collectstatic --noinput"; then
         print_success "Static files collected"
         return 0
     else
@@ -245,7 +245,7 @@ start_backend() {
     run_on_rocksteady "pkill -f 'manage.py runserver' || true"
     
     # Start new server
-    if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && nohup ./$VENV_DIR/bin/python manage.py runserver 0.0.0.0:$DJANGO_PORT > logs/server.log 2>&1 &"; then
+    if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && nohup ./$VENV_DIR/bin/python manage.py runserver 0.0.0.0:$DJANGO_PORT > logs/server.log 2>&1 &"; then
         print_success "Backend server started on port $DJANGO_PORT"
         return 0
     else
@@ -294,8 +294,8 @@ health_check() {
     # Check Django installation
     echo ""
     echo "Django:"
-    if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/python -c 'import django; print(django.__version__)' 2>/dev/null"; then
-        local DJANGO_VERSION=$(run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/python -c 'import django; print(django.__version__)' 2>/dev/null")
+    if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/python -c 'import django; print(django.__version__)' 2>/dev/null"; then
+        local DJANGO_VERSION=$(run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/python -c 'import django; print(django.__version__)' 2>/dev/null")
         print_success "  Django $DJANGO_VERSION installed"
     else
         print_error "  Django not installed or import failed"
@@ -307,7 +307,7 @@ health_check() {
     echo "Critical Packages:"
     local PACKAGES=("djangorestframework" "psycopg2" "channels" "daphne" "aiohttp" "django_environ")
     for pkg in "${PACKAGES[@]}"; do
-        if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/python -c 'import $pkg' 2>/dev/null"; then
+        if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/python -c 'import $pkg' 2>/dev/null"; then
             print_success "  $pkg installed"
         else
             print_warning "  $pkg not installed"
@@ -369,11 +369,11 @@ health_check() {
     # Check Django settings can be imported
     echo ""
     echo "Django Settings:"
-    if run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/python -c 'import os; os.environ.setdefault(\"DJANGO_SETTINGS_MODULE\", \"unibos_backend.settings.development\"); import django; django.setup()' 2>/dev/null"; then
+    if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/python -c 'import os; os.environ.setdefault(\"DJANGO_SETTINGS_MODULE\", \"unibos_backend.settings.development\"); import django; django.setup()' 2>/dev/null"; then
         print_success "  Settings import successful"
     else
         print_error "  Settings import failed"
-        run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && ./$VENV_DIR/bin/python -c 'import os; os.environ.setdefault(\"DJANGO_SETTINGS_MODULE\", \"unibos_backend.settings.development\"); import django; django.setup()' 2>&1 | tail -10"
+        run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/python -c 'import os; os.environ.setdefault(\"DJANGO_SETTINGS_MODULE\", \"unibos_backend.settings.development\"); import django; django.setup()' 2>&1 | tail -10"
         FAILED=1
     fi
 
@@ -507,7 +507,7 @@ clean_deploy() {
     check_connection || exit 1
     
     print_step "Removing old installation..."
-    run_on_rocksteady "cd $ROCKSTEADY_DIR/backend && rm -rf $VENV_DIR logs staticfiles media"
+    run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && rm -rf $VENV_DIR logs staticfiles media"
     
     full_deploy
 }

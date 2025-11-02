@@ -1681,3 +1681,77 @@ All version management and deployment scripts updated for new structure.
 - Result: Monorepo structure successfully implemented. All applications, documentation, and tools properly organized. Path references updated throughout codebase.
 
 
+## [2025-11-02 12:14] Project Cleanup: Comprehensive root directory cleanup and organization
+- Implemented 4-phase cleanup and organization:
+
+Phase 1 - Security Fix:
+- Removed fix_remote_login.py (contained hardcoded credentials)
+
+Phase 2 - Cleanup (70MB+ removed):
+- Removed old SQL backups: v523, v524, v525 (57MB)
+- Removed 15 test HTML files
+- Removed 10 version tracking txt files
+- Removed old log files and debug outputs
+- Removed temporary data files
+
+Phase 3 - Test Organization:
+- Created tests/ structure with subdirectories: cli/, backend/, legacy/
+- Moved test_all_menus.py → tests/cli/
+- Moved test_smtp.py, test_public_deploy.py → tests/backend/
+- Moved demo_v057.py, test_v057.py → tests/legacy/
+
+Phase 4 - Utility Organization:
+- Created tools/utilities/ directory
+- Moved import_unicorn_users.py, update_password_local.py, unibos_logger.py → tools/utilities/
+- Created data/database/backups/ for SQL backups
+
+Path Updates:
+- Updated test_all_menus.py: src/ → apps/cli/src/
+- Updated import_unicorn_users.py: backend/ → apps/web/backend/
+- Updated unibos_version.sh: SQL backups now go to data/database/backups/
+- Updated .gitignore: data/, test patterns, new paths
+
+All files moved with git mv to preserve history.
+- Result: Root directory cleaned and organized. 70MB+ temporary files removed. Tests and utilities properly organized. SQL backups now in data/database/backups/.
+
+
+## [2025-11-02 12:26] Path Consistency: Comprehensive monorepo path consistency updates across entire codebase
+- Fixed all remaining old path references after monorepo restructuring:
+
+Phase 1 - Root Directory Cleanup:
+- Updated alembic.ini: src/database/migrations → apps/cli/src/database/migrations
+- Moved gunicorn.service → tools/configs/systemd/ (updated paths)
+- Deleted fix_admin_ui.css (unused file)
+- Deleted requirements.txt (redundant, each app has its own)
+
+Phase 2 - Critical Path Updates:
+- apps/cli/src/main.py: Fixed 5+ hardcoded absolute paths
+  - VERSION.json path updated
+  - Backend log paths updated
+  - Frontend paths updated
+- Backend utility scripts (7 files): All hardcoded paths updated
+
+Phase 3 - Docker Configuration:
+- Dockerfile: Updated COPY commands for monorepo structure
+- docker-compose.yml: Updated volume mounts to new paths
+
+Phase 4 - Deployment Scripts (9 files):
+- test_quick_deploy.sh, oneliner_deploy.sh, verify_rocksteady_sync.sh
+- start_rocksteady_server.sh, unibos.sh, setup_recaria_redirect.sh
+- rocksteady_deploy.sh, fix_remote_login.sh, debug_remote_auth_complete.sh
+All scripts updated: backend/ → apps/web/backend/, src/ → apps/cli/src/
+
+Phase 5 - Documentation:
+- All .md files updated with new path examples
+- Mobile app documentation updated
+- Deployment guides updated
+- Module documentation updated
+
+Path Pattern Updates:
+- backend/ → apps/web/backend/
+- src/ → apps/cli/src/
+- birlikteyiz_app/ → apps/mobile/birlikteyiz/
+- /Users/.../backend → /Users/.../apps/web/backend
+- Result: All path references now consistent with monorepo structure. ~50 files updated across scripts, docs, and source code. System fully aligned with new architecture.
+
+

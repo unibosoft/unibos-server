@@ -10,7 +10,7 @@ import re
 from datetime import datetime
 
 # Django setup
-sys.path.append('/Users/berkhatirli/Desktop/unibos/backend')
+sys.path.append('/Users/berkhatirli/Desktop/unibos/apps/web/backend')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unibos_backend.settings.emergency')
 django.setup()
 

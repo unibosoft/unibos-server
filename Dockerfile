@@ -16,8 +16,8 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy requirements
-COPY backend/requirements*.txt ./
+# Copy requirements (updated for monorepo structure)
+COPY apps/web/backend/requirements*.txt ./
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --user -r requirements.txt || \
@@ -53,9 +53,9 @@ RUN useradd -m -u 1000 unibos && \
 # Set working directory
 WORKDIR /app
 
-# Copy application
-COPY --chown=unibos:unibos backend/ ./backend/
-COPY --chown=unibos:unibos src/ ./src/
+# Copy application (updated for monorepo structure)
+COPY --chown=unibos:unibos apps/web/backend/ ./backend/
+COPY --chown=unibos:unibos apps/cli/src/ ./src/
 
 # Copy configuration files
 COPY --chown=unibos:unibos deploy/docker/nginx.conf /etc/nginx/nginx.conf

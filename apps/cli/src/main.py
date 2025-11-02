@@ -2244,7 +2244,7 @@ def handle_claude_exit():
             description = input().strip() or "Claude AI assisted development"
             
             # Update VERSION.json description
-            version_file = "/Users/berkhatirli/Desktop/unibos/src/VERSION.json"
+            version_file = "/Users/berkhatirli/Desktop/unibos/apps/cli/src/VERSION.json"
             if os.path.exists(version_file):
                 with open(version_file, 'r') as f:
                     version_data = json.loads(f.read())
@@ -2254,7 +2254,7 @@ def handle_claude_exit():
             
             # Run version manager script
             print(f"\n{Colors.GREEN}Running version manager...{Colors.RESET}")
-            result = subprocess.run(["/Users/berkhatirli/Desktop/unibos/src/version_manager.sh"], 
+            result = subprocess.run(["/Users/berkhatirli/Desktop/unibos/apps/cli/src/version_manager.sh"], 
                                     input="e\n", text=True, capture_output=True)
             
             if result.returncode == 0:
@@ -4763,7 +4763,7 @@ def get_current_version_number():
         possible_paths = [
             'VERSION.json',  # Same directory as main.py
             '../src/VERSION.json',  # If running from root
-            '/Users/berkhatirli/Desktop/unibos/src/VERSION.json'  # Absolute path
+            '/Users/berkhatirli/Desktop/unibos/apps/cli/src/VERSION.json'  # Absolute path
         ]
         
         for path in possible_paths:
@@ -4940,7 +4940,7 @@ def update_version_json(version, description):
         possible_paths = [
             'VERSION.json',  # Same directory as main.py
             '../src/VERSION.json',  # If running from root
-            '/Users/berkhatirli/Desktop/unibos/src/VERSION.json'  # Absolute path
+            '/Users/berkhatirli/Desktop/unibos/apps/cli/src/VERSION.json'  # Absolute path
         ]
         
         for path in possible_paths:
@@ -7258,7 +7258,7 @@ def show_server_logs():
     y += 2
     
     # Check for Django log file
-    log_file = Path('/Users/berkhatirli/Desktop/unibos/backend/logs/django.log')
+    log_file = Path('/Users/berkhatirli/Desktop/unibos/apps/web/backend/logs/django.log')
     if log_file.exists():
         try:
             # Read last 20 lines of log
@@ -7486,10 +7486,10 @@ def show_server_logs():
     """Show server logs in a formatted view with arrow navigation"""
     selected_index = 0
     log_options = [
-        ("backend_server", "📝 backend server log", "/Users/berkhatirli/Desktop/unibos/backend/server.log"),
-        ("django_log", "🔧 django log", "/Users/berkhatirli/Desktop/unibos/backend/logs/django.log"),
-        ("error_log", "❌ error log", "/Users/berkhatirli/Desktop/unibos/backend/error.log"),
-        ("access_log", "🌐 access log", "/Users/berkhatirli/Desktop/unibos/backend/logs/access.log"),
+        ("backend_server", "📝 backend server log", "/Users/berkhatirli/Desktop/unibos/apps/web/backend/server.log"),
+        ("django_log", "🔧 django log", "/Users/berkhatirli/Desktop/unibos/apps/web/backend/logs/django.log"),
+        ("error_log", "❌ error log", "/Users/berkhatirli/Desktop/unibos/apps/web/backend/error.log"),
+        ("access_log", "🌐 access log", "/Users/berkhatirli/Desktop/unibos/apps/web/backend/logs/access.log"),
         ("back", "← back to web forge", None)
     ]
     

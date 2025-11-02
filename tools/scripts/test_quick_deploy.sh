@@ -14,7 +14,7 @@ echo "  Nginx started: $INITIAL_NGINX"
 echo ""
 
 # Create a test file to verify sync
-echo "# Test comment added at $(date)" >> src/main.py
+echo "# Test comment added at $(date)" >> apps/cli/src/main.py
 
 echo "📦 Running quick deploy..."
 python3 << 'EOF'
@@ -27,7 +27,7 @@ menu = PublicServerMenu()
 
 # Simulate quick deploy steps
 print("  1. Backing up remote settings...")
-backup_cmd = "ssh rocksteady 'cd ~/unibos/backend && cp -f unibos_backend/settings/production.py /tmp/prod_bak.py 2>/dev/null; cp -f .env /tmp/env_bak 2>/dev/null'"
+backup_cmd = "ssh rocksteady 'cd ~/unibos/apps/web/backend && cp -f unibos_apps/web/backend/settings/production.py /tmp/prod_bak.py 2>/dev/null; cp -f .env /tmp/env_bak 2>/dev/null'"
 subprocess.run(backup_cmd, shell=True, capture_output=True)
 
 print("  2. Syncing files...")
@@ -38,7 +38,7 @@ if result.returncode == 0:
     print("  ✅ Files synced")
     
     print("  3. Restoring settings...")
-    restore_cmd = "ssh rocksteady 'cd ~/unibos/backend && [ -f /tmp/prod_bak.py ] && cp -f /tmp/prod_bak.py unibos_backend/settings/production.py; [ -f /tmp/env_bak ] && cp -f /tmp/env_bak .env'"
+    restore_cmd = "ssh rocksteady 'cd ~/unibos/apps/web/backend && [ -f /tmp/prod_bak.py ] && cp -f /tmp/prod_bak.py unibos_apps/web/backend/settings/production.py; [ -f /tmp/env_bak ] && cp -f /tmp/env_bak .env'"
     subprocess.run(restore_cmd, shell=True, capture_output=True)
     
     print("  4. Restarting services...")
@@ -55,7 +55,7 @@ else:
 EOF
 
 # Remove test comment
-sed -i '' '/# Test comment added at/d' src/main.py 2>/dev/null || sed -i '/# Test comment added at/d' src/main.py
+sed -i '' '/# Test comment added at/d' apps/cli/src/main.py 2>/dev/null || sed -i '/# Test comment added at/d' apps/cli/src/main.py
 
 echo ""
 echo "⏳ Waiting for services to stabilize..."

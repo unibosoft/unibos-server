@@ -37,10 +37,10 @@ sleep 3
 if pgrep -f "manage.py runserver" > /dev/null; then
     echo "✅ Server started successfully!"
     echo "Access at: http://rocksteady:8000"
-    echo "Logs at: ~/unibos/backend/logs/server.log"
+    echo "Logs at: ~/unibos/apps/web/backend/logs/server.log"
 else
     echo "❌ Server failed to start"
-    echo "Check logs: ssh rocksteady 'tail -n 50 ~/unibos/backend/logs/server.log'"
+    echo "Check logs: ssh rocksteady 'tail -n 50 ~/unibos/apps/web/backend/logs/server.log'"
 fi
 EOF
 

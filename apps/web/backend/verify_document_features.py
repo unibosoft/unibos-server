@@ -8,7 +8,7 @@ import sys
 from datetime import timedelta
 
 # Add the backend directory to the path
-sys.path.insert(0, '/Users/berkhatirli/Desktop/unibos/backend')
+sys.path.insert(0, '/Users/berkhatirli/Desktop/unibos/apps/web/backend')
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unibos_backend.settings.emergency')

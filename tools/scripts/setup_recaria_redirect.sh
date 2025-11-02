@@ -43,13 +43,13 @@ server {
     
     # Static files (if needed)
     location /static/ {
-        alias /home/ubuntu/unibos/backend/staticfiles/;
+        alias /home/ubuntu/unibos/apps/web/backend/staticfiles/;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
     
     location /media/ {
-        alias /home/ubuntu/unibos/backend/media/;
+        alias /home/ubuntu/unibos/apps/web/backend/media/;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }

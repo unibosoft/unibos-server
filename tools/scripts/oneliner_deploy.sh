@@ -23,13 +23,13 @@ echo "────────────────────────�
 echo ""
 echo "4️⃣  Deploy only backend (Django):"
 echo ""
-echo 'rsync -avz backend/ rocksteady:~/unibos/backend/ && ssh rocksteady "cd ~/unibos/backend && source venv/bin/activate 2>/dev/null || python3 -m venv venv && source venv/bin/activate && pip install -q -r requirements.txt && python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"'
+echo 'rsync -avz apps/web/backend/ rocksteady:~/unibos/apps/web/backend/ && ssh rocksteady "cd ~/unibos/apps/web/backend && source venv/bin/activate 2>/dev/null || python3 -m venv venv && source venv/bin/activate && pip install -q -r requirements.txt && python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"'
 echo ""
 echo "─────────────────────────────────────────────────────────────"
 echo ""
 echo "5️⃣  Deploy only CLI:"
 echo ""
-echo 'rsync -avz src/ rocksteady:~/unibos/src/ && ssh rocksteady "cd ~/unibos/src && python3 main.py"'
+echo 'rsync -avz apps/cli/src/ rocksteady:~/unibos/apps/cli/src/ && ssh rocksteady "cd ~/unibos/apps/cli/src && python3 main.py"'
 echo ""
 echo "─────────────────────────────────────────────────────────────"
 echo ""
@@ -41,7 +41,7 @@ echo "────────────────────────�
 echo ""
 echo "7️⃣  Deploy with systemd service (production):"
 echo ""
-echo 'rsync -avz . rocksteady:~/unibos/ && ssh rocksteady "cd ~/unibos && sudo cp backend/unibos.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl restart unibos && sudo systemctl status unibos"'
+echo 'rsync -avz . rocksteady:~/unibos/ && ssh rocksteady "cd ~/unibos && sudo cp apps/web/backend/unibos.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl restart unibos && sudo systemctl status unibos"'
 echo ""
 echo "─────────────────────────────────────────────────────────────"
 echo ""

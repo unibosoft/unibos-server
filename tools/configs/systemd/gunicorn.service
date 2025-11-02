@@ -5,8 +5,9 @@ After=network.target
 [Service]
 User=ubuntu
 Group=ubuntu
-WorkingDirectory=/home/ubuntu/unibos/backend
-ExecStart=/home/ubuntu/unibos/backend/venv/bin/gunicorn \
+# Updated for monorepo structure
+WorkingDirectory=/home/ubuntu/unibos/apps/web/backend
+ExecStart=/home/ubuntu/unibos/apps/web/backend/venv/bin/gunicorn \
           --access-logfile /home/ubuntu/unibos/logs/gunicorn-access.log \
           --error-logfile /home/ubuntu/unibos/logs/gunicorn-error.log \
           --workers 3 \

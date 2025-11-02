@@ -10,7 +10,7 @@ import django
 import sys
 
 # Setup Django
-sys.path.append('/Users/berkhatirli/Desktop/unibos/backend')
+sys.path.append('/Users/berkhatirli/Desktop/unibos/apps/web/backend')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unibos_backend.settings.development')
 os.environ.setdefault('SECRET_KEY', 'dev-secret-key-for-testing')
 django.setup()

@@ -77,11 +77,11 @@ ssh rocksteady << 'EOF'
 cd ~/unibos/backend
 
 # Check if production.py has correct session settings
-if grep -q "SESSION_COOKIE_SECURE = False" unibos_backend/settings/production.py; then
+if grep -q "SESSION_COOKIE_SECURE = False" unibos_apps/web/backend/settings/production.py; then
     echo "✓ Session cookies configured for HTTP"
 else
     echo "✗ Fixing session cookie settings..."
-    cat >> unibos_backend/settings/production.py << 'SETTINGS'
+    cat >> unibos_apps/web/backend/settings/production.py << 'SETTINGS'
 
 # HTTP Session Settings
 SESSION_COOKIE_SECURE = False
@@ -135,7 +135,7 @@ else
     
     echo ""
     echo "📝 Checking Django logs..."
-    ssh rocksteady 'tail -20 ~/unibos/backend/server.log'
+    ssh rocksteady 'tail -20 ~/unibos/apps/web/backend/server.log'
 fi
 
 echo ""

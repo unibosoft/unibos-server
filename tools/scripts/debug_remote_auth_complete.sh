@@ -148,10 +148,10 @@ ssh rocksteady << 'EOF'
 cd ~/unibos/backend
 
 # Backup current settings
-cp unibos_backend/settings/production.py unibos_backend/settings/production.py.backup
+cp unibos_apps/web/backend/settings/production.py unibos_apps/web/backend/settings/production.py.backup
 
 # Create new production settings
-cat > unibos_backend/settings/production.py << 'SETTINGS'
+cat > unibos_apps/web/backend/settings/production.py << 'SETTINGS'
 """
 Production settings for UNIBOS - Fixed for HTTP
 """
