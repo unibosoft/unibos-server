@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🪐 unibos v525 - unicorn bodrum operating system
+🪐 unibos v526 - unicorn bodrum operating system
 Simplified Web Forge + Lowercase UI + Single Server Architecture
 
 Author: berk hatırlı - bitez, bodrum, muğla, türkiye
-Version: v525_20250827_1713
+Version: v526_20251102_0501
 Purpose: Professional terminal UI with multi-module support"""
 
 import os
