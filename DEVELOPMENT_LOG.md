@@ -1805,3 +1805,27 @@ Technical details:
 - Result: Map initialization significantly improved with robust error handling and retry logic. Deployed to recaria.org (rocksteady). User should test at https://recaria.org/birlikteyiz/map/
 
 
+## [2025-11-03 02:01] UI/UX: birlikteyiz earthquake map - container overflow and color improvements
+- Fixed map container overflow and updated color scheme:
+
+Container Fixes:
+- Added max-width: 100% to prevent overflow
+- Added overflow: hidden to leaflet-container
+- Fixed inline styles on map container div
+
+Color Scheme Updates:
+- Changed from phosphorescent green (#00ff00) to neutral gray (#808080)
+- Updated all labels, dropdowns, borders to use --gray variable
+- Changed small earthquake markers from green to gray
+- Updated legend colors
+- Added orange hover effect on zoom controls
+
+Affected Elements:
+- Leaflet popup wrappers and tips
+- Zoom controls and attribution
+- Filter labels and select dropdowns
+- Map container border
+- Legend text and small earthquake indicator
+- Result: Map now displays correctly within container bounds. Color scheme is more professional and consistent with overall design. Deployed to recaria.org.
+
+
