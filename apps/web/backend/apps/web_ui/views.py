@@ -674,33 +674,40 @@ class LoginView(TemplateView):
         # Get credentials from request
         username = request.POST.get('username')
         password = request.POST.get('password')
-        
+        next_url = request.POST.get('next') or request.GET.get('next')
+
         # Try JSON body if form data not found
         if not username and request.content_type == 'application/json':
             try:
                 data = json.loads(request.body)
                 username = data.get('username')
                 password = data.get('password')
+                if not next_url:
+                    next_url = data.get('next')
             except:
                 pass
-        
+
         # Authenticate user
         user = authenticate(request, username=username, password=password)
-        
+
         if user is not None:
             # Login successful
             login(request, user)
 
             # Return JSON response for AJAX
             if request.content_type == 'application/json':
-                return JsonResponse({
+                response_data = {
                     'success': True,
                     'user': {
                         'username': user.username,
                         'email': user.email,
                         'is_superuser': user.is_superuser
                     }
-                })
+                }
+                # Add redirect URL if present
+                if next_url:
+                    response_data['redirect_url'] = next_url
+                return JsonResponse(response_data)
             else:
                 # Check for next parameter
                 next_url = request.POST.get('next') or request.GET.get('next')

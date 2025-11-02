@@ -247,16 +247,18 @@
     <script>
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            const nextInput = document.querySelector('input[name="next"]');
+            const next = nextInput ? nextInput.value : '';
             const errorMsg = document.getElementById('errorMessage');
             const loading = document.getElementById('loading');
-            
+
             // Hide error and show loading
             errorMsg.classList.remove('show');
             loading.classList.add('show');
-            
+
             try {
                 // Use Django session-based login instead of JWT
                 const response = await fetch('/login/', {
@@ -266,19 +268,20 @@
                         'X-CSRFToken': getCookie('csrftoken')
                     },
                     credentials: 'same-origin',
-                    body: JSON.stringify({ username, password }),
+                    body: JSON.stringify({ username, password, next }),
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok && data.success) {
                     // Store user info if needed
                     if (data.user) {
                         localStorage.setItem('user', JSON.stringify(data.user));
                     }
-                    
-                    // Redirect to main app
-                    window.location.href = '/';
+
+                    // Redirect to next URL or main app
+                    const redirectUrl = data.redirect_url || next || '/';
+                    window.location.href = redirectUrl;
                 } else {
                     // Show error
                     errorMsg.textContent = data.error || 'invalid credentials';
