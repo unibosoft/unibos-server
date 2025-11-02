@@ -1963,3 +1963,40 @@ Technical:
 - Result: Leaflet now loading from CDN with integrity checks. Map should work on remote. Deployed to recaria.org.
 
 
+## [2025-11-03 02:20] DevOps: nginx static files path - fixed configuration
+- Fixed nginx static files serving configuration on rocksteady:
+
+Previous Issue:
+- Nginx config pointed to: /opt/unibos/static/
+- Actual files location: /home/ubuntu/unibos/apps/web/backend/staticfiles/
+- Static files returned 404 errors
+
+Changes Made:
+1. Updated /etc/nginx/sites-available/recaria.org
+   - Changed static location from /opt/unibos/static/
+   - To: /home/ubuntu/unibos/apps/web/backend/staticfiles/
+
+2. Fixed directory permissions for nginx access:
+   - chmod o+x /home/ubuntu (and subdirectories)
+   - chmod -R 755 staticfiles/
+
+3. Tested configuration:
+   - sudo nginx -t (passed)
+   - sudo systemctl reload nginx (success)
+   - curl -I https://recaria.org/static/leaflet/leaflet.js (200 OK)
+
+Configuration:
+location /static/ {
+    alias /home/ubuntu/unibos/apps/web/backend/staticfiles/;
+    expires 30d;
+    add_header Cache-Control "public, immutable";
+}
+
+Result:
+- Static files now serve correctly (HTTP 200)
+- Cache headers set for 30 days
+- Future local static files (like Leaflet) will work
+- Currently using CDN but path is ready if needed
+- Result: Nginx static files configuration fixed. Path updated to correct location. Permissions set. Tested and working (200 OK). Ready for future local static file usage.
+
+
