@@ -124,9 +124,10 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ] if (BASE_DIR / 'static').exists() else []
 
-# Media files (User uploaded content)
+# Media files (User uploaded content) - Universal Data Directory
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR.parent / 'data_db' / 'media'
+DATA_DIR = BASE_DIR.parent.parent.parent / 'data'
+MEDIA_ROOT = DATA_DIR / 'runtime' / 'media'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

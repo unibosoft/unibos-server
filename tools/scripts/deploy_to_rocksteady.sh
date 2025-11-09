@@ -32,7 +32,8 @@ rsync -av --progress \
     --exclude='db.sqlite3' \
     --exclude='.DS_Store' \
     --exclude='archive/versions' \
-    --exclude='data_db/backups' \
+    --exclude='data_db' \
+    --exclude='data' \
     --exclude='quarantine' \
     --exclude='*.sql' \
     "$SCRIPT_DIR/" "$TEMP_DIR/$DEPLOY_NAME/"

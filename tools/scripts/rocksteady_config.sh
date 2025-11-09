@@ -38,8 +38,10 @@ export UTIL_PACKAGES="whitenoise==6.6.0 user-agents==2.2.0 python-json-logger==2
 # All packages combined
 export ALL_PACKAGES="$CORE_PACKAGES $DB_PACKAGES $ESSENTIAL_PACKAGES $AUTH_PACKAGES $UTIL_PACKAGES"
 
-# Rsync exclusions - CRITICAL: Never sync archive folder!
-export RSYNC_EXCLUDE=".git,venv,__pycache__,*.pyc,node_modules,*.log,db.sqlite3,.DS_Store,archive,archive/,archive/*,quarantine,*.sql,data_db,logs,staticfiles"
+# Rsync exclusions - CRITICAL: Never sync archive folder or data directories!
+# data_db = legacy data directory (deprecated)
+# data = new universal data directory structure
+export RSYNC_EXCLUDE=".git,venv,__pycache__,*.pyc,node_modules,*.log,db.sqlite3,.DS_Store,archive,archive/,archive/*,quarantine,*.sql,data_db,data,logs,staticfiles"
 
 # Required directories
 export REQUIRED_DIRS="logs staticfiles media"

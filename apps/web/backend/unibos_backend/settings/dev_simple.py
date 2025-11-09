@@ -50,9 +50,10 @@ CORS_ALLOW_ALL_ORIGINS = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Media files
+# Media files - Universal Data Directory
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR.parent / 'data_db' / 'media'
+DATA_DIR = BASE_DIR.parent.parent.parent / 'data'
+MEDIA_ROOT = DATA_DIR / 'runtime' / 'media'
 
 # Simplified logging
 LOGGING = {
