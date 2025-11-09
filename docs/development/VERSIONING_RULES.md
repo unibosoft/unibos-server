@@ -98,11 +98,15 @@ MEVCUT VERSİYON (örn. v531):
       • main (branch)
       • refs/tags/v531 (tag)
       ⚠️ KRİTİK: main ve v531 branch'i aynı commit'te olmalı!
+      ⚠️ UYARI: Bu adımdan sonra deployment yapılana kadar ASLA yeni commit yapma!
   8. → DEPLOY (rocksteady'ye v531 gönder)
+      ⚠️ Deploy BAŞARISIZ olursa hemen durdur, deployment fix'le, tekrar dene
+      ✅ Deploy başarılı olduktan SONRA bir sonraki adıma geç
   9. → ŞİMDİ YENİ VERSİYONA GEÇ (v532)
       - VERSION.json'u v532 yap
       - Git commit: "chore: bump version to v532"
       - Git push origin main
+      ⚠️ Bu adım MUTLAKA deployment sonrasında olmalı!
   10. → Artık v532'desin, yeni geliştirmelere başla!
 ```
 
@@ -114,6 +118,27 @@ MEVCUT VERSİYON (örn. v531):
 ❌ Sonra commit et
 ❌ v531 kaybolur!
 ```
+
+### ❌ YANLIŞ Workflow 2 (Tag/Branch Yanlış Commit'e Point Eder!):
+
+```
+❌ Git tag ve branch oluştur
+❌ Push yap
+❌ SONRA deployment integration commit'i yap
+❌ SONRA version bump commit'i yap
+❌ Sonuç: Tag v531 eski commit'te, yeni değişiklikler eksik!
+```
+
+**Neden Yanlış?**
+- Git tag ve branch oluşturulduğu anda mevcut HEAD commit'ine point eder
+- Eğer sonradan yeni commit yapılırsa, tag ve branch ESKİ commit'te kalır
+- Yeni commit'ler tag/branch'te olmaz ama main'de olur
+- GitHub'da tag kodları ile main kodları farklı olur!
+
+**Doğrusu:**
+- Tag ve branch oluşturmadan ÖNCE tüm commit'ler yapılmalı
+- Tag ve branch SONUNCU (final) commit'e point etmeli
+- Tag/branch push'undan SONRA version bump commit'i yapılmalı (yeni versiyona geçiş için)
 
 ### 📌 Önemli Notlar:
 

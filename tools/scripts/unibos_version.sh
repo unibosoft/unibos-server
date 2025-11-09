@@ -720,8 +720,24 @@ quick_release() {
     # Step 3: Git operations for CURRENT version (commit, tag, branch, push)
     git_operations "$current_version" "$description"
 
-    # Step 4: NOW update to next version (after current is archived and tagged)
-    print_color "$CYAN" "\n🔄 Now bumping to v${next_version}..."
+    print_color "$GREEN" "\n✅ Version v${current_version} archived, tagged, and pushed successfully!"
+    print_color "$CYAN" "\n📌 IMPORTANT: Version is now finalized as v${current_version}"
+    print_color "$YELLOW" "   ⚠️  Do NOT make any more commits until after deployment!"
+    print_color "$YELLOW" "   ⚠️  Tag and branch point to current commit: $(git rev-parse --short HEAD)"
+
+    # Ask if user wants to deploy now
+    print_color "$CYAN" "\n🚀 Deploy v${current_version} to production now? (y/N):"
+    read -r deploy_confirm
+
+    if [[ $deploy_confirm =~ ^[Yy]$ ]]; then
+        deploy_to_production "$current_version"
+    else
+        print_color "$YELLOW" "   Deployment skipped. You can deploy later with:"
+        print_color "$YELLOW" "   ./tools/scripts/unibos_version.sh (option 6)"
+    fi
+
+    # Step 4: NOW update to next version (after deployment decision)
+    print_color "$CYAN" "\n🔄 Now bumping to v${next_version} for next development cycle..."
     update_version_json "$next_version" "Preparation for next development cycle"
     update_django_files "$next_version"
 
@@ -730,8 +746,13 @@ quick_release() {
     git commit -m "chore: bump version to v${next_version}" 2>/dev/null || true
     git push origin main 2>/dev/null || true
 
-    print_color "$GREEN" "\n✅ Version v${current_version} archived and tagged successfully!"
-    print_color "$GREEN" "✅ Bumped to v${next_version} for next development cycle"
+    print_color "$GREEN" "\n✅ Bumped to v${next_version} for next development cycle"
+    print_color "$BLUE" "\n📋 Summary:"
+    print_color "$BLUE" "   • v${current_version}: Archived, tagged, and pushed ✅"
+    print_color "$BLUE" "   • Current working version: v${next_version}"
+    print_color "$BLUE" "   • Tag v${current_version} points to: $(git rev-parse --short v${current_version} 2>/dev/null || echo 'N/A')"
+    print_color "$BLUE" "   • Branch v${current_version} points to: $(git rev-parse --short v${current_version} 2>/dev/null || echo 'N/A')"
+    print_color "$BLUE" "   • Main branch at: $(git rev-parse --short main)"
     
     # Restart services to apply new version
     print_color "$YELLOW" "\n🔄 Restarting services with new version..."
