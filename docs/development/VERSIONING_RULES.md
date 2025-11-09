@@ -168,6 +168,34 @@ ls -la archive/versions/unibos_vXXX_*/
 git push
 ```
 
+### 6. Deploy to Production
+```bash
+# ❌ YANLIŞ: Manuel deployment
+ssh rocksteady "cd /var/www/unibos && git pull && sudo systemctl restart gunicorn"
+
+# ✅ DOĞRU: Script ile deployment
+./tools/scripts/unibos_version.sh
+# Select option 6 (Deploy to Production)
+
+# Veya doğrudan:
+./tools/scripts/rocksteady_deploy.sh deploy
+```
+
+**Deployment Script Özellikleri:**
+- SSH bağlantısı kontrolü
+- Kod senkronizasyonu (rsync ile)
+- Dependency kurulumu (pip install)
+- Database migration
+- Gunicorn/Nginx servis restart
+- Health check (HTTP 200 doğrulama)
+- Rollback desteği (hata durumunda)
+
+**Önemli Notlar:**
+1. Deploy işlemi SADECE git push sonrasında yapılmalı
+2. Production'da her zaman tagged versiyon olmalı (v531, v532 gibi)
+3. Health check başarısız olursa deployment iptal edilir
+4. SSH key authentication gereklidir (password-less login)
+
 ## 🐛 Common Issues & Solutions
 
 ### Issue 1: Archive Too Large (>100MB)

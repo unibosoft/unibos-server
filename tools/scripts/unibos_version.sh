@@ -396,19 +396,56 @@ git_operations() {
 }
 
 # Main menu
+# Deploy to production server
+deploy_to_production() {
+    local version=$1
+
+    print_color "$YELLOW" "\n🚀 Deploying to production (rocksteady)..."
+
+    # Check if deployment script exists
+    if [ ! -f "tools/scripts/rocksteady_deploy.sh" ]; then
+        print_color "$RED" "   ❌ Deployment script not found: tools/scripts/rocksteady_deploy.sh"
+        return 1
+    fi
+
+    # Ask for confirmation
+    print_color "$CYAN" "   Version: v${version}"
+    print_color "$YELLOW" "   Deploy to rocksteady? (y/N):"
+    read -r confirm
+
+    if [[ ! $confirm =~ ^[Yy]$ ]]; then
+        print_color "$BLUE" "   Deployment skipped"
+        return 0
+    fi
+
+    # Run deployment script
+    print_color "$CYAN" "   Running deployment script..."
+    if ./tools/scripts/rocksteady_deploy.sh deploy; then
+        print_color "$GREEN" "   ✅ Deployment completed successfully!"
+        print_color "$GREEN" "   🌐 Production server updated to v${version}"
+        return 0
+    else
+        print_color "$RED" "   ❌ Deployment failed!"
+        print_color "$YELLOW" "   Please check logs and try again manually:"
+        print_color "$YELLOW" "   ./tools/scripts/rocksteady_deploy.sh deploy"
+        return 1
+    fi
+}
+
 show_menu() {
     print_header "UNIBOS Unified Version Manager"
-    
+
     echo -e "\n${BLUE}Select an operation:${NC}"
     echo "1) Quick Release (auto version + commit + archive)"
     echo "2) Status Check (versions, gaps, sync)"
     echo "3) Manual Version (specify version number)"
     echo "4) Fix Version Sync (align VERSION.json with git)"
     echo "5) Archive Only (no git operations)"
-    echo "6) Cleanup Old Archives"
+    echo "6) Deploy to Production (rocksteady)"
+    echo "7) Cleanup Old Archives"
     echo "0) Exit"
-    
-    echo -e "\n${YELLOW}Enter choice [0-6]:${NC} "
+
+    echo -e "\n${YELLOW}Enter choice [0-7]:${NC} "
 }
 
 # Status check
@@ -814,8 +851,12 @@ main() {
                 version=$(get_current_version)
                 create_archive "$version"
                 ;;
-            6) cleanup_archives ;;
-            0) 
+            6)
+                version=$(get_current_version)
+                deploy_to_production "$version"
+                ;;
+            7) cleanup_archives ;;
+            0)
                 print_color "$GREEN" "Goodbye!"
                 exit 0
                 ;;
