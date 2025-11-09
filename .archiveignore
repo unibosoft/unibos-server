@@ -3,6 +3,11 @@
 # Created: 2025-08-19
 # Purpose: Prevent large/unnecessary files from bloating version archives
 
+# Version control (CRITICAL - prevents 37GB bloat!)
+.git/
+.gitignore
+.gitattributes
+
 # Database files
 *.sqlite3
 *.sqlite3-journal

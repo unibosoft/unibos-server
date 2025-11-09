@@ -89,14 +89,19 @@ MEVCUT VERSİYON (örn. v531):
   1. Tüm geliştirmeler tamamlandı ✅
   2. → DATABASE BACKUP oluştur
   3. → ARŞİV oluştur (mevcut v531'i arşivle)
-  4. → GIT COMMIT (v531 final)
+  4. → GIT COMMIT (v531 final) - main branch'te
   5. → GIT TAG oluştur (v531)
-  6. → GIT BRANCH oluştur (v531)
-  7. → GITHUB'A PUSH (tag + branch)
+  6. → GIT BRANCH oluştur (v531) - main'den branch al
+  7. → GITHUB'A PUSH
+      • refs/heads/v531 (branch)
+      • main (branch)
+      • refs/tags/v531 (tag)
+      ⚠️ KRİTİK: main ve v531 branch'i aynı commit'te olmalı!
   8. → DEPLOY (rocksteady'ye v531 gönder)
   9. → ŞİMDİ YENİ VERSİYONA GEÇ (v532)
       - VERSION.json'u v532 yap
       - Git commit: "chore: bump version to v532"
+      - Git push origin main
   10. → Artık v532'desin, yeni geliştirmelere başla!
 ```
 
@@ -114,8 +119,10 @@ MEVCUT VERSİYON (örn. v531):
 1. **Arşivlenen = Bitmiş versiyon** (v531 tamamlandı → v531'i arşivle)
 2. **Tag = Bitmiş commit** (v531 commit'i → v531 tag'i)
 3. **Branch = Her versiyon için ayrı** (hem tag hem branch olmalı)
-4. **Deploy = Arşivlenen versiy on** (v531 arşivlendi → v531 deploy edilir)
-5. **Yeni versiyon = Boş başlangıç** (v532 = temiz sayfa)
+4. **Main ve vXXX branch = İdentical** (aynı commit'te olmalı)
+5. **Deploy = Arşivlenen versiyon** (v531 arşivlendi → v531 deploy edilir)
+6. **Yeni versiyon = Boş başlangıç** (v532 = temiz sayfa)
+7. **Push stratejisi = Full ref path** (refs/heads/vXXX ve refs/tags/vXXX kullan)
 
 ### 🎯 Mantık:
 

@@ -31,12 +31,14 @@
 
 5. GIT BRANCH oluştur (v531)
    git checkout -b v531
-   git push origin v531
+   git push origin refs/heads/v531  # Full ref path kullan
 
-6. GITHUB'A PUSH (tag + branch)
+6. GITHUB'A PUSH (main + tag)
    git checkout main
    git push origin main
-   git push origin --tags
+   git push origin refs/tags/v531   # Full ref path kullan
+
+   ⚠️ DİKKAT: main ve v531 branch'i aynı commit'te olmalı!
 
 7. DEPLOY (v531'i rocksteady'ye gönder)
    ./tools/scripts/rocksteady_deploy.sh deploy

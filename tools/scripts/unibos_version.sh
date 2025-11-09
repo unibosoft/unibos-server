@@ -349,32 +349,50 @@ create_archive() {
 git_operations() {
     local version=$1
     local description=$2
-    
+
     print_color "$YELLOW" "\n📝 Git operations..."
-    
+
     # Ensure version doesn't already have 'v' prefix to prevent double 'v'
     clean_version=$(echo "$version" | sed 's/^v//')
-    
-    # Add and commit on main
+
+    # Step 1: Ensure we're on main branch
     git checkout main 2>/dev/null || true
+    print_color "$CYAN" "   📍 On main branch"
+
+    # Step 2: Add and commit on main
     git add -A
     git commit -m "v${clean_version}: ${description}" || true
-    
-    # Create version branch from main (they will be identical)
+    print_color "$GREEN" "   ✅ Committed on main"
+
+    # Step 3: Create version branch from main (they will be identical)
     git checkout -b "v${clean_version}" 2>/dev/null || git checkout "v${clean_version}"
-    
-    # Push version branch
-    git push origin "v${clean_version}"
-    
-    # Go back to main and push (main and vXXX are the same)
+    print_color "$GREEN" "   ✅ Created branch v${clean_version}"
+
+    # Step 4: Push version branch to remote
+    git push origin refs/heads/v${clean_version} || git push origin "v${clean_version}"
+    print_color "$GREEN" "   ✅ Pushed branch v${clean_version} to origin"
+
+    # Step 5: Go back to main and push (main and vXXX are identical at this point)
     git checkout main
     git push origin main
-    
-    # Create and push tag
+    print_color "$GREEN" "   ✅ Pushed main to origin"
+
+    # Step 6: Create and push tag (tag points to same commit as branch)
     git tag "v${clean_version}" 2>/dev/null || true
-    git push origin --tags
-    
-    print_color "$GREEN" "✅ Git operations completed (v${clean_version} and main are identical)"
+    git push origin refs/tags/v${clean_version} || git push origin --tags
+    print_color "$GREEN" "   ✅ Created and pushed tag v${clean_version}"
+
+    # Verification: Ensure main and vXXX branch are identical
+    local main_commit=$(git rev-parse main)
+    local branch_commit=$(git rev-parse "v${clean_version}")
+
+    if [ "$main_commit" = "$branch_commit" ]; then
+        print_color "$GREEN" "✅ Git operations completed (v${clean_version} branch and main are identical: ${main_commit:0:7})"
+    else
+        print_color "$YELLOW" "⚠️  Warning: main and v${clean_version} are at different commits"
+        print_color "$YELLOW" "   Main: ${main_commit:0:7}"
+        print_color "$YELLOW" "   v${clean_version}: ${branch_commit:0:7}"
+    fi
 }
 
 # Main menu
