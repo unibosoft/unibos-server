@@ -2427,3 +2427,16 @@ Files Modified:
 - Result: MiniCPM-v 2.6 successfully integrated as primary OCR model. System ready for multilingual document processing with GPT-4o level quality.
 
 
+## [2025-11-09 12:37] Deployment Infrastructure: ASGI server migration preparation with Daphne configuration
+- Infrastructure improvements for production deployment:
+
+- Created daphne.conf.py configuration for ASGI server settings
+- Updated rocksteady_deploy.sh to prioritize Daphne service with fallback support
+- Enhanced health checks for Daphne/Gunicorn/runserver detection
+- Updated test_quick_deploy.sh for Daphne service verification
+- Changed nginx restart to reload for minimal downtime
+
+This prepares infrastructure for upcoming Uvicorn migration which will provide 2-3x performance improvement over Daphne while maintaining full WebSocket support.
+- Result: Deployment scripts now support Daphne (ASGI) as primary server, with backward compatibility for Gunicorn (WSGI). Health checks enhanced to detect all server types and warn about WebSocket capabilities.
+
+
