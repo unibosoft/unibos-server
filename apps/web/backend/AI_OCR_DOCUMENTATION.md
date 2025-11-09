@@ -54,7 +54,7 @@ export MISTRAL_API_KEY="your_api_key_here"
 ### Command Line
 
 ```python
-from apps.documents.ocr_service import OCRProcessor
+from modules.documents.backend.ocr_service import OCRProcessor
 
 # Initialize processor
 processor = OCRProcessor()

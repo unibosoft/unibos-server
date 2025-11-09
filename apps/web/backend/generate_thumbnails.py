@@ -13,7 +13,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unibos_backend.settings.emergen
 sys.path.insert(0, '/Users/berkhatirli/Desktop/unibos/apps/web/backend')
 django.setup()
 
-from apps.documents.models import Document
+from modules.documents.backend.models import Document
 
 def generate_thumbnail(image_path, size=(150, 150)):
     """Generate thumbnail from image file"""

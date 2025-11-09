@@ -13,9 +13,9 @@ sys.path.insert(0, '/Users/berkhatirli/Desktop/unibos/apps/web/backend')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unibos_backend.settings.development')
 django.setup()
 
-from apps.documents.models import Document
-from apps.documents.image_quality_service import ImageQualityService
-from apps.documents.analysis_service import OCRAnalysisService
+from modules.documents.backend.models import Document
+from modules.documents.backend.image_quality_service import ImageQualityService
+from modules.documents.backend.analysis_service import OCRAnalysisService
 import json
 
 
@@ -97,7 +97,7 @@ def test_json_guard():
     print("TEST 3: JSON Guard Validation")
     print("=" * 80)
 
-    from apps.documents.ollama_service import OllamaService
+    from modules.documents.backend.ollama_service import OllamaService
 
     ollama = OllamaService()
 

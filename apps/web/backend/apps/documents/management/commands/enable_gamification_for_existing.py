@@ -5,8 +5,8 @@ Enable gamification for existing documents
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from apps.documents.models import Document
-from apps.documents.gamification_models import UserProfile, PointTransaction
+from modules.documents.backend.models import Document
+from modules.documents.backend.gamification_models import UserProfile, PointTransaction
 import random
 
 User = get_user_model()

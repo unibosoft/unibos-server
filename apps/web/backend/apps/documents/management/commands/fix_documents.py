@@ -9,8 +9,8 @@ from django.utils import timezone
 
 User = get_user_model()
 from django.core.files.base import ContentFile
-from apps.documents.models import Document, ParsedReceipt
-from apps.documents.thumbnail_service import EnhancedThumbnailGenerator
+from modules.documents.backend.models import Document, ParsedReceipt
+from modules.documents.backend.thumbnail_service import EnhancedThumbnailGenerator
 from PIL import Image, ImageDraw, ImageFont
 import random
 import io

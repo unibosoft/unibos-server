@@ -23,14 +23,14 @@ from typing import Dict, List, Optional
 
 from apps.web_ui.views import BaseUIView
 
-from .models import Document, ParsedReceipt, ReceiptItem
-from .gamification_models import (
-    UserProfile, Achievement, PointTransaction, Challenge, 
+from modules.documents.backend.models import Document, ParsedReceipt, ReceiptItem
+from modules.documents.backend.gamification_models import (
+    UserProfile, Achievement, PointTransaction, Challenge,
     UserChallenge, Leaderboard, ValidationFeedback, LearningModel,
     POINT_REWARDS, ACHIEVEMENT_DEFINITIONS
 )
-from .ocr_service import OCRProcessor
-from .ollama_service import OllamaService, IntelligentAgent
+from modules.documents.backend.ocr_service import OCRProcessor
+from modules.documents.backend.ollama_service import OllamaService, IntelligentAgent
 
 logger = logging.getLogger('documents.receipt_processing')
 
@@ -665,9 +665,9 @@ def rescan_ocr(request, document_id):
             # Store old text info
             old_text_length = len(document.ocr_text) if document.ocr_text else 0
             old_confidence = document.ocr_confidence or 0
-            
+
             # Use OCR processor to rescan
-            from apps.documents.ocr_service import OCRProcessor
+            from modules.documents.backend.ocr_service import OCRProcessor
             ocr_processor = OCRProcessor()
             
             if document.file_path:
@@ -1127,7 +1127,7 @@ def document_validation(request):
     
     # Get base context from BaseUIView for sidebar
     from apps.web_ui.views import BaseUIView
-    from .document_models import DocumentType, DocumentShare, DEFAULT_DOCUMENT_TYPES
+    from modules.documents.backend.document_models import DocumentType, DocumentShare, DEFAULT_DOCUMENT_TYPES
     
     base_view = BaseUIView()
     base_view.request = request
@@ -1190,12 +1190,12 @@ def document_validation(request):
                 current_receipt = pending_validations.first() if pending_validations else None
         else:
             current_receipt = pending_validations.first() if pending_validations else None
-        
+
         # Ensure current receipt has OCR text for display
         if current_receipt:
             if not current_receipt.ocr_text and current_receipt.file_path:
                 # Try to extract OCR text if missing
-                from apps.documents.ocr_service import OCRProcessor
+                from modules.documents.backend.ocr_service import OCRProcessor
                 try:
                     ocr_processor = OCRProcessor()
                     ocr_result = ocr_processor.process_document(
@@ -1576,7 +1576,7 @@ def get_receipt_detail(request, receipt_id):
         
         # Ensure OCR text is available
         if not receipt.ocr_text and receipt.file_path:
-            from apps.documents.ocr_service import OCRProcessor
+            from modules.documents.backend.ocr_service import OCRProcessor
             try:
                 ocr_processor = OCRProcessor()
                 ocr_result = ocr_processor.process_document(
@@ -1663,7 +1663,7 @@ def crop_image(request, document_id):
         document.file_path.save(filename, ContentFile(output.read()), save=True)
         
         # Regenerate thumbnail
-        from apps.documents.utils import ThumbnailGenerator
+        from modules.documents.backend.utils import ThumbnailGenerator
         thumb_gen = ThumbnailGenerator()
         thumb_gen.generate_thumbnail(document)
         

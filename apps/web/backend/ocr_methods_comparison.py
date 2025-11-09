@@ -16,8 +16,8 @@ sys.path.insert(0, '/Users/berkhatirli/Desktop/unibos/apps/web/backend')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unibos_backend.settings.development')
 django.setup()
 
-from apps.documents.models import Document
-from apps.documents.analysis_service import OCRAnalysisService
+from modules.documents.backend.models import Document
+from modules.documents.backend.analysis_service import OCRAnalysisService
 
 
 def analyze_document_with_all_methods(document: Document, doc_info: Dict) -> Dict:

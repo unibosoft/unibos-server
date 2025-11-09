@@ -275,7 +275,7 @@ class DocumentHelper:
         Generate unique filename if file already exists
         Adds incrementing number or timestamp to avoid overwriting
         """
-        from apps.documents.models import Document
+        from modules.documents.backend.models import Document
         from datetime import datetime
         
         sanitized = DocumentHelper.sanitize_filename(original_filename)

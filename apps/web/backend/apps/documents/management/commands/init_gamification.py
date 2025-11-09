@@ -9,7 +9,7 @@ from django.utils import timezone
 
 User = get_user_model()
 from datetime import timedelta
-from apps.documents.gamification_models import (
+from modules.documents.backend.gamification_models import (
     UserProfile, Challenge, Achievement, Leaderboard
 )
 

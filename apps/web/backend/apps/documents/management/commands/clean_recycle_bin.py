@@ -8,7 +8,7 @@ from django.utils import timezone
 from datetime import timedelta
 import logging
 
-from apps.documents.models import Document
+from modules.documents.backend.models import Document
 
 logger = logging.getLogger('documents.cron')
 

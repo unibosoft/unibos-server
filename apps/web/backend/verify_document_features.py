@@ -16,7 +16,7 @@ django.setup()
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from apps.documents.models import Document
+from modules.documents.backend.models import Document
 
 User = get_user_model()
 

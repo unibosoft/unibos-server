@@ -8,8 +8,8 @@ import logging
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.core.cache import cache
-from apps.documents.models import Document
-from apps.documents.ocr_service import OCRProcessor
+from modules.documents.backend.models import Document
+from modules.documents.backend.ocr_service import OCRProcessor
 
 logger = logging.getLogger('documents.ocr_processor')
 

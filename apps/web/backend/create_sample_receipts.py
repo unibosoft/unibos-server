@@ -16,8 +16,8 @@ sys.path.append(str(Path(__file__).parent.parent))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unibos_backend.settings.emergency')
 django.setup()
 
-from apps.documents.models import Document
-from apps.documents.utils import ThumbnailGenerator
+from modules.documents.backend.models import Document
+from modules.documents.backend.utils import ThumbnailGenerator
 from apps.auth_system.models import User
 
 def create_receipt_image(store_name, receipt_number, width=400, height=600):

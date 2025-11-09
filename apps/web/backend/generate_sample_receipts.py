@@ -23,8 +23,8 @@ django.setup()
 from PIL import Image, ImageDraw, ImageFont
 from django.core.files.base import ContentFile
 from django.conf import settings
-from apps.documents.models import Document, ParsedReceipt
-from apps.documents.utils import ThumbnailGenerator
+from modules.documents.backend.models import Document, ParsedReceipt
+from modules.documents.backend.utils import ThumbnailGenerator
 import io
 
 # Store configurations for Turkish receipts

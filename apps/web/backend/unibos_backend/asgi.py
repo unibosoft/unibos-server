@@ -16,14 +16,14 @@ from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator
 from apps.common.middleware import JWTAuthMiddleware
-import apps.documents.routing
+import modules.documents.backend.routing
 
 # Django ASGI application
 django_asgi_app = get_asgi_application()
 
 # WebSocket routing
 websocket_urlpatterns = []
-websocket_urlpatterns += apps.documents.routing.websocket_urlpatterns
+websocket_urlpatterns += modules.documents.backend.routing.websocket_urlpatterns
 
 # Import other app routings if their consumers exist
 try:

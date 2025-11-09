@@ -5,8 +5,8 @@ This is useful after changing the thumbnail generation logic
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from apps.documents.models import Document
-from apps.documents.utils import ThumbnailGenerator
+from modules.documents.backend.models import Document
+from modules.documents.backend.utils import ThumbnailGenerator
 import logging
 
 logger = logging.getLogger('documents.commands')
