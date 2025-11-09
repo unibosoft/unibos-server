@@ -1,10 +1,10 @@
 {
-  "version": "v531",
-  "build_number": "20251109_1351",
-  "release_date": "2025-11-09 13:51:15 +0300",
+  "version": "v532",
+  "build_number": "20251109_1435",
+  "release_date": "2025-11-09 14:35:56 +0300",
   "author": "berk hatırlı",
   "location": "bitez, bodrum, muğla, türkiye, dünya, güneş sistemi, samanyolu, yerel galaksi grubu, evren",
-  "description": "Added Claude session protocols and code quality standards",
+  "description": "Upgraded to MiniCPM-v 2.6, added document analysis UI, enforced script-only versioning workflow",
   "features": [
     "🎬 **Movies Module**: Complete movie/series collection management with TMDB/OMDB API integration",
     "🎵 **Music Module**: Spotify-integrated music library without storing files, open source artwork",
