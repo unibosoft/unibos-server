@@ -56,6 +56,14 @@ class Command(BaseCommand):
                     )
 
                     try:
+                        # Check pause again before starting heavy processing
+                        if cache.get('ocr_processing_paused', False):
+                            self.stdout.write(self.style.WARNING(
+                                '⏸️  OCR paused before starting document. Skipping.'
+                            ))
+                            time.sleep(interval * 2)
+                            continue
+
                         # Process with OCR
                         result = ocr_processor.process_document(
                             pending_document.file_path.path,

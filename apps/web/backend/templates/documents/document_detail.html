@@ -217,7 +217,14 @@
 <div class="document-viewer">
     <!-- original document -->
     <div class="document-preview">
-        <h2 style="color: var(--orange); font-size: 16px; margin-bottom: 10px;">📷 orijinal doküman</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h2 style="color: var(--orange); font-size: 16px; margin: 0;">📷 orijinal doküman</h2>
+            <a href="{% url 'documents:document_analysis' document.id %}"
+               class="btn"
+               style="background: var(--cyan); color: #000; padding: 6px 12px; font-size: 12px; text-decoration: none; border-radius: 4px;">
+                🔬 compare ocr methods
+            </a>
+        </div>
 
         <div class="preview-container">
             {% if document.file_path %}

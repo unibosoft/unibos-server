@@ -12,7 +12,8 @@ from .views import (
     RecycleBinView,
     CreditCardManagementView,
     SubscriptionManagementView,
-    select_ocr_method
+    select_ocr_method,
+    DocumentAnalysisView
 )
 from .api_views import (
     trigger_ocr,
@@ -26,7 +27,13 @@ from .api_views import (
     get_processing_status,
     ocr_pause,
     ocr_resume,
-    ocr_status
+    ocr_status,
+    analysis_retry_method,
+    analysis_select_method,
+    analysis_refresh,
+    analysis_run_all,
+    run_analysis_methods,
+    get_analysis_status
 )
 from .bulk_views import (
     BulkDeleteView,
@@ -60,7 +67,8 @@ urlpatterns = [
     path('document/<uuid:document_id>/', DocumentDetailView.as_view(), name='document_detail'),
     path('document/<uuid:document_id>/view/', DocumentViewerView.as_view(), name='document_view'),
     path('document/<uuid:document_id>/select-ocr/', select_ocr_method, name='select_ocr_method'),
-    
+    path('document/<uuid:document_id>/analysis/', DocumentAnalysisView.as_view(), name='document_analysis'),
+
     # Financial tools
     path('credit-cards/', CreditCardManagementView.as_view(), name='credit_cards'),
     path('subscriptions/', SubscriptionManagementView.as_view(), name='subscriptions'),
@@ -79,6 +87,14 @@ urlpatterns = [
     path('api/ocr-pause/', ocr_pause, name='api_ocr_pause'),
     path('api/ocr-resume/', ocr_resume, name='api_ocr_resume'),
     path('api/ocr-status/', ocr_status, name='api_ocr_status'),
+
+    # Analysis comparison endpoints
+    path('api/analysis/<uuid:document_id>/', get_analysis_status, name='api_analysis_status'),
+    path('api/analysis/<uuid:document_id>/retry/<str:method>/', analysis_retry_method, name='api_analysis_retry'),
+    path('api/analysis/<uuid:document_id>/select/<str:method>/', analysis_select_method, name='api_analysis_select'),
+    path('api/analysis/<uuid:document_id>/refresh/', analysis_refresh, name='api_analysis_refresh'),
+    path('api/analysis/<uuid:document_id>/run-all/', analysis_run_all, name='api_analysis_run_all'),
+    path('api/analysis/<uuid:document_id>/run-methods/', run_analysis_methods, name='api_analysis_run_methods'),
 
     # Bulk operations
     path('bulk/delete/', BulkDeleteView.as_view(), name='bulk_delete'),

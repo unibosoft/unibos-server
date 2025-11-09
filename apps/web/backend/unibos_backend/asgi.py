@@ -16,20 +16,39 @@ from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator
 from apps.common.middleware import JWTAuthMiddleware
-import apps.currencies.routing
-import apps.recaria.routing
-import apps.birlikteyiz.routing
-import apps.web_ui.routing
+import apps.documents.routing
 
 # Django ASGI application
 django_asgi_app = get_asgi_application()
 
 # WebSocket routing
 websocket_urlpatterns = []
-websocket_urlpatterns += apps.currencies.routing.websocket_urlpatterns
-websocket_urlpatterns += apps.recaria.routing.websocket_urlpatterns
-websocket_urlpatterns += apps.birlikteyiz.routing.websocket_urlpatterns
-websocket_urlpatterns += apps.web_ui.routing.websocket_urlpatterns
+websocket_urlpatterns += apps.documents.routing.websocket_urlpatterns
+
+# Import other app routings if their consumers exist
+try:
+    import apps.currencies.routing
+    websocket_urlpatterns += apps.currencies.routing.websocket_urlpatterns
+except (ImportError, AttributeError):
+    pass
+
+try:
+    import apps.recaria.routing
+    websocket_urlpatterns += apps.recaria.routing.websocket_urlpatterns
+except (ImportError, AttributeError):
+    pass
+
+try:
+    import apps.birlikteyiz.routing
+    websocket_urlpatterns += apps.birlikteyiz.routing.websocket_urlpatterns
+except (ImportError, AttributeError):
+    pass
+
+try:
+    import apps.web_ui.routing
+    websocket_urlpatterns += apps.web_ui.routing.websocket_urlpatterns
+except (ImportError, AttributeError):
+    pass
 
 # ASGI application with WebSocket support
 application = ProtocolTypeRouter({

@@ -14,6 +14,7 @@ from django.conf import settings
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from channels.db import database_sync_to_async
+from django.contrib.auth.models import AnonymousUser
 from apps.authentication.models import UserSession
 
 logger = logging.getLogger(__name__)
@@ -179,10 +180,10 @@ class JWTAuthMiddleware:
                 scope['user'] = user
             except (InvalidToken, TokenError) as e:
                 # Invalid token, set anonymous user
-                scope['user'] = None
+                scope['user'] = AnonymousUser()
         else:
             # No token provided
-            scope['user'] = None
+            scope['user'] = AnonymousUser()
         
         return await self.inner(scope, receive, send)
     

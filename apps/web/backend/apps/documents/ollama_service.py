@@ -1,7 +1,7 @@
 """
 Ollama Integration Service for Intelligent Receipt Processing
-Uses MiniCPM-v (8B), Gemma3, and Llama2 models for advanced OCR analysis
-MiniCPM-v 2.6: Top OCRBench performer, beats GPT-4o, supports 30+ languages
+Uses Llama 3.2-Vision (primary), Moondream2 (lightweight), Gemma3, and Llama2 models
+Vision models: Llama 3.2-Vision (Meta, stable) and Moondream2 (fast, low resource)
 """
 
 import requests
@@ -34,19 +34,22 @@ class ReceiptField:
 class OllamaService:
     """
     Service for integrating with Ollama models
-    Supports MiniCPM-v 2.6, Gemma3, and Llama2 for multilingual receipt processing
+    Supports Llama 3.2-Vision, Moondream2, Gemma3, and Llama2 for multilingual receipt processing
     """
 
     def __init__(self, base_url: str = "http://localhost:11434"):
         self.base_url = base_url
+        # Model definitions (priority order for vision OCR)
         self.models = {
-            'minicpm-v': 'minicpm-v:latest',  # Top OCRBench performer, 30+ languages
+            'llama3.2-vision': 'llama3.2-vision',  # Primary vision model (Meta, stable, recommended)
+            'moondream': 'moondream',  # Lightweight fast vision OCR (low resource alternative)
             'gemma3': 'gemma3:latest',
             'llama2': 'llama2:latest',
             'mistral': 'mistral:latest'  # Fallback option
         }
-        self.current_model = 'minicpm-v'  # Changed from 'gemma3' to 'minicpm-v'
-        self.timeout = 180  # Increased for MiniCPM-v processing (was 120)
+        self.current_model = 'gemma3'  # Best results with Tesseract + Gemma3 text processing
+        self.vision_models = ['llama3.2-vision', 'moondream']  # Models supporting vision
+        self.timeout = 300  # Extended timeout for vision models (5 minutes)
         
         # Turkish receipt prompts
         self.prompts = {
@@ -67,14 +70,30 @@ class OllamaService:
                 models = response.json().get('models', [])
                 available_models = [m['name'] for m in models]
                 logger.info(f"Ollama available with models: {available_models}")
-                
-                # Check for our preferred models
+
+                # Check for Llama 3.2-Vision first (priority model for OCR)
+                for available_model in available_models:
+                    if 'llama3.2-vision' in available_model.lower():
+                        self.models['llama3.2-vision'] = available_model
+                        self.current_model = 'llama3.2-vision'
+                        logger.info(f"Using Llama 3.2-Vision model: {available_model}")
+                        return True
+
+                # Check for Moondream2 as secondary vision model
+                for available_model in available_models:
+                    if 'moondream' in available_model.lower():
+                        self.models['moondream'] = available_model
+                        self.current_model = 'moondream'
+                        logger.info(f"Using Moondream model: {available_model}")
+                        return True
+
+                # Check for other preferred models
                 for model_key, model_name in self.models.items():
                     if any(model_name in m for m in available_models):
                         self.current_model = model_key
                         logger.info(f"Using model: {model_name}")
                         return True
-                        
+
                 logger.warning("Preferred models not found in Ollama")
                 return False
             return False
@@ -103,11 +122,10 @@ class OllamaService:
         try:
             # Use vision mode if image provided and no OCR text
             if image_base64 and not ocr_text:
-                # Optimized prompt for MiniCPM-v vision OCR
-                if self.current_model == 'minicpm-v':
-                    prompt = """Perform complete OCR on this document image. Extract every word, number, and symbol visible in the image.
-Start from the very top and continue to the very bottom. Include all transaction details, codes, and footer information.
-Do not summarize or skip anything - transcribe EVERYTHING you can see."""
+                # Optimized prompts for vision OCR models
+                if self.current_model in ['llama3.2-vision', 'moondream']:
+                    # Direct, clear prompt for vision models
+                    prompt = "Read ALL text in this receipt image. Extract every word, number, and symbol you see. Output ONLY the plain text, no explanations or formatting."
                 else:
                     prompt = """Transcribe all text from this image:"""
             else:
@@ -144,19 +162,28 @@ Do not summarize or skip anything - transcribe EVERYTHING you can see."""
             return {'error': str(e)}
     
     def _call_ollama(self, prompt: str, image_base64: Optional[str] = None) -> Dict:
-        """Make API call to Ollama"""
+        """Make API call to Ollama using /api/chat endpoint for vision models"""
         try:
             start_time = datetime.now()
 
             # Model-specific parameters optimized for OCR performance
-            if self.current_model == 'minicpm-v':
-                # MiniCPM-v optimal parameters for OCR tasks
+            if self.current_model == 'llama3.2-vision':
+                # Llama 3.2-Vision optimal parameters for OCR tasks
                 options = {
                     'temperature': 0.1,    # Low temperature for precise OCR (accuracy over creativity)
                     'top_p': 0.8,          # Focused sampling for better text recognition
                     'top_k': 40,           # Conservative vocabulary selection
                     'num_predict': 8000,   # Higher limit for comprehensive document OCR
                     'repeat_penalty': 1.1  # Slight penalty to reduce repetition in long texts
+                }
+            elif self.current_model == 'moondream':
+                # Moondream optimal parameters (lightweight, fast)
+                options = {
+                    'temperature': 0.1,    # Low temperature for accuracy
+                    'top_p': 0.9,          # Slightly higher for better completeness
+                    'top_k': 50,           # Moderate vocabulary
+                    'num_predict': 6000,   # Sufficient for most receipts
+                    'repeat_penalty': 1.05 # Light penalty
                 }
             else:
                 # Gemma3/other models - previous optimized settings
@@ -168,19 +195,33 @@ Do not summarize or skip anything - transcribe EVERYTHING you can see."""
                     'repeat_penalty': 1.0  # Disabled for Gemma3
                 }
 
-            payload = {
-                'model': self.models[self.current_model],
-                'prompt': prompt,
-                'stream': False,
-                'options': options
-            }
-
-            # Add image if available (for vision models)
+            # Use /api/chat for vision models (recommended by Ollama docs)
+            # Use /api/generate for text-only models
             if image_base64:
-                payload['images'] = [image_base64]
-            
+                # Vision mode - use chat endpoint with images in message
+                payload = {
+                    'model': self.models[self.current_model],
+                    'messages': [{
+                        'role': 'user',
+                        'content': prompt,
+                        'images': [image_base64]  # Base64 image array
+                    }],
+                    'stream': False,
+                    'options': options
+                }
+                endpoint = f"{self.base_url}/api/chat"
+            else:
+                # Text-only mode - use generate endpoint
+                payload = {
+                    'model': self.models[self.current_model],
+                    'prompt': prompt,
+                    'stream': False,
+                    'options': options
+                }
+                endpoint = f"{self.base_url}/api/generate"
+
             response = requests.post(
-                f"{self.base_url}/api/generate",
+                endpoint,
                 json=payload,
                 timeout=self.timeout
             )
@@ -189,8 +230,24 @@ Do not summarize or skip anything - transcribe EVERYTHING you can see."""
                 result = response.json()
                 processing_time = (datetime.now() - start_time).total_seconds()
                 result['processing_time'] = processing_time
+
+                # Extract response text - different format for chat vs generate
+                if image_base64:
+                    # Chat endpoint returns message format
+                    response_text = result.get('message', {}).get('content', '')
+                else:
+                    # Generate endpoint returns response field
+                    response_text = result.get('response', '')
+
+                # Normalize result format
+                result['response'] = response_text
+
+                # Log response for debugging
+                logger.info(f"Ollama response ({self.current_model}): {response_text[:200]}...")
+
                 return result
             else:
+                logger.error(f"Ollama API error: {response.status_code} - {response.text}")
                 return {'error': f"Ollama API error: {response.status_code}"}
                 
         except requests.exceptions.Timeout:
@@ -325,22 +382,96 @@ Return as JSON array of items.
 """
     
     def _parse_ollama_response(self, response_text: str) -> Dict:
-        """Parse Ollama model response"""
+        """
+        Parse Ollama model response with JSON Guard
+
+        JSON Guard: Robust JSON extraction with fallback strategies
+        - Strategy 1: Extract complete JSON object between { }
+        - Strategy 2: Extract first valid JSON block
+        - Strategy 3: Fix common JSON issues (trailing commas, quotes)
+        - Strategy 4: Fallback to structured text parsing
+        """
         try:
-            # Try to extract JSON from response
-            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            # JSON Guard Strategy 1: Extract outermost JSON block
+            json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response_text, re.DOTALL)
+
             if json_match:
                 json_str = json_match.group()
-                return json.loads(json_str)
-            else:
-                # Fallback: try to parse structured text
-                return self._parse_structured_text(response_text)
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse Ollama response as JSON: {e}")
+
+                try:
+                    # Try to parse directly
+                    parsed = json.loads(json_str)
+                    logger.info("JSON Guard: Successfully parsed JSON (Strategy 1)")
+                    return parsed
+                except json.JSONDecodeError as e:
+                    logger.warning(f"JSON Guard: Strategy 1 failed, trying fixes: {e}")
+
+                    # JSON Guard Strategy 3: Fix common JSON issues
+                    fixed_json = self._fix_json_issues(json_str)
+
+                    try:
+                        parsed = json.loads(fixed_json)
+                        logger.info("JSON Guard: Successfully parsed after fixes (Strategy 3)")
+                        return parsed
+                    except json.JSONDecodeError as e2:
+                        logger.warning(f"JSON Guard: Strategy 3 failed: {e2}")
+
+            # JSON Guard Strategy 2: Try to extract first valid JSON block
+            # Look for multiple JSON patterns
+            patterns = [
+                r'\{[\s\S]*?\}',  # Non-greedy match
+                r'\{[^\}]*\}',     # Simple match
+            ]
+
+            for pattern in patterns:
+                matches = re.finditer(pattern, response_text)
+                for match in matches:
+                    try:
+                        candidate = match.group()
+                        parsed = json.loads(candidate)
+                        logger.info(f"JSON Guard: Successfully parsed JSON (Strategy 2 - pattern: {pattern})")
+                        return parsed
+                    except json.JSONDecodeError:
+                        continue
+
+            # JSON Guard Strategy 4: Fallback to structured text parsing
+            logger.warning("JSON Guard: All JSON strategies failed, falling back to structured text parsing")
             return self._parse_structured_text(response_text)
+
         except Exception as e:
-            logger.error(f"Error parsing Ollama response: {e}")
+            logger.error(f"JSON Guard: Critical error in response parsing: {e}")
             return {}
+
+    def _fix_json_issues(self, json_str: str) -> str:
+        """
+        Fix common JSON issues in LLM responses
+
+        Common issues:
+        - Trailing commas before closing braces
+        - Unescaped quotes in strings
+        - Single quotes instead of double quotes
+        - Comments (// or /* */)
+        """
+        try:
+            # Remove trailing commas before } or ]
+            json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
+
+            # Remove comments (// style)
+            json_str = re.sub(r'//.*?$', '', json_str, flags=re.MULTILINE)
+
+            # Remove comments (/* */ style)
+            json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)
+
+            # Fix single quotes to double quotes (careful with apostrophes)
+            # Only replace single quotes that are clearly JSON delimiters
+            json_str = re.sub(r"'([^']*)'(\s*:)", r'"\1"\2', json_str)  # Keys
+            json_str = re.sub(r":\s*'([^']*)'", r': "\1"', json_str)    # Values
+
+            return json_str
+
+        except Exception as e:
+            logger.error(f"Error fixing JSON issues: {e}")
+            return json_str
     
     def _parse_structured_text(self, text: str) -> Dict:
         """Fallback parser for non-JSON responses"""

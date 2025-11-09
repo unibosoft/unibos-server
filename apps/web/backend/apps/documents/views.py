@@ -1337,3 +1337,133 @@ def select_ocr_method(request, document_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+class DocumentAnalysisView(LoginRequiredMixin, BaseUIView):
+    """
+    Comprehensive OCR Analysis Comparison View
+    Runs 4 different OCR methods and shows side-by-side comparison
+    """
+    template_name = 'documents/document_analysis.html'
+
+    # OCR Method Configuration - Single source of truth
+    OCR_METHODS = [
+        {
+            'id': 'paddleocr',
+            'name': 'paddleocr',
+            'title': 'paddleocr - çok dilli ocr, 80+ dil',
+            'icon': '🚀',
+            'description': 'çok dilli ocr, 80+ dil',
+            'speed': '⚡ ~2-5s',
+            'order': 1
+        },
+        {
+            'id': 'tesseract',
+            'name': 'tesseract',
+            'title': 'tesseract - temel ocr motoru',
+            'icon': '🔤',
+            'description': 'temel ocr motoru',
+            'speed': '⚡ ~1-3s',
+            'order': 2
+        },
+        {
+            'id': 'trocr',
+            'name': 'trocr',
+            'title': 'trocr - microsoft transformer, el yazısı',
+            'icon': '✍️',
+            'description': 'microsoft transformer, el yazısı',
+            'speed': '🐢 ~15-30s',
+            'order': 3
+        },
+        {
+            'id': 'llama_vision',
+            'name': 'llama 3.2-vision',
+            'title': 'llama 3.2-vision - meta\'nın görsel ai\'ı',
+            'icon': '🦙',
+            'description': 'meta\'nın görsel ai\'ı',
+            'speed': '🐢 ~180-200s',
+            'order': 4
+        },
+        {
+            'id': 'hybrid',
+            'name': 'hybrid',
+            'title': 'hybrid - paddleocr + llama vision',
+            'icon': '🔄',
+            'description': 'paddleocr + llama vision',
+            'speed': '🐢 ~180-200s',
+            'order': 5
+        },
+        {
+            'id': 'donut',
+            'name': 'donut',
+            'title': 'donut - ocr-free transformer, naver clova',
+            'icon': '🍩',
+            'description': 'ocr-free transformer, naver clova',
+            'speed': '🐌 ~30-60s',
+            'order': 6
+        },
+        {
+            'id': 'layoutlmv3',
+            'name': 'layoutlmv3',
+            'title': 'layoutlmv3 - layout-aware extraction, microsoft',
+            'icon': '📐',
+            'description': 'layout-aware extraction, microsoft',
+            'speed': '🐌 ~40-80s',
+            'order': 7
+        },
+        {
+            'id': 'surya',
+            'name': 'surya',
+            'title': 'surya - all-in-one ocr, 90+ languages',
+            'icon': '☀️',
+            'description': 'all-in-one ocr, 90+ languages',
+            'speed': '⚡ ~15-30s',
+            'order': 8
+        },
+        {
+            'id': 'doctr',
+            'name': 'doctr',
+            'title': 'doctr - modern pytorch ocr',
+            'icon': '📚',
+            'description': 'modern pytorch ocr',
+            'speed': '⚡ ~10-20s',
+            'order': 9
+        },
+        {
+            'id': 'easyocr',
+            'name': 'easyocr',
+            'title': 'easyocr - multilingual fallback, 80+ languages',
+            'icon': '✨',
+            'description': 'multilingual fallback, 80+ languages',
+            'speed': '⚡ ~5-15s',
+            'order': 10
+        },
+        {
+            'id': 'ocrmypdf',
+            'name': 'ocrmypdf',
+            'title': 'ocrmypdf - pdf-optimized tesseract',
+            'icon': '📄',
+            'description': 'pdf-optimized tesseract',
+            'speed': '⚡ ~8-15s',
+            'order': 11
+        },
+    ]
+
+    def get(self, request, document_id, *args, **kwargs):
+        document = get_object_or_404(Document, id=document_id, user=request.user, is_deleted=False)
+
+        # Import analysis service
+        from .analysis_service import OCRAnalysisService
+
+        # Don't run any OCR methods on page load (user will select methods manually)
+        analyzer = OCRAnalysisService()
+        analysis_results = analyzer.analyze_document(document, methods_to_run=[])
+
+        context = self.get_context_data()
+        context['document'] = document
+        context['analysis'] = analysis_results
+        context['ocr_methods'] = self.OCR_METHODS  # Pass method config to template
+
+        logger.info(f"User {request.user.username} viewed analysis comparison for document {document_id}")
+
+        return render(request, self.template_name, context)

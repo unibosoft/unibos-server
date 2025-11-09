@@ -67,7 +67,11 @@ class Document(models.Model):
     ai_provider = models.CharField(max_length=50, blank=True, default='')  # mistral, huggingface, local
     ai_confidence = models.FloatField(null=True, blank=True)
     ai_processed_at = models.DateTimeField(null=True, blank=True)
-    
+
+    # OCR Analysis Comparison Results (stores results from all OCR methods)
+    analysis_results = models.JSONField(null=True, blank=True, help_text='Stores comparison results from all OCR methods (tesseract, paddleocr, llama_vision, trocr, donut, layoutlmv3, surya, doctr, easyocr, ocrmypdf, hybrid)')
+    last_analysis_at = models.DateTimeField(null=True, blank=True, help_text='Timestamp of the last OCR analysis comparison')
+
     # Timestamps
     uploaded_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

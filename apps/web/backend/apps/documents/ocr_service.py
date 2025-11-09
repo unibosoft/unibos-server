@@ -132,6 +132,18 @@ class OCRProcessor:
         logger.info(f"Starting DUAL OCR processing for: {image_path}, type: {document_type}")
 
         try:
+            # Check if processing is paused (early abort)
+            from django.core.cache import cache
+            if cache.get('ocr_processing_paused', False):
+                logger.info("OCR processing paused - aborting document processing")
+                return {
+                    'success': False,
+                    'error': 'Processing paused by user',
+                    'ocr_text': '',
+                    'parsed_data': {},
+                    'confidence': 0
+                }
+
             # Ensure file exists
             if not os.path.exists(image_path):
                 logger.error(f"File not found: {image_path}")
@@ -152,6 +164,18 @@ class OCRProcessor:
 
             # === PARALLEL PROCESSING: Run both Tesseract and Ollama independently ===
             tesseract_result = self._process_with_tesseract(processed_image, image_path, document_type)
+
+            # Check pause again before Ollama (in case user paused during Tesseract)
+            if cache.get('ocr_processing_paused', False):
+                logger.info("OCR processing paused - aborting before Ollama processing")
+                return {
+                    'success': False,
+                    'error': 'Processing paused by user',
+                    'ocr_text': '',
+                    'parsed_data': {},
+                    'confidence': 0
+                }
+
             ollama_result = self._process_with_ollama(image_path, document_type)
 
             # Store both results in document instance if provided
@@ -520,14 +544,13 @@ class OCRProcessor:
             image = Image.open(image_path)
             
             # Try multiple OCR configurations for better results
+            # Optimized configs: PSM 6 (uniform block) works best for receipts
+            # OEM 1 (LSTM) is more accurate than OEM 3 (legacy+LSTM hybrid)
             configs = [
-                r'--oem 3 --psm 6 -l tur+eng',  # Standard
-                r'--oem 3 --psm 4 -l tur+eng',  # Single column of text
-                r'--oem 3 --psm 3 -l tur+eng',  # Fully automatic page segmentation
-                r'--oem 3 --psm 11 -l tur+eng', # Sparse text
-                r'--oem 3 --psm 12 -l tur+eng', # Sparse text with OSD
-                r'--oem 1 --psm 6 -l tur',      # Turkish only with LSTM
-                r'--oem 1 --psm 6 -l eng',      # English only fallback
+                r'--oem 1 --psm 6 -l eng',      # English with LSTM (PRIMARY - best for receipts)
+                r'--oem 1 --psm 6 -l tur+eng',  # Turkish+English with LSTM
+                r'--oem 1 --psm 4 -l eng',      # Single column English
+                r'--oem 1 --psm 3 -l eng',      # Fully automatic (fallback)
             ]
             
             best_text = ""
@@ -565,18 +588,19 @@ class OCRProcessor:
             if image.mode != 'RGB':
                 image = image.convert('RGB')
             
-            # Enhance image
+            # Gentle enhancement (aggressive enhancement causes artifacts)
+            # For receipts, subtle improvements work better
             enhancer = ImageEnhance.Contrast(image)
-            image = enhancer.enhance(2.0)
-            
+            image = enhancer.enhance(1.2)  # Reduced from 2.0 to 1.2
+
             enhancer = ImageEnhance.Sharpness(image)
-            image = enhancer.enhance(2.0)
-            
-            # Apply filter
-            image = image.filter(ImageFilter.MedianFilter(size=3))
-            
-            # Try OCR on enhanced image
-            text = pytesseract.image_to_string(image, config=r'--oem 3 --psm 6 -l tur+eng')
+            image = enhancer.enhance(1.3)  # Reduced from 2.0 to 1.3
+
+            # Skip median filter (can blur small text)
+            # image = image.filter(ImageFilter.MedianFilter(size=3))
+
+            # Try OCR on enhanced image with optimized config
+            text = pytesseract.image_to_string(image, config=r'--oem 1 --psm 6 -l eng')
             
             return text
             
