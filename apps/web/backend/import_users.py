@@ -111,7 +111,7 @@ def import_users():
         
         # Also check/create screen lock for berkhatirli
         if username == 'berkhatirli':
-            from apps.administration.models import ScreenLock
+            from modules.administration.backend.models import ScreenLock
             screen_lock, created = ScreenLock.objects.get_or_create(
                 user=user,
                 defaults={

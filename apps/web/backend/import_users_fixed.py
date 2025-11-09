@@ -118,7 +118,7 @@ def import_users():
         
         # Also check/create screen lock for berkhatirli
         if username == 'berkhatirli':
-            from apps.administration.models import ScreenLock
+            from modules.administration.backend.models import ScreenLock
             
             # Hash the password 'lplp'
             import hashlib

@@ -1,1 +1,0 @@
-# System logging app for UNIBOS

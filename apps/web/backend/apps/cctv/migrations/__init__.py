@@ -1,1 +1,0 @@
-# CCTV app migrations

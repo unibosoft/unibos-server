@@ -7,7 +7,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unibos_backend.settings.emergency')
 django.setup()
 
-from apps.currencies.models import CryptoExchangeRate
+from modules.currencies.backend.models import CryptoExchangeRate
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.db.models import Avg, Max, Min, Count
