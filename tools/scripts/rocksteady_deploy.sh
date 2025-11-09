@@ -20,6 +20,7 @@ Actions:
   quick        - quick sync without full setup
   setup-db     - setup PostgreSQL database only
   setup-deps   - install Python dependencies only
+  setup-ocr    - install OCR dependencies (system packages + Python libraries)
   setup-env    - create .env file only
   check        - comprehensive health check of server
   clean        - clean and reinstall everything
@@ -36,11 +37,18 @@ Health Checks:
   - Django settings can be imported
   - backend server is running and responding to HTTP requests
 
+OCR Setup:
+  The setup-ocr action installs:
+  - System dependencies: tesseract-ocr, poppler-utils, libgl1, libglib2.0-0
+  - Python packages: paddleocr, torch, transformers, easyocr, surya-ocr, doctr
+  - Uses ARM64-compatible versions (paddlepaddle 2.6.2 for ARM64 stability)
+
 Examples:
-  ./rocksteady_deploy.sh           # full deployment with health checks
-  ./rocksteady_deploy.sh quick     # quick sync only
-  ./rocksteady_deploy.sh setup-db  # setup database only
-  ./rocksteady_deploy.sh check     # run health checks only
+  ./rocksteady_deploy.sh                # full deployment with health checks
+  ./rocksteady_deploy.sh quick          # quick sync only
+  ./rocksteady_deploy.sh setup-db       # setup database only
+  ./rocksteady_deploy.sh setup-ocr      # install OCR dependencies
+  ./rocksteady_deploy.sh check          # run health checks only
 EOF
 }
 
@@ -125,7 +133,7 @@ setup_venv() {
 # Install Python dependencies
 install_dependencies() {
     print_step "Installing Python dependencies..."
-    
+
     # Try minimal requirements first if file exists
     if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && [ -f requirements_minimal.txt ]"; then
         print_info "Installing from requirements_minimal.txt..."
@@ -134,7 +142,7 @@ install_dependencies() {
             return 0
         fi
     fi
-    
+
     # Fallback to individual packages
     print_info "Installing packages individually..."
     if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/pip install $ALL_PACKAGES"; then
@@ -149,6 +157,61 @@ install_dependencies() {
             print_error "Failed to install core packages"
             return 1
         fi
+    fi
+}
+
+# Install OCR dependencies (optional, requires system packages)
+install_ocr_dependencies() {
+    print_step "Installing OCR dependencies..."
+
+    # Check if requirements_ocr.txt exists
+    if ! run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && [ -f requirements_ocr.txt ]"; then
+        print_warning "requirements_ocr.txt not found, skipping OCR dependencies"
+        return 0
+    fi
+
+    # Check system dependencies first
+    print_info "Checking system dependencies..."
+    local MISSING_DEPS=""
+
+    if ! run_on_rocksteady "command -v tesseract >/dev/null 2>&1"; then
+        MISSING_DEPS="$MISSING_DEPS tesseract-ocr"
+    fi
+
+    if ! run_on_rocksteady "dpkg -l | grep -q libgl1"; then
+        MISSING_DEPS="$MISSING_DEPS libgl1 libglib2.0-0"
+    fi
+
+    if [ -n "$MISSING_DEPS" ]; then
+        print_warning "Missing system dependencies:$MISSING_DEPS"
+        print_info "Installing system dependencies..."
+        run_on_rocksteady "sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-tur tesseract-ocr-eng poppler-utils libgl1 libglib2.0-0" || {
+            print_error "Failed to install system dependencies"
+            print_warning "OCR features may not work without system packages"
+            return 1
+        }
+        print_success "System dependencies installed"
+    else
+        print_success "System dependencies already installed"
+    fi
+
+    # Install Python OCR packages
+    print_info "Installing Python OCR packages from requirements_ocr.txt..."
+    if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/pip install -r requirements_ocr.txt"; then
+        print_success "OCR dependencies installed"
+
+        # Test critical imports
+        print_info "Testing OCR imports..."
+        if run_on_rocksteady "cd $ROCKSTEADY_DIR/apps/web/backend && ./$VENV_DIR/bin/python -c 'import paddleocr; import transformers; print(\"OK\")'" 2>/dev/null | grep -q "OK"; then
+            print_success "OCR packages verified"
+            return 0
+        else
+            print_warning "OCR packages installed but imports failed - check logs"
+            return 1
+        fi
+    else
+        print_error "Failed to install OCR dependencies"
+        return 1
     fi
 }
 
@@ -609,6 +672,9 @@ case "$ACTION" in
         ;;
     setup-deps)
         check_connection && setup_venv && install_dependencies
+        ;;
+    setup-ocr)
+        check_connection && install_ocr_dependencies
         ;;
     setup-env)
         check_connection && setup_env_file
