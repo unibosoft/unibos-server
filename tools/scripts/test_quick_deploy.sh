@@ -6,10 +6,10 @@ echo "========================================"
 
 # Get initial service start times
 echo "📊 Initial service status:"
-INITIAL_GUNICORN=$(ssh rocksteady "systemctl show gunicorn --property=ActiveEnterTimestamp" 2>/dev/null | cut -d= -f2)
+INITIAL_DAPHNE=$(ssh rocksteady "systemctl show daphne --property=ActiveEnterTimestamp" 2>/dev/null | cut -d= -f2)
 INITIAL_NGINX=$(ssh rocksteady "systemctl show nginx --property=ActiveEnterTimestamp" 2>/dev/null | cut -d= -f2)
 
-echo "  Gunicorn started: $INITIAL_GUNICORN"
+echo "  Daphne started: $INITIAL_DAPHNE"
 echo "  Nginx started: $INITIAL_NGINX"
 echo ""
 
@@ -42,9 +42,9 @@ if result.returncode == 0:
     subprocess.run(restore_cmd, shell=True, capture_output=True)
     
     print("  4. Restarting services...")
-    restart_cmd = "ssh rocksteady 'sudo systemctl restart gunicorn && sudo systemctl reload nginx'"
+    restart_cmd = "ssh rocksteady 'sudo systemctl restart daphne && sudo systemctl reload nginx'"
     result = subprocess.run(restart_cmd, shell=True, capture_output=True, text=True)
-    
+
     if result.returncode == 0:
         print("  ✅ Services restarted")
     else:
@@ -64,19 +64,19 @@ sleep 3
 # Check new service start times
 echo ""
 echo "📊 Final service status:"
-FINAL_GUNICORN=$(ssh rocksteady "systemctl show gunicorn --property=ActiveEnterTimestamp" 2>/dev/null | cut -d= -f2)
+FINAL_DAPHNE=$(ssh rocksteady "systemctl show daphne --property=ActiveEnterTimestamp" 2>/dev/null | cut -d= -f2)
 FINAL_NGINX=$(ssh rocksteady "systemctl show nginx --property=ActiveEnterTimestamp" 2>/dev/null | cut -d= -f2)
 
-echo "  Gunicorn started: $FINAL_GUNICORN"
+echo "  Daphne started: $FINAL_DAPHNE"
 echo "  Nginx started: $FINAL_NGINX"
 
 echo ""
 echo "🔍 Verification:"
 
-if [ "$INITIAL_GUNICORN" != "$FINAL_GUNICORN" ]; then
-    echo "  ✅ Gunicorn was restarted"
+if [ "$INITIAL_DAPHNE" != "$FINAL_DAPHNE" ]; then
+    echo "  ✅ Daphne was restarted"
 else
-    echo "  ❌ Gunicorn was NOT restarted"
+    echo "  ❌ Daphne was NOT restarted"
 fi
 
 if [ "$INITIAL_NGINX" != "$FINAL_NGINX" ]; then

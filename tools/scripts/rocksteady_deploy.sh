@@ -260,11 +260,31 @@ collect_static() {
 start_backend() {
     print_step "Starting backend server..."
 
-    # Check if gunicorn systemd service exists
-    if run_on_rocksteady "sudo systemctl list-units --type=service --all | grep -q gunicorn.service"; then
+    # Check if daphne systemd service exists (ASGI server for WebSocket support)
+    if run_on_rocksteady "sudo systemctl list-units --type=service --all | grep -q daphne.service"; then
+        print_info "Restarting Daphne service (ASGI server)..."
+        if run_on_rocksteady "sudo systemctl restart daphne"; then
+            print_success "Daphne service restarted"
+
+            # Also reload nginx to ensure it picks up any changes
+            if run_on_rocksteady "sudo systemctl reload nginx"; then
+                print_success "Nginx reloaded"
+            else
+                print_warning "Nginx reload failed, but Daphne is running"
+            fi
+            return 0
+        else
+            print_error "Failed to restart Daphne service"
+            return 1
+        fi
+    # Check for legacy gunicorn service (WSGI - no WebSocket support)
+    elif run_on_rocksteady "sudo systemctl list-units --type=service --all | grep -q gunicorn.service"; then
+        print_warning "Found Gunicorn service (legacy WSGI - no WebSocket support)"
         print_info "Restarting Gunicorn service..."
         if run_on_rocksteady "sudo systemctl restart gunicorn"; then
             print_success "Gunicorn service restarted"
+            print_warning "⚠ WebSocket features will not work with Gunicorn!"
+            print_warning "⚠ Please migrate to Daphne for WebSocket support"
 
             # Also restart nginx to ensure it picks up any changes
             if run_on_rocksteady "sudo systemctl restart nginx"; then
@@ -278,8 +298,8 @@ start_backend() {
             return 1
         fi
     else
-        # Fallback to runserver if gunicorn service doesn't exist
-        print_info "Gunicorn service not found, using runserver..."
+        # Fallback to runserver if no systemd service exists
+        print_info "No systemd service found, using runserver..."
 
         # Kill existing server
         run_on_rocksteady "pkill -f 'manage.py runserver' || true"
@@ -421,8 +441,31 @@ health_check() {
     # Check backend server status
     echo ""
     echo "Backend Server:"
-    if run_on_rocksteady "pgrep -f 'manage.py runserver' >/dev/null"; then
-        print_success "  Process running (port $DJANGO_PORT)"
+    # Check for Daphne (ASGI - WebSocket support)
+    if run_on_rocksteady "pgrep -f 'daphne.*unibos' >/dev/null"; then
+        print_success "  Daphne (ASGI) process running (port $DJANGO_PORT)"
+
+        # Try HTTP request
+        if run_on_rocksteady "curl -s -o /dev/null -w '%{http_code}' http://localhost:$DJANGO_PORT 2>/dev/null | grep -q '200\|301\|302'"; then
+            print_success "  HTTP server responding"
+        else
+            print_warning "  Server process running but not responding to HTTP"
+            FAILED=1
+        fi
+    # Check for Gunicorn (WSGI - no WebSocket support)
+    elif run_on_rocksteady "pgrep -f 'gunicorn.*unibos' >/dev/null"; then
+        print_warning "  Gunicorn (WSGI) process running - WebSocket NOT supported"
+
+        # Try HTTP request
+        if run_on_rocksteady "curl -s -o /dev/null -w '%{http_code}' http://localhost:$DJANGO_PORT 2>/dev/null | grep -q '200\|301\|302'"; then
+            print_success "  HTTP server responding"
+        else
+            print_warning "  Server process running but not responding to HTTP"
+            FAILED=1
+        fi
+    # Check for runserver (development only)
+    elif run_on_rocksteady "pgrep -f 'manage.py runserver' >/dev/null"; then
+        print_info "  Runserver (development) process running (port $DJANGO_PORT)"
 
         # Try HTTP request
         if run_on_rocksteady "curl -s -o /dev/null -w '%{http_code}' http://localhost:$DJANGO_PORT 2>/dev/null | grep -q '200\|301\|302'"; then
