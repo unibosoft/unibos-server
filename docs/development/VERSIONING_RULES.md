@@ -10,6 +10,7 @@ This document defines strict rules for version management and archiving to preve
 3. **Consistency** - Archive sizes should be predictable (~30-90MB range)
 4. **Traceability** - Clear changelog and git history
 5. **One Archive Per Version** - Each version must have exactly ONE current archive directory
+6. **🔒 CRITICAL: Build Timestamp Preservation** - Archive directory name MUST use the original `build_number` from VERSION.json, NOT current timestamp
 
 ## 📦 Archive Exclusion Rules
 
@@ -88,9 +89,30 @@ Before creating a version archive:
 2. ✅ Verify no SQL dumps in root: `ls -lh *.sql`
 3. ✅ Check Flutter build dirs (v532+): `du -sh modules/*/mobile/build`
 4. ✅ Check Flutter build dirs (legacy): `du -sh apps/mobile/*/build`
-5. ✅ Verify VERSION.json updated
-6. ✅ Confirm git commits are clean
-7. ✅ Test exclude patterns work
+5. ✅ Verify VERSION.json updated with correct `build_number`
+6. ✅ **CRITICAL**: Confirm archive name will use VERSION.json `build_number`, NOT current timestamp
+7. ✅ Confirm git commits are clean
+8. ✅ Test exclude patterns work
+
+### Archive Naming Verification
+
+**CRITICAL**: Archive directory name MUST match VERSION.json `build_number`:
+
+```bash
+# Check VERSION.json build_number
+grep '"build_number"' apps/cli/src/VERSION.json
+
+# Example correct archive name:
+# VERSION.json: "build_number": "20251109_1435"
+# Archive name: archive/versions/unibos_v532_20251109_1435/
+#                                          ^^^^^^^^^^^^^^
+#                                          MUST MATCH!
+```
+
+**Why This Matters**:
+- Archive timestamp represents when the version was **originally built**
+- Using current timestamp would create confusion (version v532 built on Nov 9, archived on Nov 10 = wrong timestamp)
+- Violates traceability principle
 
 ## ⚠️ KRİTİK: VERSİYONLAMA SIRALAMA KURALI
 

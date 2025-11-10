@@ -252,12 +252,16 @@ create_sql_backup() {
 # Archive functions
 create_archive() {
     local version=$1
-    
+
     # Clean version - remove any existing 'v' prefix
     local clean_version=$(echo "$version" | sed 's/^v//')
-    
-    local timestamp=$(get_istanbul_time "+%Y%m%d_%H%M")
-    local archive_name="unibos_v${clean_version}_${timestamp}"
+
+    # Read build_number from VERSION.json (original build timestamp)
+    local build_number=$(grep '"build_number"' apps/cli/src/VERSION.json | sed -E 's/.*"build_number": "([^"]+)".*/\1/')
+
+    # Use original build_number from VERSION.json for archive name
+    # This ensures archive directory matches the version's original build timestamp
+    local archive_name="unibos_v${clean_version}_${build_number}"
     
     print_color "$YELLOW" "\n📦 Creating archive (open folder format)..."
     
