@@ -74,25 +74,25 @@ temp/
 *.temp
 
 # Production settings (preserve remote)
-apps/web/backend/.env
-apps/web/backend/unibos_backend/settings/production.py
-apps/web/backend/unibos_backend/settings/production_*.py
+platform/runtime/web/backend/.env
+platform/runtime/web/backend/unibos_backend/settings/production.py
+platform/runtime/web/backend/unibos_backend/settings/production_*.py
 
 # Django generated
-apps/web/backend/staticfiles/
-apps/web/backend/media/
-apps/web/backend/venv/
+platform/runtime/web/backend/staticfiles/
+platform/runtime/web/backend/media/
+platform/runtime/web/backend/venv/
 
 # Flutter/Mobile build artifacts
-apps/mobile/birlikteyiz/build/
-apps/mobile/birlikteyiz/.dart_tool/
-apps/mobile/birlikteyiz/.flutter-plugins
-apps/mobile/birlikteyiz/.flutter-plugins-dependencies
-apps/mobile/birlikteyiz/android/build/
-apps/mobile/birlikteyiz/ios/build/
-apps/mobile/birlikteyiz/ios/Pods/
-apps/mobile/birlikteyiz/macos/build/
-apps/mobile/birlikteyiz/windows/build/
-apps/mobile/birlikteyiz/linux/build/
-apps/mobile/birlikteyiz/.packages
-apps/mobile/birlikteyiz/pubspec.lock
+modules/birlikteyiz/mobile/build/
+modules/birlikteyiz/mobile/.dart_tool/
+modules/birlikteyiz/mobile/.flutter-plugins
+modules/birlikteyiz/mobile/.flutter-plugins-dependencies
+modules/birlikteyiz/mobile/android/build/
+modules/birlikteyiz/mobile/ios/build/
+modules/birlikteyiz/mobile/ios/Pods/
+modules/birlikteyiz/mobile/macos/build/
+modules/birlikteyiz/mobile/windows/build/
+modules/birlikteyiz/mobile/linux/build/
+modules/birlikteyiz/mobile/.packages
+modules/birlikteyiz/mobile/pubspec.lock
