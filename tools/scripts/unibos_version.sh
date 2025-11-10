@@ -33,9 +33,9 @@ NC='\033[0m'
 # Configuration (adjusted for new monorepo structure)
 ARCHIVE_DIR="archive/versions"
 COMPRESSED_DIR="archive/compressed"
-VERSION_FILE="apps/cli/src/VERSION.json"
-DJANGO_VERSION_FILE="apps/web/backend/apps/web_ui/views.py"
-LOGIN_TEMPLATE="apps/web/backend/templates/authentication/login.html"
+VERSION_FILE="platform/runtime/cli/src/VERSION.json"
+DJANGO_VERSION_FILE="platform/runtime/web/backend/apps/web_ui/views.py"
+LOGIN_TEMPLATE="platform/runtime/web/backend/templates/authentication/login.html"
 
 # Print functions
 print_color() {
@@ -142,29 +142,29 @@ update_django_files() {
         print_color "$GREEN" "✅ Login template updated"
     fi
 
-    # Update apps/cli/src/main.py
-    if [ -f "apps/cli/src/main.py" ]; then
+    # Update platform/runtime/cli/src/main.py
+    if [ -f "platform/runtime/cli/src/main.py" ]; then
         # Update version in docstring (line with "🪐 unibos vXXX")
-        sed -i.bak "s/🪐 unibos v[0-9]*/🪐 unibos v$clean_version/" "apps/cli/src/main.py"
+        sed -i.bak "s/🪐 unibos v[0-9]*/🪐 unibos v$clean_version/" "platform/runtime/cli/src/main.py"
         # Update version in Version: line
-        sed -i.bak "s/Version: v[0-9]*_[0-9_]*/Version: v${clean_version}_${build}/" "apps/cli/src/main.py"
-        rm -f "apps/cli/src/main.py.bak"
-        print_color "$GREEN" "✅ apps/cli/src/main.py updated"
+        sed -i.bak "s/Version: v[0-9]*_[0-9_]*/Version: v${clean_version}_${build}/" "platform/runtime/cli/src/main.py"
+        rm -f "platform/runtime/cli/src/main.py.bak"
+        print_color "$GREEN" "✅ platform/runtime/cli/src/main.py updated"
     fi
 
-    # Update apps/web/backend/VERSION.json
-    if [ -f "apps/web/backend/VERSION.json" ]; then
+    # Update platform/runtime/web/backend/VERSION.json
+    if [ -f "platform/runtime/web/backend/VERSION.json" ]; then
         python3 -c "
 import json
-with open('apps/web/backend/VERSION.json', 'r') as f:
+with open('platform/runtime/web/backend/VERSION.json', 'r') as f:
     data = json.load(f)
 data['version'] = 'v$clean_version'
 data['build_number'] = '$build'
 data['release_date'] = '$timestamp'
-with open('apps/web/backend/VERSION.json', 'w') as f:
+with open('platform/runtime/web/backend/VERSION.json', 'w') as f:
     json.dump(data, f, indent=2, ensure_ascii=False)
 "
-        print_color "$GREEN" "✅ apps/web/backend/VERSION.json updated"
+        print_color "$GREEN" "✅ platform/runtime/web/backend/VERSION.json updated"
     fi
 }
 
@@ -207,8 +207,8 @@ create_sql_backup() {
     local db_port="${DB_PORT:-5432}"
 
     # Try to load from .env if exists
-    if [ -f "apps/web/backend/.env" ]; then
-        source apps/web/backend/.env 2>/dev/null || true
+    if [ -f "platform/runtime/web/backend/.env" ]; then
+        source platform/runtime/web/backend/.env 2>/dev/null || true
     fi
 
     # Perform pg_dump
@@ -257,7 +257,7 @@ create_archive() {
     local clean_version=$(echo "$version" | sed 's/^v//')
 
     # Read build_number from VERSION.json (original build timestamp)
-    local build_number=$(grep '"build_number"' apps/cli/src/VERSION.json | sed -E 's/.*"build_number": "([^"]+)".*/\1/')
+    local build_number=$(grep '"build_number"' platform/runtime/cli/src/VERSION.json | sed -E 's/.*"build_number": "([^"]+)".*/\1/')
 
     # Use original build_number from VERSION.json for archive name
     # This ensures archive directory matches the version's original build timestamp
@@ -335,10 +335,10 @@ create_archive() {
               --exclude='data_db' --exclude='data_db_backup_*' \
               --exclude='quarantine' --exclude='docs' \
               --exclude='data' --exclude='projects' \
-              --exclude='apps/web/backend/media' --exclude='apps/web/backend/documents/2025' \
+              --exclude='platform/runtime/web/backend/media' --exclude='platform/runtime/web/backend/documents/2025' \
               --exclude='*.sqlite3' --exclude='*.sqlite3.backup' --exclude='*.sql' \
-              --exclude='*.log' --exclude='apps/web/backend/staticfiles' \
-              --exclude='apps/web/backend/logs' \
+              --exclude='*.log' --exclude='platform/runtime/web/backend/staticfiles' \
+              --exclude='platform/runtime/web/backend/logs' \
               --exclude='apps/mobile/*/build' --exclude='apps/mobile/*/.dart_tool' \
               --exclude='apps/mobile/*/.flutter-plugins' --exclude='apps/mobile/*/.flutter-plugins-dependencies' \
               --exclude='modules/*/mobile/build' --exclude='modules/*/mobile/.dart_tool' \
@@ -508,9 +508,9 @@ generate_commit_message() {
     local md_files=$(echo "$all_files" | grep "\.md$" | wc -l | xargs)
     local css_files=$(echo "$all_files" | grep "\.css$" | wc -l | xargs)
     
-    # Analyze Django apps changes (v532+: both old apps/ and new modules/ structure)
-    if echo "$all_files" | grep -q "apps/web/backend/apps/"; then
-        local modules=$(echo "$all_files" | grep "apps/web/backend/apps/" | cut -d'/' -f5 | sort -u)
+    # Analyze Django apps changes (v532+: both old platform/runtime/web/backend/ and new modules/ structure)
+    if echo "$all_files" | grep -q "platform/runtime/web/backend/apps/"; then
+        local modules=$(echo "$all_files" | grep "platform/runtime/web/backend/apps/" | cut -d'/' -f5 | sort -u)
         for module in $modules; do
             case $module in
                 movies) details+=("Movies module updates") ;;
@@ -771,7 +771,7 @@ quick_release() {
     update_django_files "$next_version"
 
     # Step 5: Commit the version bump
-    git add apps/cli/src/VERSION.json apps/web/backend/VERSION.json apps/cli/src/main.py 2>/dev/null || true
+    git add platform/runtime/cli/src/VERSION.json platform/runtime/web/backend/VERSION.json platform/runtime/cli/src/main.py 2>/dev/null || true
     git commit -m "chore: bump version to v${next_version}" 2>/dev/null || true
     git push origin main 2>/dev/null || true
 
@@ -785,14 +785,14 @@ quick_release() {
     
     # Restart services to apply new version
     print_color "$YELLOW" "\n🔄 Restarting services with new version..."
-    
+
     # Restart web core (Django backend)
-    if [ -f "apps/web/backend/start_backend.sh" ]; then
+    if [ -f "platform/runtime/web/backend/start_backend.sh" ]; then
         print_color "$CYAN" "   Restarting web core..."
-        ./apps/web/backend/start_backend.sh restart
+        ./platform/runtime/web/backend/start_backend.sh restart
         sleep 2
         print_color "$GREEN" "   ✅ Web core restarted"
-        
+
         # Open web UI in browser to show new version
         print_color "$CYAN" "   Opening web UI in browser..."
         if command -v open > /dev/null 2>&1; then
@@ -806,7 +806,7 @@ quick_release() {
             wslview "http://localhost:8000" 2>/dev/null &
         fi
     else
-        print_color "$YELLOW" "   ⚠️  Could not find apps/web/backend/start_backend.sh"
+        print_color "$YELLOW" "   ⚠️  Could not find platform/runtime/web/backend/start_backend.sh"
     fi
     
     # Restart CLI (unibos.sh) in background
@@ -874,14 +874,14 @@ main() {
                 # Restart services to apply new version
                 print_color "$YELLOW" "\n🔄 Restarting services with new version..."
 
-                # Restart web core (Django backend) - v532+: apps/web/backend/
-                if [ -f "apps/web/backend/start_backend.sh" ]; then
+                # Restart web core (Django backend) - v532+: platform/runtime/web/backend/
+                if [ -f "platform/runtime/web/backend/start_backend.sh" ]; then
                     print_color "$CYAN" "   Restarting web core..."
-                    ./apps/web/backend/start_backend.sh restart
+                    ./platform/runtime/web/backend/start_backend.sh restart
                     sleep 2
                     print_color "$GREEN" "   ✅ Web core restarted"
                 else
-                    print_color "$YELLOW" "   ⚠️  Could not find apps/web/backend/start_backend.sh"
+                    print_color "$YELLOW" "   ⚠️  Could not find platform/runtime/web/backend/start_backend.sh"
                 fi
                 
                 # Restart CLI

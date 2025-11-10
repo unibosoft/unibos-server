@@ -13,7 +13,7 @@ import sys
 class CoreConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'modules.core.backend'
-    label = 'core'
+    label = 'modules_core'
     verbose_name = 'Core - System Foundation'
 
     def ready(self):

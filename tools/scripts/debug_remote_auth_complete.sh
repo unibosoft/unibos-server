@@ -24,7 +24,7 @@ EOF
 # 2. Test authentication directly on remote
 echo -e "\n🔐 Step 2: Testing authentication on remote..."
 ssh rocksteady << 'EOF'
-cd ~/unibos/backend
+cd ~/unibos/platform/runtime/web/backend
 
 # Test with Django shell
 ./venv/bin/python << PYTHON
@@ -62,7 +62,7 @@ EOF
 # 3. Check Django settings on remote
 echo -e "\n⚙️ Step 3: Checking Django settings..."
 ssh rocksteady << 'EOF'
-cd ~/unibos/backend
+cd ~/unibos/platform/runtime/web/backend
 
 ./venv/bin/python << PYTHON
 import os, django
@@ -89,7 +89,7 @@ EOF
 # 4. Force reset berkhatirli password on remote
 echo -e "\n🔄 Step 4: Force resetting berkhatirli password on remote..."
 ssh rocksteady << 'EOF'
-cd ~/unibos/backend
+cd ~/unibos/platform/runtime/web/backend
 
 ./venv/bin/python << PYTHON
 import os, django
@@ -145,13 +145,13 @@ EOF
 # 6. Fix settings file
 echo -e "\n🔧 Step 6: Fixing production settings..."
 ssh rocksteady << 'EOF'
-cd ~/unibos/backend
+cd ~/unibos/platform/runtime/web/backend
 
 # Backup current settings
-cp unibos_apps/web/backend/settings/production.py unibos_apps/web/backend/settings/production.py.backup
+cp unibos_platform/runtime/web/backend/settings/production.py unibos_platform/runtime/web/backend/settings/production.py.backup
 
 # Create new production settings
-cat > unibos_apps/web/backend/settings/production.py << 'SETTINGS'
+cat > unibos_platform/runtime/web/backend/settings/production.py << 'SETTINGS'
 """
 Production settings for UNIBOS - Fixed for HTTP
 """
@@ -280,7 +280,7 @@ pkill -f "manage.py runserver"
 sleep 2
 
 # Start Django
-cd ~/unibos/backend
+cd ~/unibos/platform/runtime/web/backend
 nohup ./venv/bin/python manage.py runserver 0.0.0.0:8000 > server.log 2>&1 &
 echo "✓ Django restarted"
 

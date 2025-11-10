@@ -3,8 +3,17 @@ UNIBOS Backend Base Settings
 Secure, scalable Django configuration for production use
 """
 
+import sys
 import os
 from pathlib import Path
+
+# Add UNIBOS root directory to Python path so modules/ can be imported
+# This file is in: platform/runtime/web/backend/unibos_backend/settings/base.py
+# Path: base.py → settings/ → unibos_backend/ → backend/ → web/ → runtime/ → core/ → (UNIBOS root)
+# UNIBOS root is 7 levels up
+_unibos_root = Path(__file__).resolve().parent.parent.parent.parent.parent.parent.parent
+if str(_unibos_root) not in sys.path:
+    sys.path.insert(0, str(_unibos_root))
 from datetime import timedelta
 import environ
 
@@ -63,9 +72,9 @@ CORE_APPS = [
 
 UNIBOS_SYSTEM_APPS = [
     # Module registry must be loaded early to discover modules
-    # Note: module_registry symlink exists at apps/web/backend/core/
-    # but we're referencing the original location
-    'core.backend.core_apps.module_registry',  # UNIBOS Module Registry
+    # Note: module_registry was removed during v533 architectural migration
+    # TODO: Implement new module discovery system
+    # 'core.backend.core_apps.module_registry',  # UNIBOS Module Registry (DEPRECATED)
 ]
 
 UNIBOS_MODULES = [

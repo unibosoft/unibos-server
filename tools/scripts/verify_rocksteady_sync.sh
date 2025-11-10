@@ -40,16 +40,16 @@ fi
 # 2. Check public_server_menu_proper.py exists
 echo ""
 echo "Public Server Menu:"
-if ssh rocksteady '[ -f ~/unibos/apps/cli/src/public_server_menu_proper.py ]'; then
+if ssh rocksteady '[ -f ~/unibos/platform/runtime/cli/src/public_server_menu_proper.py ]'; then
     echo -e "  ${GREEN}✅ public_server_menu_proper.py exists${NC}"
-    
+
     # Check file size
-    LOCAL_SIZE=$(wc -c < apps/cli/src/public_server_menu_proper.py 2>/dev/null)
-    REMOTE_SIZE=$(ssh rocksteady 'wc -c < ~/unibos/apps/cli/src/public_server_menu_proper.py 2>/dev/null')
+    LOCAL_SIZE=$(wc -c < platform/runtime/cli/src/public_server_menu_proper.py 2>/dev/null)
+    REMOTE_SIZE=$(ssh rocksteady 'wc -c < ~/unibos/platform/runtime/cli/src/public_server_menu_proper.py 2>/dev/null')
     echo "  File size: Local=$LOCAL_SIZE bytes, Remote=$REMOTE_SIZE bytes"
-    
+
     # Check if it has the new functions
-    if ssh rocksteady 'grep -q "def full_deployment" ~/unibos/apps/cli/src/public_server_menu_proper.py'; then
+    if ssh rocksteady 'grep -q "def full_deployment" ~/unibos/platform/runtime/cli/src/public_server_menu_proper.py'; then
         echo -e "  ${GREEN}✅ Has full_deployment function${NC}"
     else
         echo -e "  ${RED}❌ Missing full_deployment function${NC}"
@@ -61,14 +61,14 @@ fi
 # 3. Check main.py
 echo ""
 echo "Main CLI:"
-LOCAL_MAIN_LINES=$(wc -l < apps/cli/src/main.py 2>/dev/null)
-REMOTE_MAIN_LINES=$(ssh rocksteady 'wc -l < ~/unibos/apps/cli/src/main.py 2>/dev/null')
+LOCAL_MAIN_LINES=$(wc -l < platform/runtime/cli/src/main.py 2>/dev/null)
+REMOTE_MAIN_LINES=$(ssh rocksteady 'wc -l < ~/unibos/platform/runtime/cli/src/main.py 2>/dev/null')
 echo "  main.py lines: Local=$LOCAL_MAIN_LINES, Remote=$REMOTE_MAIN_LINES"
 
 # 4. Check backend files
 echo ""
 echo "Backend:"
-if ssh rocksteady '[ -f ~/unibos/apps/web/backend/requirements_minimal.txt ]'; then
+if ssh rocksteady '[ -f ~/unibos/platform/runtime/web/backend/requirements_minimal.txt ]'; then
     echo -e "  ${GREEN}✅ requirements_minimal.txt exists${NC}"
 else
     echo -e "  ${YELLOW}⚠️  requirements_minimal.txt missing (may use fallback)${NC}"
@@ -89,8 +89,8 @@ done
 echo ""
 echo "Last Modified Times:"
 echo "===================="
-LOCAL_MODIFIED=$(stat -f "%Sm" apps/cli/src/public_server_menu_proper.py 2>/dev/null || stat -c "%y" apps/cli/src/public_server_menu_proper.py 2>/dev/null)
-REMOTE_MODIFIED=$(ssh rocksteady 'stat -c "%y" ~/unibos/apps/cli/src/public_server_menu_proper.py 2>/dev/null || echo "unknown"')
+LOCAL_MODIFIED=$(stat -f "%Sm" platform/runtime/cli/src/public_server_menu_proper.py 2>/dev/null || stat -c "%y" platform/runtime/cli/src/public_server_menu_proper.py 2>/dev/null)
+REMOTE_MODIFIED=$(ssh rocksteady 'stat -c "%y" ~/unibos/platform/runtime/cli/src/public_server_menu_proper.py 2>/dev/null || echo "unknown"')
 echo "  Local:  $LOCAL_MODIFIED"
 echo "  Remote: $REMOTE_MODIFIED"
 

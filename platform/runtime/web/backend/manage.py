@@ -2,10 +2,18 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+from pathlib import Path
 
 
 def main():
     """Run administrative tasks."""
+    # Add UNIBOS root directory to Python path so modules/ can be imported
+    # manage.py is in: platform/runtime/web/backend/
+    # UNIBOS root is 4 levels up
+    unibos_root = Path(__file__).resolve().parent.parent.parent.parent
+    if str(unibos_root) not in sys.path:
+        sys.path.insert(0, str(unibos_root))
+
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unibos_backend.settings.development')
     try:
         from django.core.management import execute_from_command_line

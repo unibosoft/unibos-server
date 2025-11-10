@@ -785,6 +785,465 @@ class CurrencyService:
 
 ---
 
+---
+
+### **Phase 8: Everything App Platform Architecture (v534+)**
+
+**Goal:** Transform UNIBOS into a flexible platform supporting both unified "everything app" and standalone module deployments across web, CLI, and mobile platforms.
+
+#### 8.1 Core Architecture Redesign
+
+**Current Problem:**
+- Platform launchers (`apps/cli/`, `apps/web/backend/`) mix runtime concerns with application code
+- No clear separation between UNIBOS Core OS and module applications
+- Cannot deploy modules as standalone apps
+- Each module cannot independently support multiple platforms (web/cli/mobile)
+
+**Target Architecture:**
+```
+core/                          # UNIBOS Platform Core (OS Kernel)
+├── runtime/                   # Platform Runtime Environments
+│   ├── web/                   # Django web platform
+│   │   ├── unibos_backend/    # Django project settings
+│   │   ├── manage.py
+│   │   └── templates/         # Base platform templates
+│   ├── cli/                   # Terminal CLI platform
+│   │   ├── src/
+│   │   └── main.py
+│   └── shared/                # Common runtime utilities
+│
+├── shared/                    # Shared Libraries & Services
+│   ├── auth/                  # Authentication services
+│   ├── storage/               # File storage services
+│   ├── cache/                 # Caching services
+│   ├── events/                # Event bus system
+│   ├── registry/              # Module registry & discovery
+│   └── api_gateway/           # API gateway for inter-module calls
+│
+└── sdk/                       # UNIBOS SDK for module development
+    ├── python/                # Python SDK
+    ├── dart/                  # Flutter/Dart SDK
+    └── docs/                  # SDK documentation
+
+modules/                       # Module Applications
+├── {module_name}/
+│   ├── api/                   # REST API (platform-agnostic)
+│   │   ├── v1/
+│   │   └── serializers.py
+│   ├── web/                   # Web UI components (optional)
+│   │   ├── views.py
+│   │   └── templates/
+│   ├── cli/                   # CLI commands (optional)
+│   │   └── commands.py
+│   ├── mobile/                # Mobile app (optional)
+│   │   ├── lib/
+│   │   └── pubspec.yaml
+│   ├── backend/               # Business logic & models
+│   │   ├── models.py
+│   │   ├── services.py
+│   │   └── tasks.py
+│   └── module.json            # Module manifest v2.0
+```
+
+**Implementation Tasks:**
+
+- [ ] **8.1.1 Create core/ directory structure**
+  - Create `core/runtime/web/` (migrate from `apps/web/backend/`)
+  - Create `core/runtime/cli/` (migrate from `apps/cli/`)
+  - Create `core/shared/` for common services
+  - Create `core/sdk/` for module development toolkit
+
+- [ ] **8.1.2 Migrate platform runtime**
+  - Use `git mv apps/web/backend/ core/runtime/web/`
+  - Use `git mv apps/cli/ core/runtime/cli/`
+  - Update all path references in settings
+  - Update deployment scripts
+
+- [ ] **8.1.3 Extract core services to core/shared/**
+  - Extract authentication to `core/shared/auth/`
+  - Extract storage helpers to `core/shared/storage/`
+  - Extract caching layer to `core/shared/cache/`
+  - Create event bus in `core/shared/events/`
+  - Create module registry in `core/shared/registry/`
+
+- [ ] **8.1.4 Update module.json specification to v2.0**
+  - Add `platforms` section with web/cli/mobile support flags
+  - Add `deployment_modes` (standalone, unified, hybrid)
+  - Add `entry_points` for each platform
+  - Add `module_dependencies` with semver versioning
+  - Add `shared_services` section
+
+- [ ] **8.1.5 Archive unused files**
+  - Archive old `apps/` structure to `archive/legacy_structure/`
+  - Update `.archiveignore` to reference `core/runtime/`
+  - Verify no data loss (especially `archive/versions/`)
+
+#### 8.2 Multi-Platform Module Support
+
+**Goal:** Enable each module to support any combination of web, CLI, and mobile platforms
+
+**Module Structure v2.0:**
+```
+modules/{module_name}/
+├── module.json              # v2.0 with platform capabilities
+├── api/                     # Platform-agnostic REST API
+│   ├── v1/
+│   │   ├── views.py
+│   │   ├── serializers.py
+│   │   └── urls.py
+│   └── websockets/          # WebSocket endpoints (if realtime: true)
+│
+├── web/                     # Web platform (optional)
+│   ├── views.py
+│   ├── templates/
+│   │   └── {module_name}/
+│   ├── static/
+│   │   └── {module_name}/
+│   └── urls.py
+│
+├── cli/                     # CLI platform (optional)
+│   ├── commands/
+│   │   ├── list.py
+│   │   ├── create.py
+│   │   └── manage.py
+│   └── cli.py
+│
+├── mobile/                  # Mobile platform (optional)
+│   ├── lib/
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   ├── services/
+│   │   └── main.dart
+│   ├── pubspec.yaml
+│   ├── android/
+│   └── ios/
+│
+└── backend/                 # Core business logic (required)
+    ├── models.py
+    ├── services.py          # Business logic layer
+    ├── tasks.py             # Celery tasks
+    ├── receivers.py         # Event receivers
+    └── migrations/
+```
+
+**Implementation Tasks:**
+
+- [ ] **8.2.1 Pilot module migration: birlikteyiz**
+  - Already has backend + mobile
+  - Add `api/` layer (extract from backend)
+  - Add `web/` layer (create web UI)
+  - Update `module.json` to v2.0
+  - Test all three platforms work independently
+
+- [ ] **8.2.2 Pilot module migration: documents**
+  - Currently backend + web
+  - Add `api/` layer
+  - Add `cli/` commands for OCR operations
+  - Consider `mobile/` for document scanning
+  - Update `module.json` to v2.0
+
+- [ ] **8.2.3 Pilot module migration: recaria**
+  - Game module - needs all platforms
+  - Add `api/` for game state
+  - Create `web/` browser game UI
+  - Create `mobile/` Flutter game app
+  - Keep `cli/` for admin tools
+
+- [ ] **8.2.4 Update remaining modules**
+  - Systematically migrate all 21 modules
+  - Each module defines its own platform support
+  - Not all modules need all platforms
+
+- [ ] **8.2.5 Platform detection & routing**
+  - Core runtime detects available module platforms
+  - Web runtime loads only web-enabled modules
+  - CLI runtime loads only cli-enabled modules
+  - Mobile apps fetch only mobile-enabled modules
+
+#### 8.3 Deployment Model Support
+
+**Goal:** Support three deployment scenarios simultaneously
+
+**Deployment Scenarios:**
+
+1. **Unified UNIBOS (Everything App)**
+   - Single web application with all modules
+   - Single CLI tool with all modules
+   - Current implementation (keep working)
+   - Target users: Power users, enterprises, self-hosters
+
+2. **Standalone Module Apps**
+   - Individual module as separate application
+   - Example: `birlikteyiz.app` (emergency mesh network)
+   - Example: `recaria.game` (MMORPG game)
+   - Each connects to same backend API
+   - Target users: End users, mobile users
+
+3. **Hybrid Packages**
+   - Custom module combinations
+   - Example: SME Package (wimm + wims + documents + restopos)
+   - Example: Emergency Package (birlikteyiz + cctv)
+   - Target users: Specialized use cases
+
+**Implementation Tasks:**
+
+- [ ] **8.3.1 Unified deployment (keep working)**
+  - This is current state - must not break
+  - All modules loaded in Django INSTALLED_APPS
+  - All modules appear in sidebar
+  - All modules accessible from single domain
+
+- [ ] **8.3.2 Standalone deployment preparation**
+  - Create standalone Django settings template
+  - Create standalone URL routing for single module
+  - Create standalone packaging scripts
+  - Example: Package birlikteyiz as standalone app
+
+- [ ] **8.3.3 Hybrid package system**
+  - Create package manifest format
+  - Define module combination rules
+  - Handle cross-package dependencies
+  - Create packaging tool
+
+- [ ] **8.3.4 Template system updates**
+  - Base templates detect deployment mode
+  - Standalone mode: module-specific branding
+  - Unified mode: UNIBOS branding with all modules
+  - Hybrid mode: package-specific branding
+
+- [ ] **8.3.5 Build & deployment automation**
+  - Script to build unified UNIBOS
+  - Script to build standalone module
+  - Script to build hybrid package
+  - Docker images for each deployment type
+
+#### 8.4 Module Manifest v2.0 Specification
+
+**Extended module.json format:**
+
+```json
+{
+  "id": "birlikteyiz",
+  "name": "Birlikteyiz",
+  "version": "2.0.0",
+  "manifest_version": "2.0",
+
+  "platforms": {
+    "api": {
+      "enabled": true,
+      "base_path": "/api/v1/birlikteyiz/",
+      "openapi_spec": "api/openapi.yaml"
+    },
+    "web": {
+      "enabled": true,
+      "entry_point": "web.views",
+      "base_url": "/birlikteyiz/",
+      "requires_auth": true
+    },
+    "cli": {
+      "enabled": false
+    },
+    "mobile": {
+      "enabled": true,
+      "platforms": ["android", "ios"],
+      "package_name": "org.unibos.birlikteyiz",
+      "min_version": "2.0.0"
+    }
+  },
+
+  "deployment_modes": {
+    "standalone": {
+      "supported": true,
+      "app_name": "Birlikteyiz Emergency Network",
+      "description": "Emergency mesh communication system",
+      "icon": "📡",
+      "branding": {
+        "primary_color": "#FF6B35",
+        "logo": "assets/logo.png"
+      }
+    },
+    "unified": {
+      "supported": true,
+      "sidebar_position": 1,
+      "category": "emergency"
+    },
+    "hybrid": {
+      "supported": true,
+      "compatible_packages": ["emergency-response", "disaster-management"]
+    }
+  },
+
+  "dependencies": {
+    "core_modules": [
+      {"id": "authentication", "version": ">=1.0.0"},
+      {"id": "users", "version": ">=1.0.0"}
+    ],
+    "other_modules": [],
+    "core_services": [
+      "core.shared.auth",
+      "core.shared.cache",
+      "core.shared.events"
+    ],
+    "python_packages": [
+      "djangorestframework>=3.14.0",
+      "channels>=4.0.0",
+      "celery>=5.3.0"
+    ]
+  },
+
+  "capabilities": {
+    "backend": true,
+    "realtime": true,
+    "background_tasks": true,
+    "file_storage": true,
+    "geolocation": true
+  },
+
+  "api": {
+    "base_path": "/api/v1/birlikteyiz/",
+    "websocket_routes": [
+      "ws/birlikteyiz/earthquakes/",
+      "ws/birlikteyiz/mesh/"
+    ]
+  },
+
+  "integration": {
+    "emits_events": [
+      "earthquake_detected",
+      "alert_issued",
+      "mesh_node_connected"
+    ],
+    "listens_to_events": [
+      "user_location_updated"
+    ],
+    "provides_services": [
+      "EarthquakeDetectionService",
+      "MeshNetworkService"
+    ],
+    "uses_services": [
+      "modules.cctv.backend.services.CCTVService"
+    ]
+  }
+}
+```
+
+**Implementation Tasks:**
+
+- [ ] **8.4.1 Define v2.0 JSON schema**
+- [ ] **8.4.2 Create validation logic**
+- [ ] **8.4.3 Write migration tool (v1.0 → v2.0)**
+- [ ] **8.4.4 Update all 21 module.json files**
+- [ ] **8.4.5 Document all new fields**
+
+#### 8.5 Cross-Platform Development Experience
+
+**Goal:** Make it easy to develop modules that work across platforms
+
+**UNIBOS SDK Components:**
+
+1. **Python SDK** (`core/sdk/python/`)
+   - Base module class with platform hooks
+   - Authentication helpers
+   - Storage helpers
+   - Cache helpers
+   - Event system
+   - API client for inter-module calls
+
+2. **Dart SDK** (`core/sdk/dart/`)
+   - Flutter package for mobile modules
+   - API client
+   - State management helpers
+   - Common widgets
+   - Theme system
+
+3. **CLI Framework** (`core/sdk/cli/`)
+   - Command framework
+   - Output formatters
+   - Interactive prompts
+   - Configuration management
+
+**Implementation Tasks:**
+
+- [ ] **8.5.1 Create Python SDK package**
+  - `core/sdk/python/unibos_sdk/`
+  - Base classes for modules
+  - Platform detection utilities
+  - Service discovery
+  - Event bus client
+
+- [ ] **8.5.2 Create Dart SDK package**
+  - `core/sdk/dart/unibos_flutter/`
+  - API client
+  - Authentication
+  - Common widgets
+  - Theme system
+
+- [ ] **8.5.3 Create CLI framework**
+  - `core/sdk/cli/unibos_cli/`
+  - Command registration
+  - Output formatting
+  - Interactive mode
+
+- [ ] **8.5.4 Module scaffolding tool**
+  - CLI tool to generate new modules
+  - Template for each platform
+  - Generates module.json v2.0
+  - Creates directory structure
+
+- [ ] **8.5.5 Documentation & examples**
+  - Getting started guide
+  - Platform-specific tutorials
+  - Best practices
+  - Reference implementations
+
+#### 8.6 Migration Strategy
+
+**Phase 8 Timeline:** 6-8 weeks
+
+**Week 1-2: Core Architecture**
+- Create `core/` directory structure
+- Migrate `apps/` → `core/runtime/` using git mv
+- Extract core services to `core/shared/`
+- Update all path references
+- Test: Django and CLI still work
+
+**Week 3-4: Multi-Platform Support**
+- Design module.json v2.0
+- Migrate 3 pilot modules (birlikteyiz, documents, recaria)
+- Implement platform detection
+- Test: Each platform works independently
+
+**Week 5-6: Deployment Models**
+- Implement standalone deployment
+- Implement hybrid packages
+- Create packaging scripts
+- Test: All deployment modes work
+
+**Week 7-8: SDK & Developer Experience**
+- Create Python SDK
+- Create Dart SDK
+- Create CLI framework
+- Create module scaffolding tool
+- Write comprehensive documentation
+
+**Success Criteria:**
+- ✅ Core platform runtime separated from modules
+- ✅ At least 3 modules support multiple platforms
+- ✅ Can deploy as unified app (current functionality)
+- ✅ Can deploy birlikteyiz as standalone app
+- ✅ Module scaffolding tool generates working modules
+- ✅ No data loss, especially `archive/versions/`
+- ✅ All existing functionality still works
+- ✅ Web UI design (terminal style) unchanged
+
+**Rollback Plan:**
+- Git tag before Phase 8: `pre-phase-8-everything-app`
+- Feature branch: `feature/everything-app-architecture`
+- Can rollback entire phase if critical issues
+- Can rollback individual modules if needed
+
+---
+
 ## 📅 Timeline
 
 | Phase | Duration | Start | End | Status |
@@ -796,8 +1255,9 @@ class CurrencyService:
 | Phase 5: Testing & QA | 2 weeks | TBD | TBD | 🟡 Not Started |
 | Phase 6: Documentation | 1 week | TBD | TBD | 🟡 Not Started |
 | Phase 7: Production Deploy | 1 week | TBD | TBD | 🟡 Not Started |
+| **Phase 8: Everything App** | **6-8 weeks** | **2025-11-10** | **TBD** | **🔵 In Progress** |
 
-**Total Estimated Time:** 13-15 weeks (~3.5 months)
+**Total Estimated Time:** 19-23 weeks (~5-6 months)
 
 **Status Legend:**
 - 🟡 Not Started

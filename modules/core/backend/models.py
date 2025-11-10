@@ -26,7 +26,7 @@ class ItemCategory(BaseModel):
     icon = models.CharField(max_length=50, blank=True)  # Emoji or icon class
     
     class Meta:
-        app_label = 'core'
+        app_label = 'modules_core'
         verbose_name_plural = "Item Categories"
         ordering = ['name']
     
@@ -50,7 +50,7 @@ class Unit(BaseModel):
     ])
     
     class Meta:
-        app_label = 'core'
+        app_label = 'modules_core'
     
     def __str__(self):
         return f"{self.name} ({self.symbol})"
@@ -86,7 +86,7 @@ class Item(BaseModel):
     tags = models.JSONField(default=list, blank=True)  # ["food", "organic", "fruit"]
     
     class Meta:
-        app_label = 'core'
+        app_label = 'modules_core'
         ordering = ['name']
         indexes = [
             models.Index(fields=['code']),
@@ -120,7 +120,7 @@ class ItemPrice(BaseModel):
     # Example: {"discount": 10, "campaign": "summer_sale", "min_quantity": 1}
     
     class Meta:
-        app_label = 'core'
+        app_label = 'modules_core'
         ordering = ['-valid_from']
         indexes = [
             models.Index(fields=['item', 'source', '-valid_from']),
@@ -160,7 +160,7 @@ class Account(BaseModel):
     # Example: {"interest_rate": 2.5, "credit_limit": 10000, "wallet_address": "0x..."}
     
     class Meta:
-        app_label = 'core'
+        app_label = 'modules_core'
         ordering = ['name']
         unique_together = [['user', 'name']]
     
@@ -198,7 +198,7 @@ class UserProfile(BaseModel):
     notifications_enabled = models.BooleanField(default=True)
     
     class Meta:
-        app_label = 'core'
+        app_label = 'modules_core'
         ordering = ['user__username']
     
     def __str__(self):

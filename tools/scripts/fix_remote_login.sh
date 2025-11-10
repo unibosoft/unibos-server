@@ -19,7 +19,7 @@ EOF
 echo ""
 echo "👤 Ensuring berkhatirli user exists..."
 ssh rocksteady << 'EOF'
-cd ~/unibos/backend
+cd ~/unibos/platform/runtime/web/backend
 
 # Create user via Django shell
 ./venv/bin/python << PYTHON
@@ -74,14 +74,14 @@ EOF
 echo ""
 echo "⚙️ Checking Django settings..."
 ssh rocksteady << 'EOF'
-cd ~/unibos/backend
+cd ~/unibos/platform/runtime/web/backend
 
 # Check if production.py has correct session settings
-if grep -q "SESSION_COOKIE_SECURE = False" unibos_apps/web/backend/settings/production.py; then
+if grep -q "SESSION_COOKIE_SECURE = False" unibos_platform/runtime/web/backend/settings/production.py; then
     echo "✓ Session cookies configured for HTTP"
 else
     echo "✗ Fixing session cookie settings..."
-    cat >> unibos_apps/web/backend/settings/production.py << 'SETTINGS'
+    cat >> unibos_platform/runtime/web/backend/settings/production.py << 'SETTINGS'
 
 # HTTP Session Settings
 SESSION_COOKIE_SECURE = False
@@ -104,7 +104,7 @@ pkill -f "manage.py runserver"
 sleep 2
 
 # Start Django
-cd ~/unibos/backend
+cd ~/unibos/platform/runtime/web/backend
 nohup ./venv/bin/python manage.py runserver 0.0.0.0:8000 > server.log 2>&1 &
 echo "✓ Django restarted with PID: $!"
 
@@ -135,7 +135,7 @@ else
     
     echo ""
     echo "📝 Checking Django logs..."
-    ssh rocksteady 'tail -20 ~/unibos/apps/web/backend/server.log'
+    ssh rocksteady 'tail -20 ~/unibos/platform/runtime/web/backend/server.log'
 fi
 
 echo ""

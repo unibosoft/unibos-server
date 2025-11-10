@@ -4,7 +4,7 @@
 
 # Configuration
 PROJECT_ROOT="/Users/berkhatirli/Desktop/unibos"
-OLD_APPS="$PROJECT_ROOT/apps/web/backend/apps"
+OLD_APPS="$PROJECT_ROOT/core/runtime/web/backend/apps"
 NEW_MODULES="$PROJECT_ROOT/modules"
 
 # Color codes for output

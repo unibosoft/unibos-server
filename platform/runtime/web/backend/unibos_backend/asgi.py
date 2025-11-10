@@ -3,9 +3,19 @@ ASGI config for UNIBOS Backend project.
 Exposes the ASGI callable for WebSocket support.
 """
 
+import sys
 import os
+from pathlib import Path
 import django
 from django.core.asgi import get_asgi_application
+
+# Add UNIBOS root directory to Python path so modules/ can be imported
+# This file is in: platform/runtime/web/backend/unibos_backend/asgi.py
+# Path: asgi.py → unibos_backend/ → backend/ → web/ → runtime/ → core/ → (UNIBOS root)
+# UNIBOS root is 6 levels up
+_unibos_root = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
+if str(_unibos_root) not in sys.path:
+    sys.path.insert(0, str(_unibos_root))
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unibos_backend.settings.production')

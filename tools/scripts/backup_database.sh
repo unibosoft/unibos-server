@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 # Configuration
 PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BACKUP_DIR="$PROJECT_ROOT/archive/database_backups"
-VERSION_FILE="$PROJECT_ROOT/apps/cli/src/VERSION.json"
+VERSION_FILE="$PROJECT_ROOT/platform/runtime/cli/src/VERSION.json"
 KEEP_BACKUPS=3  # Keep last 3 backups
 
 # PostgreSQL connection details (from development settings)

@@ -12,7 +12,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Configuration
-DJANGO_DIR="apps/web/backend"
+DJANGO_DIR="platform/runtime/web/backend"
 SETTINGS_MODULE="unibos_backend.settings.development"
 
 echo -e "${CYAN}╔══════════════════════════════════════════════════════╗${NC}"

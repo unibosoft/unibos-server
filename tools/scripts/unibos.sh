@@ -16,8 +16,8 @@ NC='\033[0m' # No Color
 # Start web core in background (non-blocking)
 (
     # Check if backend is already running
-    if [ -f "apps/web/backend/.backend.pid" ]; then
-        PID=$(cat "apps/web/backend/.backend.pid" 2>/dev/null)
+    if [ -f "platform/runtime/web/backend/.backend.pid" ]; then
+        PID=$(cat "platform/runtime/web/backend/.backend.pid" 2>/dev/null)
         if ps -p "$PID" > /dev/null 2>&1; then
             # Backend already running, just open browser
             if command -v open > /dev/null 2>&1; then
@@ -32,8 +32,8 @@ NC='\033[0m' # No Color
             fi
         else
             # Backend not running, start it
-            if [ -f "apps/web/backend/start_backend.sh" ]; then
-                ./apps/web/backend/start_backend.sh start > /dev/null 2>&1
+            if [ -f "platform/runtime/web/backend/start_backend.sh" ]; then
+                ./platform/runtime/web/backend/start_backend.sh start > /dev/null 2>&1
                 
                 # Wait for backend to be ready
                 sleep 3
@@ -53,8 +53,8 @@ NC='\033[0m' # No Color
         fi
     else
         # No PID file, start backend
-        if [ -f "apps/web/backend/start_backend.sh" ]; then
-            ./apps/web/backend/start_backend.sh start > /dev/null 2>&1
+        if [ -f "platform/runtime/web/backend/start_backend.sh" ]; then
+            ./platform/runtime/web/backend/start_backend.sh start > /dev/null 2>&1
             
             # Wait for backend to be ready
             sleep 3
