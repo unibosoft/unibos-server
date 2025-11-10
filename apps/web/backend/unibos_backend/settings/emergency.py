@@ -26,22 +26,22 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
-    'apps.core',  # Core shared models
-    'apps.web_ui',  # UNIBOS Web UI
-    'apps.currencies',  # Currencies module
-    'apps.wimm',  # Where Is My Money - Financial Management
-    'apps.wims',  # Where Is My Stuff - Inventory Management
-    'apps.administration',  # Administration module for user/role management
-    'apps.cctv',  # CCTV module for camera monitoring and recording
-    'apps.documents',  # Documents module for OCR and cross-module integration
-    'apps.personal_inflation',  # Personal inflation tracking module
-    'apps.version_manager',  # Version archive management
-    'apps.movies',  # Movies/Series collection management
-    'apps.music',  # Music library with Spotify integration
-    'apps.restopos',  # Restaurant POS system
-    'apps.solitaire',  # Solitaire game with security features
-    'apps.birlikteyiz',  # Emergency response and earthquake tracking
-    'store',  # E-commerce marketplace integration
+    'modules.core.backend',  # Core shared models
+    'modules.web_ui.backend',  # UNIBOS Web UI
+    'modules.currencies.backend',  # Currencies module
+    'modules.wimm.backend',  # Where Is My Money - Financial Management
+    'modules.wims.backend',  # Where Is My Stuff - Inventory Management
+    'modules.administration.backend',  # Administration module for user/role management
+    'modules.cctv.backend',  # CCTV module for camera monitoring and recording
+    'modules.documents.backend',  # Documents module for OCR and cross-module integration
+    'modules.personal_inflation.backend',  # Personal inflation tracking module
+    'modules.version_manager.backend',  # Version archive management
+    'modules.movies.backend',  # Movies/Series collection management
+    'modules.music.backend',  # Music library with Spotify integration
+    'modules.restopos.backend',  # Restaurant POS system
+    'modules.solitaire.backend',  # Solitaire game with security features
+    'modules.birlikteyiz.backend',  # Emergency response and earthquake tracking
+    'modules.store.backend',  # E-commerce marketplace integration
 ]
 
 MIDDLEWARE = [
@@ -69,9 +69,9 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 # UNIBOS custom context processors
-                'apps.web_ui.context_processors.sidebar_context',
-                'apps.web_ui.context_processors.version_context',
-                'apps.web_ui.context_processors.unibos_context',
+                'modules.web_ui.backend.context_processors.sidebar_context',
+                'modules.web_ui.backend.context_processors.version_context',
+                'modules.web_ui.backend.context_processors.unibos_context',
             ],
         },
     },

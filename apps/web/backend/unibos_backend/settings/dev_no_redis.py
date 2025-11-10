@@ -52,13 +52,13 @@ APPS_TO_REMOVE = [
     'drf_spectacular',
     'django_extensions',
     'whitenoise',
-    'apps.authentication',
-    'apps.users',
-    'apps.currencies',
-    'apps.personal_inflation',
-    'apps.recaria',
-    'apps.birlikteyiz',
-    'apps.common',
+    'modules.authentication.backend',
+    'modules.users.backend',
+    'modules.currencies.backend',
+    'modules.personal_inflation.backend',
+    'modules.recaria.backend',
+    'modules.birlikteyiz.backend',
+    'modules.common.backend',
 ]
 
 # Basic Django apps only

@@ -12,37 +12,37 @@ urlpatterns = [
     # path('admin/', admin.site.urls),
     
     # CCTV Module (with namespace for web interface)
-    path('cctv/', include('apps.cctv.urls', namespace='cctv')),
-    
+    path('cctv/', include('modules.cctv.backend.urls', namespace='cctv')),
+
     # Documents Module (with namespace for consistency)
-    path('documents/', include('apps.documents.urls', namespace='documents')),
-    
+    path('documents/', include('modules.documents.backend.urls', namespace='documents')),
+
     # Version Manager Module
-    path('version-manager/', include('apps.version_manager.urls', namespace='version_manager')),
-    
+    path('version-manager/', include('modules.version_manager.backend.urls', namespace='version_manager')),
+
     # Administration Module
-    path('administration/', include('apps.administration.urls', namespace='administration')),
-    
+    path('administration/', include('modules.administration.backend.urls', namespace='administration')),
+
     # Movies Module - Movie/Series Collection Management
-    path('movies/', include('apps.movies.urls', namespace='movies')),
-    
+    path('movies/', include('modules.movies.backend.urls', namespace='movies')),
+
     # Music Module - Music Collection with Spotify Integration
-    path('music/', include('apps.music.urls', namespace='music')),
-    
+    path('music/', include('modules.music.backend.urls', namespace='music')),
+
     # RestoPOS Module - Restaurant POS System
-    path('restopos/', include('apps.restopos.urls', namespace='restopos')),
-    
+    path('restopos/', include('modules.restopos.backend.urls', namespace='restopos')),
+
     # Solitaire Game Module
-    path('solitaire/', include('apps.solitaire.urls', namespace='solitaire')),
-    
+    path('solitaire/', include('modules.solitaire.backend.urls', namespace='solitaire')),
+
     # Birlikteyiz Module - Emergency Response and Earthquake Tracking
-    path('birlikteyiz/', include('apps.birlikteyiz.urls', namespace='birlikteyiz')),
-    
+    path('birlikteyiz/', include('modules.birlikteyiz.backend.urls', namespace='birlikteyiz')),
+
     # Store Module - E-commerce Marketplace Integration
-    path('store/', include('store.urls', namespace='store')),
-    
+    path('store/', include('modules.store.backend.urls', namespace='store')),
+
     # Web UI
-    path('', include('apps.web_ui.urls')),
+    path('', include('modules.web_ui.backend.urls')),
 ]
 
 # Serve media files
