@@ -103,3 +103,20 @@ screenshot_move_log.json
 
 # ===== SQL BACKUPS (manuel backups hariç) =====
 # data/database/backups/ dizini gitignore'da - SQL backups oraya gidecekarchive/database_backups/
+
+# ===== FLUTTER/MOBILE BUILD =====
+**/build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+modules/*/mobile/build/
+modules/*/mobile/.dart_tool/
+modules/*/mobile/.flutter-plugins
+modules/*/mobile/.flutter-plugins-dependencies
+modules/*/mobile/.packages
+apps/mobile/*/build/
+apps/mobile/*/.dart_tool/
+
