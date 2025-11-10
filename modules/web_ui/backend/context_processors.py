@@ -59,50 +59,50 @@ def sidebar_context(request):
 def version_context(request):
     """
     Provides version information for all templates
-    First tries backend/VERSION.json, then src/VERSION.json
+    Tries multiple paths: project root, backend, src
     """
     import json
     from pathlib import Path
-    
+
     version_data = None
-    
+
     try:
-        # First try backend VERSION.json (same directory as manage.py)
-        backend_path = Path(__file__).parent.parent.parent
-        backend_version_file = backend_path / 'VERSION.json'
-        
-        if backend_version_file.exists():
-            with open(backend_version_file, 'r') as f:
-                version_data = json.load(f)
-        
-        # If not found, try src/VERSION.json
-        if not version_data:
-            src_path = backend_path.parent / 'src'
-            src_version_file = src_path / 'VERSION.json'
-            
-            if src_version_file.exists():
-                with open(src_version_file, 'r') as f:
+        # Path resolution: modules/web_ui/backend -> project root
+        # modules/web_ui/backend -> modules -> project_root (4 levels up)
+        project_root = Path(__file__).parent.parent.parent.parent
+
+        # Try paths in priority order:
+        version_paths = [
+            project_root / 'VERSION.json',  # Project root (v533+)
+            project_root / 'platform' / 'runtime' / 'web' / 'backend' / 'VERSION.json',  # Backend (v533+)
+            project_root / 'platform' / 'runtime' / 'cli' / 'src' / 'VERSION.json',  # CLI src (v533+)
+        ]
+
+        for version_file in version_paths:
+            if version_file.exists():
+                with open(version_file, 'r') as f:
                     version_data = json.load(f)
-        
+                break
+
         # If still not found, use fallback
         if not version_data:
             version_data = {
-                "version": "v517",
-                "build_number": "20250826_1733",
-                "release_date": "2025-08-26"
+                "version": "v533",
+                "build_number": "unknown",
+                "release_date": "2025-11-10"
             }
     except Exception as e:
         # Fallback version on any error
         version_data = {
-            "version": "v517",
-            "build_number": "20250826_1733",
-            "release_date": "2025-08-26"
+            "version": "v533",
+            "build_number": "unknown",
+            "release_date": "2025-11-10"
         }
-    
+
     return {
-        'version': version_data.get('version', 'v517'),
-        'build_number': version_data.get('build_number', '20250826_1733'),
-        'release_date': version_data.get('release_date', '2025-08-26'),
+        'version': version_data.get('version', 'v533'),
+        'build_number': version_data.get('build_number', 'unknown'),
+        'release_date': version_data.get('release_date', '2025-11-10'),
     }
 
 
