@@ -21,7 +21,12 @@ core/data/logs/**
 !core/data/README.md
 
 # ===== ARŞİVLER =====
+# Ignore all archives except planning and docs
 archive/
+!archive/planning/
+!archive/planning/**
+!archive/docs/
+!archive/docs/**
 archive_backup*/
 
 # ===== PYTHON ORTAMI =====
