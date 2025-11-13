@@ -40,8 +40,8 @@ UNIBOS uses a dual-repository system for development and production:
 **Dev and Prod MUST be completely isolated:**
 
 ✅ **Separate Databases:**
-- Dev: `unibos_dev` (PostgreSQL)
-- Prod: `unibos` (PostgreSQL)
+- Dev: `unibos_dev` (PostgreSQL, user: `unibos_dev_user`)
+- Prod: `unibos_db` (PostgreSQL, user: `unibos_db_user`)
 
 ✅ **Separate Redis:**
 - Dev: Redis DB 0
@@ -309,7 +309,7 @@ User: unibos_dev_user
 Redis: DB 0
 
 # .env
-DATABASE_URL=postgresql://unibos_user:unibos_password@localhost:5432/unibos_dev
+DATABASE_URL=postgresql://unibos_dev_user:unibos_password@localhost:5432/unibos_dev
 REDIS_URL=redis://localhost:6379/0
 ```
 
@@ -322,7 +322,7 @@ User: unibos_db_user
 Redis: DB 1
 
 # .env
-DATABASE_URL=postgresql://unibos_db_user:unibos_password@localhost:5432/unibos
+DATABASE_URL=postgresql://unibos_db_user:unibos_password@localhost:5432/unibos_db
 REDIS_URL=redis://localhost:6379/1
 ```
 
@@ -333,7 +333,7 @@ REDIS_URL=redis://localhost:6379/1
 createdb unibos_db
 
 # Grant permissions
-psql -d unibos_db -c "GRANT ALL PRIVILEGES ON DATABASE unibos TO unibos;"
+psql -d unibos_db -c "GRANT ALL PRIVILEGES ON DATABASE unibos_db TO unibos_db_user;"
 
 # Run migrations
 cd /Users/berkhatirli/Applications/unibos/core/web
@@ -433,7 +433,7 @@ cat /Users/berkhatirli/Applications/unibos/core/web/.env | grep DATABASE_URL
 
 # Should be DIFFERENT!
 # If same, update prod .env:
-DATABASE_URL=postgresql://unibos_db_user:unibos_password@localhost:5432/unibos
+DATABASE_URL=postgresql://unibos_db_user:unibos_password@localhost:5432/unibos_db
 ```
 
 ### Problem: Prod has dev-only files

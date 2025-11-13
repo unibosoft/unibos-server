@@ -122,10 +122,11 @@ test_*.py
 .coverage
 htmlcov/
 
-# ===== GIT =====
+# ===== GIT & DEV IGNORE FILES =====
 .git/
 .gitignore
 .gitattributes
+.archiveignore
 
 # ===== LARGE MEDIA FILES =====
 *.mp4

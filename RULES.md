@@ -18,11 +18,14 @@
    • Manuel version bump işlemleri
    • Manuel pip install veya dependency kurulumu (remote'da)
    • Manuel service restart komutları
+   • Manuel dev→prod sync veya git push komutları
 
 ✅ HER ZAMAN HER ZAMAN HER ZAMAN:
    • ./tools/scripts/unibos_version.sh (versiyonlama için)
    • ./tools/scripts/backup_database.sh (database backup için)
    • ./core/deployment/rocksteady_deploy.sh (deployment için)
+   • unibos git sync-prod (local prod sync için)
+   • unibos git push-dev / push-prod (git operations için)
 
 ⚠️ BU KURAL İHLAL EDİLEMEZ - HİÇBİR İSTİSNA YOK!
 ⚠️ DEPLOYMENT MUTLAKA ./core/deployment/rocksteady_deploy.sh İLE YAPILMALI!
@@ -131,6 +134,20 @@ Ne üzerinde çalışmamı istersin?
 2. **Script:** `./core/deployment/rocksteady_deploy.sh`
 3. **⚠️ MUTLAKA:** Pre-flight checks yapılır, manuel komut yasak!
 
+### Dev/Prod Workflow Yapacaksan:
+1. **[docs/guides/dev-prod-workflow.md](docs/guides/dev-prod-workflow.md)** ← Detaylı workflow guide
+2. **[docs/guides/git-workflow-usage.md](docs/guides/git-workflow-usage.md)** ← CLI usage guide
+3. **CLI Commands:**
+   - `unibos git setup` - Git remotes kurulumu
+   - `unibos git push-dev` - Dev repo'ya push
+   - `unibos git push-prod` - Prod repo'ya push (filtered!)
+   - `unibos git sync-prod` - Local prod'a sync (filtered!)
+4. **⚠️ KRITIK:**
+   - Dev database: `unibos_dev` / `unibos_dev_user`
+   - Prod database: `unibos_db` / `unibos_db_user`
+   - `.prodignore` file defines exclusions
+   - ASLA manuel rsync veya git push kullanma!
+
 ---
 
 ## 🔗 DOSYA HİYERARŞİSİ
@@ -195,6 +212,9 @@ core/deployment/
 | **CLAUDE_SESSION_PROTOCOL.md** | SCREENSHOT_MANAGEMENT.md, CODE_QUALITY_STANDARDS.md | RULES.md checklist, CLAUDE.md index |
 | **SCREENSHOT_MANAGEMENT.md** | CLAUDE_SESSION_PROTOCOL.md | .archiveignore screenshot path'leri |
 | **CODE_QUALITY_STANDARDS.md** | CLAUDE_SESSION_PROTOCOL.md | Kod değişikliklerinde uyumluluk |
+| **dev-prod-workflow.md** | .prodignore, git-workflow-usage.md | CLI commands (git.py), database credentials consistency |
+| **.prodignore** | dev-prod-workflow.md, git.py | Exclusion list in documentation, rsync/git operations |
+| **core/cli/commands/git.py** | .prodignore, dev-prod-workflow.md | Exclusion patterns, workflow documentation |
 
 ### Atomik Commit Kuralı
 
@@ -250,17 +270,20 @@ Her değişiklik sonrası kendine şu soruları sor:
 
 ## 📝 Son Güncelleme
 
-**Tarih:** 2025-11-13
-**Neden:** Version-agnostic deployment sistem ve kuralları eklendi
+**Tarih:** 2025-11-13 (Updated)
+**Neden:** Dev/prod workflow kuralları ve validation eklendi
 **Değişiklikler:**
+- ✅ Dev/prod workflow section eklendi (RULES.md)
+- ✅ dev-prod-workflow.md, git-workflow-usage.md, .prodignore validation matrix'e eklendi
+- ✅ CLI git commands (push-dev, push-prod, sync-prod) mandatory kullanım
+- ✅ Manuel rsync/git push yasaklandı (dev→prod için)
+- ✅ Database naming standardized (unibos_dev/unibos_dev_user vs unibos_db/unibos_db_user)
+- ✅ .prodignore updated to exclude .archiveignore
 - ✅ core/deployment/ dizini oluşturuldu (deploy/ yerine)
 - ✅ rocksteady_deploy.sh version-agnostic yapıldı
 - ✅ Otomatik architecture detection (core/web vs platform/*)
 - ✅ Pre-flight size checks (Flutter build, logs, venv detection)
 - ✅ Otomatik dependency checking ve kurulum
-- ✅ RULES.md deployment kuralları güncellendi
-- ✅ Manuel deployment komutları yasaklandı
-- ✅ .rsyncignore validation matrix'e eklendi
 - ✅ core/deployment/README.md oluşturuldu (comprehensive guide)
 
 **Bir Önceki Güncelleme:** 2025-11-09 - Claude oturum protokolü ve kod kalitesi standartları
