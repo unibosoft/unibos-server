@@ -1,1 +1,0 @@
-tools/scripts/unibos_version.sh
