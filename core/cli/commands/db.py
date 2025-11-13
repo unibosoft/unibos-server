@@ -81,7 +81,7 @@ def db_migrate():
     env['PYTHONPATH'] = f"{django_path}:{root_dir}"
 
     result = subprocess.run(
-        ['python', 'manage.py', 'migrate'],
+        [sys.executable, 'manage.py', 'migrate'],
         cwd=str(django_path),
         env=env
     )
@@ -102,7 +102,7 @@ def db_status():
     env['PYTHONPATH'] = f"{django_path}:{root_dir}"
 
     result = subprocess.run(
-        ['python', 'manage.py', 'showmigrations'],
+        [sys.executable, 'manage.py', 'showmigrations'],
         cwd=str(django_path),
         env=env
     )

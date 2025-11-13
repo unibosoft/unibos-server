@@ -5,6 +5,7 @@ System health checks and status information
 
 import click
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -59,7 +60,7 @@ def status_command(detailed):
             # Try to get Django version
             try:
                 result = subprocess.run(
-                    ['python', str(django_path), '--version'],
+                    [sys.executable, str(django_path), '--version'],
                     capture_output=True,
                     text=True,
                     timeout=5

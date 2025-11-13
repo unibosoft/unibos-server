@@ -42,7 +42,7 @@ def dev_run(port, host):
 
     try:
         subprocess.run(
-            ['python', 'manage.py', 'runserver', f'{host}:{port}'],
+            [sys.executable, 'manage.py', 'runserver', f'{host}:{port}'],
             cwd=str(django_path),
             env=env
         )
@@ -63,7 +63,7 @@ def dev_shell():
 
     try:
         subprocess.run(
-            ['python', 'manage.py', 'shell'],
+            [sys.executable, 'manage.py', 'shell'],
             cwd=str(django_path),
             env=env
         )
@@ -83,7 +83,7 @@ def dev_test(args):
     env['DJANGO_SETTINGS_MODULE'] = 'unibos_backend.settings.development'
     env['PYTHONPATH'] = f"{django_path}:{django_path.parent}"
 
-    cmd = ['python', 'manage.py', 'test'] + list(args)
+    cmd = [sys.executable, 'manage.py', 'test'] + list(args)
 
     result = subprocess.run(cmd, cwd=str(django_path), env=env)
     sys.exit(result.returncode)
@@ -101,7 +101,7 @@ def dev_migrate(app):
     env['DJANGO_SETTINGS_MODULE'] = 'unibos_backend.settings.development'
     env['PYTHONPATH'] = f"{django_path}:{django_path.parent}"
 
-    cmd = ['python', 'manage.py', 'migrate']
+    cmd = [sys.executable, 'manage.py', 'migrate']
     if app:
         cmd.append(app)
 
@@ -121,7 +121,7 @@ def dev_makemigrations(app):
     env['DJANGO_SETTINGS_MODULE'] = 'unibos_backend.settings.development'
     env['PYTHONPATH'] = f"{django_path}:{django_path.parent}"
 
-    cmd = ['python', 'manage.py', 'makemigrations']
+    cmd = [sys.executable, 'manage.py', 'makemigrations']
     if app:
         cmd.append(app)
 
