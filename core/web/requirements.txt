@@ -35,7 +35,7 @@ aioredis==2.0.1
 
 # Task Queue
 celery==5.3.4
-django-celery-beat==2.5.0
+django-celery-beat==2.6.0
 kombu==5.3.4
 
 # Monitoring & Logging
@@ -73,7 +73,7 @@ numpy==1.26.3
 # Advanced OCR Libraries
 paddleocr==3.3.1
 paddlepaddle==2.6.2  # 3.x has segfault issues on ARM64
-torch==2.9.0
+torch==2.6.0
 torchvision==0.21.0
 transformers==4.57.1
 sentencepiece==0.2.0
@@ -101,7 +101,7 @@ marshmallow==3.20.2
 django-model-utils==4.3.1
 
 # Caching
-django-cachalot==2.6.1
+django-cachalot==2.6.2
 
 # Background Tasks
 django-crontab==0.7.1

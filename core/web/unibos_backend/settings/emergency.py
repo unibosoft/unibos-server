@@ -132,7 +132,7 @@ STATICFILES_DIRS = [
 # Media files (User uploaded content) - Universal Data Directory
 MEDIA_URL = '/media/'
 DATA_DIR = BASE_DIR.parent.parent.parent / 'data'
-MEDIA_ROOT = DATA_DIR / 'runtime' / 'media'
+MEDIA_ROOT = DATA_DIR / 'modules'  # Module files stored in data/modules/<module_name>/
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

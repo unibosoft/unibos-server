@@ -11,17 +11,21 @@
 ```
 ❌ ASLA ASLA ASLA:
    • Manuel rsync komutları
+   • Manuel ssh deployment komutları
    • Manuel git commit/tag/branch komutları
    • Manuel deployment işlemleri
    • Manuel arşiv oluşturma
    • Manuel version bump işlemleri
+   • Manuel pip install veya dependency kurulumu (remote'da)
+   • Manuel service restart komutları
 
 ✅ HER ZAMAN HER ZAMAN HER ZAMAN:
    • ./tools/scripts/unibos_version.sh (versiyonlama için)
    • ./tools/scripts/backup_database.sh (database backup için)
-   • ./tools/scripts/rocksteady_deploy.sh (deployment için)
+   • ./core/deployment/rocksteady_deploy.sh (deployment için)
 
 ⚠️ BU KURAL İHLAL EDİLEMEZ - HİÇBİR İSTİSNA YOK!
+⚠️ DEPLOYMENT MUTLAKA ./core/deployment/rocksteady_deploy.sh İLE YAPILMALI!
 ```
 
 ### 2️⃣ HER OTURUMDA KURALLARI OKU
@@ -35,6 +39,26 @@
 ```
 Kural değişti → Script + Dokümantasyon birlikte güncelle
 Script değişti → Kurallar + Dokümantasyon birlikte güncelle
+TODO güncellendi → İlgili code/docs birlikte commit et
+```
+
+### 4️⃣ ANA DİZİN HEP DÜZENLİ OLMALI
+```
+✅ Ana dizinde SADECE:
+   • README.md, RULES.md, TODO.md
+   • VERSION.json
+   • .gitignore, .rsyncignore, .archiveignore
+   • setup.py, pyproject.toml (packaging)
+   • core/, modules/, data/, docs/, tools/ (dizinler)
+
+❌ Ana dizinde ASLA:
+   • Eski TODO/ROADMAP dosyaları
+   • Geçici notlar, planlar
+   • Backup dosyaları
+   • Test dosyaları
+
+→ Tüm eski planlama dosyaları: archive/planning/
+→ Tamamlanan TODO'lar: archive/planning/completed/
 ```
 
 ---
@@ -103,8 +127,9 @@ Ne üzerinde çalışmamı istersin?
 3. **Verify:** `./tools/scripts/verify_database_backup.sh`
 
 ### Deployment Yapacaksan:
-1. **[docs/development/VERSIONING_RULES.md](docs/development/VERSIONING_RULES.md)** ← Deployment kuralları
-2. **Script:** `./tools/scripts/rocksteady_deploy.sh`
+1. **[core/deployment/README.md](core/deployment/README.md)** ← Deployment guide
+2. **Script:** `./core/deployment/rocksteady_deploy.sh`
+3. **⚠️ MUTLAKA:** Pre-flight checks yapılır, manuel komut yasak!
 
 ---
 
@@ -122,8 +147,10 @@ docs/development/
 tools/scripts/
     ├── unibos_version.sh (versioning master script)
     ├── backup_database.sh
-    ├── verify_database_backup.sh
-    └── rocksteady_deploy.sh
+    └── verify_database_backup.sh
+core/deployment/
+    ├── rocksteady_deploy.sh (production deployment)
+    └── README.md (deployment guide)
 ```
 
 ---
@@ -159,9 +186,12 @@ tools/scripts/
 | Değişiklik Yapılan | Kontrol Edilmesi Gerekenler | Güncellenmesi Gerekenler |
 |-------------------|---------------------------|------------------------|
 | **RULES.md** | VERSIONING_WORKFLOW.md, VERSIONING_RULES.md, CLAUDE_SESSION_PROTOCOL.md | Script header comment'leri, CLAUDE.md index |
+| **TODO.md** | Tamamlanan tasklar archive'e taşınmalı | İlgili code/docs birlikte commit |
 | **unibos_version.sh** | VERSIONING_RULES.md workflow bölümü | Script header, kural dökümanları |
 | **VERSIONING_RULES.md** | unibos_version.sh, backup_database.sh | VERSIONING_WORKFLOW.md örnekleri |
 | **.archiveignore** | .gitignore tutarlılığı | VERSIONING_RULES.md exclusion listesi |
+| **.rsyncignore** | .archiveignore tutarlılığı | core/deployment/README.md exclusion listesi |
+| **rocksteady_deploy.sh** | core/deployment/README.md, .rsyncignore | RULES.md deployment bölümü |
 | **CLAUDE_SESSION_PROTOCOL.md** | SCREENSHOT_MANAGEMENT.md, CODE_QUALITY_STANDARDS.md | RULES.md checklist, CLAUDE.md index |
 | **SCREENSHOT_MANAGEMENT.md** | CLAUDE_SESSION_PROTOCOL.md | .archiveignore screenshot path'leri |
 | **CODE_QUALITY_STANDARDS.md** | CLAUDE_SESSION_PROTOCOL.md | Kod değişikliklerinde uyumluluk |
@@ -220,18 +250,20 @@ Her değişiklik sonrası kendine şu soruları sor:
 
 ## 📝 Son Güncelleme
 
-**Tarih:** 2025-11-09
-**Neden:** Claude oturum protokolü ve kod kalitesi standartları eklendi
+**Tarih:** 2025-11-13
+**Neden:** Version-agnostic deployment sistem ve kuralları eklendi
 **Değişiklikler:**
-- ✅ Oturum başlangıç checklist eklendi (screenshot, timezone, git status, version)
-- ✅ CLAUDE_SESSION_PROTOCOL.md oluşturuldu (oturum start/end prosedürleri)
-- ✅ SCREENSHOT_MANAGEMENT.md oluşturuldu (screenshot tespit ve arşivleme)
-- ✅ CODE_QUALITY_STANDARDS.md oluşturuldu (timezone, crash prevention, Django best practices)
-- ✅ Validation matrix genişletildi (yeni döküman dosyaları için)
-- ✅ Recursive self-validation system eklendi
-- ✅ .archiveignore'a database_backups/ eklendi
-- ✅ Atomik commit kuralları netleştirildi
+- ✅ core/deployment/ dizini oluşturuldu (deploy/ yerine)
+- ✅ rocksteady_deploy.sh version-agnostic yapıldı
+- ✅ Otomatik architecture detection (core/web vs platform/*)
+- ✅ Pre-flight size checks (Flutter build, logs, venv detection)
+- ✅ Otomatik dependency checking ve kurulum
+- ✅ RULES.md deployment kuralları güncellendi
+- ✅ Manuel deployment komutları yasaklandı
+- ✅ .rsyncignore validation matrix'e eklendi
+- ✅ core/deployment/README.md oluşturuldu (comprehensive guide)
 
+**Bir Önceki Güncelleme:** 2025-11-09 - Claude oturum protokolü ve kod kalitesi standartları
 **Sonraki Gözden Geçirme:** Her major script veya kural değişikliğinde
 
 ---

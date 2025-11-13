@@ -280,9 +280,11 @@ STATICFILES_DIRS = [
 
 # Media files - Universal Data Directory (v533)
 # All media files stored in centralized /data directory structure at UNIBOS root
+# IMPORTANT: MEDIA_ROOT points to data/modules/ so module FileFields work correctly
+# Example: FileField(upload_to='documents/uploads/...') → /data/modules/documents/uploads/...
 MEDIA_URL = '/media/'
 DATA_DIR = UNIBOS_ROOT / 'data'
-MEDIA_ROOT = DATA_DIR / 'shared' / 'media'
+MEDIA_ROOT = DATA_DIR / 'modules'  # Changed from 'shared/media' to 'modules' for correct module paths
 
 # Static files root (v533)
 STATIC_ROOT = DATA_DIR / 'shared' / 'static'

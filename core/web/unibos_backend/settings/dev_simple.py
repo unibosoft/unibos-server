@@ -53,7 +53,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Media files - Universal Data Directory
 MEDIA_URL = '/media/'
 DATA_DIR = BASE_DIR.parent.parent.parent / 'data'
-MEDIA_ROOT = DATA_DIR / 'runtime' / 'media'
+MEDIA_ROOT = DATA_DIR / 'modules'  # Module files stored in data/modules/<module_name>/
 
 # Simplified logging
 LOGGING = {
