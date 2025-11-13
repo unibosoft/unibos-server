@@ -27,6 +27,7 @@ class ItemCategory(BaseModel):
     
     class Meta:
         app_label = 'modules_core'
+        db_table = 'core_itemcategory'  # v533: Use new table naming scheme
         verbose_name_plural = "Item Categories"
         ordering = ['name']
     
@@ -48,10 +49,11 @@ class Unit(BaseModel):
         ('digital', 'Digital'),
         ('other', 'Other'),
     ])
-    
+
     class Meta:
         app_label = 'modules_core'
-    
+        db_table = 'core_unit'  # v533: Use new table naming scheme
+
     def __str__(self):
         return f"{self.name} ({self.symbol})"
 
@@ -87,6 +89,7 @@ class Item(BaseModel):
     
     class Meta:
         app_label = 'modules_core'
+        db_table = 'core_item'  # v533: Use new table naming scheme
         ordering = ['name']
         indexes = [
             models.Index(fields=['code']),
@@ -121,6 +124,7 @@ class ItemPrice(BaseModel):
     
     class Meta:
         app_label = 'modules_core'
+        db_table = 'core_itemprice'  # v533: Use new table naming scheme
         ordering = ['-valid_from']
         indexes = [
             models.Index(fields=['item', 'source', '-valid_from']),
@@ -161,6 +165,7 @@ class Account(BaseModel):
     
     class Meta:
         app_label = 'modules_core'
+        db_table = 'core_account'  # v533: Use new table naming scheme
         ordering = ['name']
         unique_together = [['user', 'name']]
     
@@ -196,10 +201,11 @@ class UserProfile(BaseModel):
         ('auto', 'Auto'),
     ])
     notifications_enabled = models.BooleanField(default=True)
-    
+
     class Meta:
         app_label = 'modules_core'
+        db_table = 'core_userprofile'  # v533: Use new table naming scheme
         ordering = ['user__username']
-    
+
     def __str__(self):
         return f"{self.user.username}'s profile"
