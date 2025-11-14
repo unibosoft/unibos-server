@@ -27,6 +27,7 @@ setup(
     },
     install_requires=[
         'click>=8.0.0',
+        'psutil>=5.9.0',  # Platform detection
     ],
     python_requires='>=3.9',
     classifiers=[

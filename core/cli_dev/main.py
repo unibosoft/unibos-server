@@ -18,6 +18,7 @@ from core.cli_dev.commands.dev import dev_group
 from core.cli_dev.commands.db import db_group
 from core.cli_dev.commands.status import status_command
 from core.cli_dev.commands.git import git_group
+from core.cli_dev.commands.platform import platform_command
 
 
 @click.group()
@@ -58,6 +59,7 @@ cli.add_command(dev_group)
 cli.add_command(db_group)
 cli.add_command(status_command)
 cli.add_command(git_group)
+cli.add_command(platform_command)
 
 
 def main():

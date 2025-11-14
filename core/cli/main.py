@@ -16,6 +16,7 @@ from core.cli.ui.splash import show_splash, show_header
 from core.cli.commands.status import status_command
 from core.cli.commands.start import start_command
 from core.cli.commands.logs import logs_command
+from core.cli.commands.platform import platform_command
 
 
 @click.group()
@@ -48,6 +49,7 @@ def cli(ctx, no_splash):
 cli.add_command(status_command)
 cli.add_command(start_command)
 cli.add_command(logs_command)
+cli.add_command(platform_command)
 
 
 def main():
