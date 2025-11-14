@@ -19,10 +19,11 @@ from core.cli_dev.commands.db import db_group
 from core.cli_dev.commands.status import status_command
 from core.cli_dev.commands.git import git_group
 from core.cli_dev.commands.platform import platform_command
+from core.version import __version__
 
 
 @click.group()
-@click.version_option(version='533+', prog_name='unibos-dev')
+@click.version_option(version=__version__, prog_name='unibos-dev')
 @click.option('--no-splash', is_flag=True, help='Skip splash screen')
 @click.pass_context
 def cli(ctx, no_splash):

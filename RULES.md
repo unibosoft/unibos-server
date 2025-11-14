@@ -286,8 +286,71 @@ Her değişiklik sonrası kendine şu soruları sor:
 - ✅ Otomatik dependency checking ve kurulum
 - ✅ core/deployment/README.md oluşturuldu (comprehensive guide)
 
-**Bir Önceki Güncelleme:** 2025-11-09 - Claude oturum protokolü ve kod kalitesi standartları
+**Bir Önceki Güncelleme:** 2025-11-15 - Versiyonlama sistemi ve semantic versioning
 **Sonraki Gözden Geçirme:** Her major script veya kural değişikliğinde
+
+---
+
+## 📌 VERSİYONLAMA KURALLARI (2025-11-15)
+
+### Semantic Versioning (SemVer)
+```
+MAJOR.MINOR.PATCH (örn: 1.2.3)
+
+MAJOR (X.0.0): Breaking changes
+  ↳ CLI komut yapısı değişti
+  ↳ API incompatible
+  ↳ Database schema major change
+
+MINOR (0.X.0): Yeni özellikler (geriye uyumlu)
+  ↳ Yeni CLI komutları
+  ↳ Yeni modüller
+  ↳ Geriye uyumlu özellikler
+
+PATCH (0.0.X): Bug fixler
+  ↳ Hata düzeltmeleri
+  ↳ Küçük iyileştirmeler
+  ↳ Dokümantasyon güncellemeleri
+```
+
+### Version Dosyası
+```python
+# Versiyon bilgisi: core/version.py
+# Setup dosyaları: core/version.__version__ kullanır
+# CLI: core/version.__version__ kullanır
+```
+
+### Version Değiştirme Prosedürü
+```bash
+# 1. core/version.py güncelle
+# 2. CHANGELOG.md güncelle
+# 3. Git tag oluştur
+# 4. Setup dosyaları otomatik çeker
+
+# Örnek:
+# core/version.py: __version__ = "1.0.0"
+# git tag -a v1.0.0 -m "First public release"
+```
+
+### Pre-Release Versiyonları
+```
+v0.533.0    → Development milestone
+v1.0.0-rc.1 → Release candidate
+v1.0.0      → Stable release
+```
+
+### Arşiv Koruması
+```
+archive/versions/pre-release/
+  ↳ v0.1.0 - v0.533.0 arşivi
+  ↳ Hiçbir zaman silinmez
+  ↳ .prodignore ile production'dan exclude
+```
+
+### Detaylı Döküman
+- `CHANGELOG.md` - Version history
+- `core/version.py` - Version metadata
+- `docs/development/versioning.md` - Detaylı kurallar (oluşturulacak)
 
 ---
 

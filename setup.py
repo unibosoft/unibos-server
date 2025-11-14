@@ -4,6 +4,11 @@ Installation script for the unibos CLI tool.
 """
 from setuptools import setup, find_packages
 from pathlib import Path
+import sys
+
+# Add project root to path for version import
+sys.path.insert(0, str(Path(__file__).parent))
+from core.version import __version__
 
 # Read README
 readme_file = Path(__file__).parent / "README.md"
@@ -11,7 +16,7 @@ long_description = readme_file.read_text() if readme_file.exists() else ""
 
 setup(
     name='unibos',
-    version='0.533.0',
+    version=__version__,
     description='UNIBOS Production CLI - Your Personal Operating System',
     long_description=long_description,
     long_description_content_type='text/markdown',
