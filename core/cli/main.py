@@ -18,6 +18,7 @@ from core.cli.commands.start import start_command
 from core.cli.commands.stop import stop_command
 from core.cli.commands.logs import logs_command
 from core.cli.commands.platform import platform_command
+from core.cli.commands.node import node_group
 from core.version import __version__
 
 
@@ -53,6 +54,7 @@ cli.add_command(start_command)
 cli.add_command(stop_command)
 cli.add_command(logs_command)
 cli.add_command(platform_command)
+cli.add_command(node_group)
 
 
 def main():
