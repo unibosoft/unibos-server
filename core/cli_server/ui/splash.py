@@ -3,6 +3,7 @@ UNIBOS Server CLI - Splash Screen
 """
 
 import click
+from core.version import __version__
 
 
 def show_splash():
@@ -13,4 +14,4 @@ def show_splash():
 
 def show_header():
     """Show compact header"""
-    click.echo(click.style('🖥️  unibos-server', fg='magenta') + click.style(' v533+', fg='bright_black'))
+    click.echo(click.style('🖥️  unibos-server', fg='magenta') + click.style(f' v{__version__}', fg='bright_black'))

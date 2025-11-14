@@ -3,6 +3,7 @@ UNIBOS Production CLI - Simplified Splash Screen
 """
 
 import click
+from core.version import __version__
 
 
 def show_splash():
@@ -13,4 +14,4 @@ def show_splash():
 
 def show_header():
     """Show compact header for commands"""
-    click.echo(click.style('🪐 unibos', fg='cyan') + click.style(' v533+', fg='bright_black'))
+    click.echo(click.style('🪐 unibos', fg='cyan') + click.style(f' v{__version__}', fg='bright_black'))

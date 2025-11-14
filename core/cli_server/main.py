@@ -15,10 +15,12 @@ sys.path.insert(0, str(project_root))
 from core.cli_server.ui.splash import show_splash, show_header
 from core.cli_server.commands.health import health_command
 from core.cli_server.commands.stats import stats_command
+from core.cli_server.commands.service import service_group
+from core.version import __version__
 
 
 @click.group()
-@click.version_option(version='533+', prog_name='unibos-server')
+@click.version_option(version=__version__, prog_name='unibos-server')
 @click.option('--no-splash', is_flag=True, help='Skip splash screen')
 @click.pass_context
 def cli(ctx, no_splash):
@@ -44,6 +46,7 @@ def cli(ctx, no_splash):
 # Register commands
 cli.add_command(health_command)
 cli.add_command(stats_command)
+cli.add_command(service_group)
 
 
 def main():

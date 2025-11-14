@@ -15,6 +15,7 @@ sys.path.insert(0, str(project_root))
 from core.cli.ui.splash import show_splash, show_header
 from core.cli.commands.status import status_command
 from core.cli.commands.start import start_command
+from core.cli.commands.stop import stop_command
 from core.cli.commands.logs import logs_command
 from core.cli.commands.platform import platform_command
 from core.version import __version__
@@ -49,6 +50,7 @@ def cli(ctx, no_splash):
 # Register commands
 cli.add_command(status_command)
 cli.add_command(start_command)
+cli.add_command(stop_command)
 cli.add_command(logs_command)
 cli.add_command(platform_command)
 
