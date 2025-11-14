@@ -3,9 +3,9 @@
 .gitignore
 
 # Development CLIs (security critical)
-core/cli-dev/
+core/cli_dev/
 setup-dev.py
-core/cli-server/
+core/cli_server/
 setup-server.py
 
 # Python

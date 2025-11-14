@@ -11,11 +11,11 @@ docs/rules/
 docs/design/decisions/
 
 # Developer CLI (security critical - keep out of production)
-core/cli-dev/
+core/cli_dev/
 setup-dev.py
 
 # Server CLI (only for rocksteady)
-core/cli-server/
+core/cli_server/
 setup-server.py
 
 # Claude session data
