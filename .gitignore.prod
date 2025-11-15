@@ -1,11 +1,25 @@
 # =============================================================================
-# UNIBOS Repository .gitignore ŞABLONU (TEMPLATE)
+# UNIBOS Repository .gitignore TEMPLATE (KAYNAK ŞABLON)
 # Production nodes - Raspberry Pi / Local Mac standalone
 # =============================================================================
-# ⚠️  BU DOSYA ŞABLONDUR - DOĞRUDAN KULLANILMAZ
+# ⚠️  BU DOSYA KAYNAK TEMPLATE'DIR
 #
-# Kullanım: .gitignore dosyasına kopyalanarak kullanılır
+# Bu template .gitignore dosyasına kopyalanarak kullanılır:
 #   cp .gitignore.prod .gitignore
+#
+# TEMPLATE ÇALIŞMA MANTIĞI (3-Repo Architecture):
+# - .gitignore.dev    → unibos-dev repo için
+# - .gitignore.server → unibos-server repo için
+# - .gitignore.prod   → unibos (prod) repo için (bu dosya)
+#
+# push-all komutu her repo'ya push ederken doğru template'i otomatik kopyalar:
+#   dev   → cp .gitignore.dev .gitignore    → push to dev
+#   server→ cp .gitignore.server .gitignore → push to server
+#   prod  → cp .gitignore.prod .gitignore   → push to prod
+#
+# DEĞİŞİKLİK YAPARKEN:
+# ✅ Bu template'i (.gitignore.prod) düzenleyebilirsiniz
+# ✅ Ortak değişiklikleri .gitignore.dev ve .gitignore.server'a da ekleyin
 #
 # Bu şablon unibos (production nodes) repo'su için tasarlanmıştır.
 # Standalone node deployment (raspberry pi, local mac) için.

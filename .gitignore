@@ -1,16 +1,24 @@
 # =============================================================================
-# UNIBOS-DEV Repository .gitignore (ACTIVE)
+# UNIBOS-DEV Repository .gitignore (AKTİF DOSYA - TEMPLATE'DEN KOPYALANMIŞ)
 # Development environment - Mac local development
 # =============================================================================
-# ⚠️  BU DOSYA AKTİF .gitignore DOSYASIDIR - GIT BUNU KULLANIR
+# ⚠️  ÖNEMLİ: BU DOSYA .gitignore.dev'DEN KOPYALANMIŞTIR
 #
-# Bu dosya .gitignore.dev'den kopyalanmıştır.
-# Kaynak şablon: .gitignore.dev
+# Kaynak template: .gitignore.dev
+# Son güncelleme: .gitignore.dev'den kopyalandı (3-repo architecture)
 #
-# Farklı repo'lara push ederken doğru şablonu kopyalayın:
-#   cp .gitignore.dev .gitignore     # dev repo için
-#   cp .gitignore.server .gitignore  # server repo için
-#   cp .gitignore.prod .gitignore    # production repo için
+# DEĞİŞİKLİK YAPARKEN DİKKAT EDİN:
+# ❌ Bu dosyayı (.gitignore) doğrudan düzenlemeyin!
+# ❌ Değişiklikler push-all komutu sırasında kaybolabilir!
+#
+# ✅ Doğru Yaklaşım:
+#   1. .gitignore.dev dosyasını düzenleyin
+#   2. İlgili değişiklikleri .gitignore.server ve .gitignore.prod'a da ekleyin
+#   3. cp .gitignore.dev .gitignore ile aktif hale getirin
+#   4. push-all komutu her repo için doğru template'i otomatik kopyalayacaktır
+#
+# Bu şablon unibos-dev repo'su için tasarlanmıştır.
+# Tüm development tools, tüm CLIs, tüm ayarlar dahildir.
 #
 # Repo: https://github.com/unibosoft/unibos-dev
 # Purpose: Full development environment with all tools

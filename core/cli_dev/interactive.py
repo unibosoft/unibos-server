@@ -85,16 +85,34 @@ class UnibosDevInteractive(InteractiveMode):
                         description='show current git repository status'
                     ),
                     MenuItem(
+                        id='git_setup',
+                        label='setup git remotes',
+                        icon='🔧',
+                        description='configure git remotes for 3-repo architecture\n\ndev, server, prod repositories'
+                    ),
+                    MenuItem(
+                        id='git_push_all',
+                        label='push to all repos',
+                        icon='🌐',
+                        description='push to all 3 repositories\n\nautomatically switches .gitignore templates\ndev → server → prod'
+                    ),
+                    MenuItem(
                         id='git_push_dev',
                         label='push to dev',
                         icon='⬆️',
-                        description='push to development repository (GitHub)'
+                        description='push to development repository only\n\nRepo: github.com/unibosoft/unibos-dev'
                     ),
                     MenuItem(
-                        id='git_sync_prod',
-                        label='sync to prod directory',
-                        icon='🔄',
-                        description='sync code to local production directory'
+                        id='git_push_server',
+                        label='push to server',
+                        icon='🖥️',
+                        description='push to server repository only\n\nRepo: github.com/unibosoft/unibos-server'
+                    ),
+                    MenuItem(
+                        id='git_push_prod',
+                        label='push to prod',
+                        icon='📦',
+                        description='push to production repository only\n\nRepo: github.com/unibosoft/unibos'
                     ),
                     MenuItem(
                         id='deploy_rocksteady',
@@ -205,11 +223,45 @@ class UnibosDevInteractive(InteractiveMode):
             elif item.id == 'git_status':
                 subprocess.run(['git', 'status'], check=True)
 
-            elif item.id == 'git_push_dev':
-                subprocess.run(['unibos-dev', 'git', 'push-dev'], check=True)
+            elif item.id == 'git_setup':
+                print(f"{Colors.DIM}Setting up git remotes for 3-repo architecture...{Colors.RESET}\n")
+                subprocess.run(['unibos-dev', 'git', 'setup'], check=True)
 
-            elif item.id == 'git_sync_prod':
-                subprocess.run(['unibos-dev', 'git', 'sync-prod'], check=True)
+            elif item.id == 'git_push_all':
+                print(f"{Colors.YELLOW}Enter commit message:{Colors.RESET} ", end='')
+                message = input().strip()
+                if message:
+                    print(f"\n{Colors.DIM}Pushing to all 3 repositories...{Colors.RESET}\n")
+                    subprocess.run(['unibos-dev', 'git', 'push-all', message], check=True)
+                else:
+                    print(f"{Colors.RED}❌ Commit message required{Colors.RESET}")
+
+            elif item.id == 'git_push_dev':
+                print(f"{Colors.YELLOW}Enter commit message:{Colors.RESET} ", end='')
+                message = input().strip()
+                if message:
+                    print(f"\n{Colors.DIM}Pushing to dev repository...{Colors.RESET}\n")
+                    subprocess.run(['unibos-dev', 'git', 'push-all', message, '--repos', 'dev'], check=True)
+                else:
+                    print(f"{Colors.RED}❌ Commit message required{Colors.RESET}")
+
+            elif item.id == 'git_push_server':
+                print(f"{Colors.YELLOW}Enter commit message:{Colors.RESET} ", end='')
+                message = input().strip()
+                if message:
+                    print(f"\n{Colors.DIM}Pushing to server repository...{Colors.RESET}\n")
+                    subprocess.run(['unibos-dev', 'git', 'push-all', message, '--repos', 'server'], check=True)
+                else:
+                    print(f"{Colors.RED}❌ Commit message required{Colors.RESET}")
+
+            elif item.id == 'git_push_prod':
+                print(f"{Colors.YELLOW}Enter commit message:{Colors.RESET} ", end='')
+                message = input().strip()
+                if message:
+                    print(f"\n{Colors.DIM}Pushing to prod repository...{Colors.RESET}\n")
+                    subprocess.run(['unibos-dev', 'git', 'push-all', message, '--repos', 'prod'], check=True)
+                else:
+                    print(f"{Colors.RED}❌ Commit message required{Colors.RESET}")
 
             elif item.id == 'deploy_rocksteady':
                 subprocess.run(['unibos-dev', 'deploy', 'rocksteady'], check=True)
