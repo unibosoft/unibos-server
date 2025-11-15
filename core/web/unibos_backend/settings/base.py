@@ -85,22 +85,41 @@ UNIBOS_SYSTEM_APPS = [
     # 'core.backend.core_apps.module_registry',  # UNIBOS Module Registry (DEPRECATED)
 ]
 
-UNIBOS_MODULES = [
-    # New modular architecture - modules from modules/ directory
-    'modules.birlikteyiz.backend',  # Emergency mesh network (reference implementation)
-    'modules.documents.backend',  # OCR and document management system
-    'modules.currencies.backend',  # Currency tracking and portfolio management
-    'modules.personal_inflation.backend',  # Personal inflation tracking
-    'modules.recaria.backend',  # Medieval consciousness exploration MMORPG
-    'modules.cctv.backend',  # Security camera management system
-    'modules.movies.backend',  # Movie and TV series collection
-    'modules.music.backend',  # Music collection with Spotify integration
-    'modules.restopos.backend',  # Restaurant POS system
-    'modules.wimm.backend',  # Where Is My Money - Personal finance tracker
-    'modules.wims.backend',  # Where Is My Stuff - Inventory management
-    'modules.solitaire.backend',  # Solitaire game with session tracking
-    'modules.store.backend',  # Store - Marketplace Integration & Order Management
-]
+# Dynamic module loading using ModuleRegistry
+# Only enabled modules with backend capability will be loaded
+def get_dynamic_modules():
+    """
+    Get dynamically loaded modules from ModuleRegistry
+
+    Returns list of Django app labels for enabled modules.
+    Falls back to hardcoded list if registry unavailable.
+    """
+    try:
+        from core.modules import get_module_registry
+        registry = get_module_registry()
+        return registry.get_django_apps()
+    except Exception as e:
+        # Fallback to hardcoded modules if registry fails
+        # This ensures Django can still start even if module discovery fails
+        print(f"Warning: Module registry unavailable ({e}), using fallback modules")
+        return [
+            'modules.birlikteyiz.backend',
+            'modules.documents.backend',
+            'modules.currencies.backend',
+            'modules.personal_inflation.backend',
+            'modules.recaria.backend',
+            'modules.cctv.backend',
+            'modules.movies.backend',
+            'modules.music.backend',
+            'modules.restopos.backend',
+            'modules.wimm.backend',
+            'modules.wims.backend',
+            'modules.solitaire.backend',
+            'modules.store.backend',
+        ]
+
+# Load modules dynamically
+UNIBOS_MODULES = get_dynamic_modules()
 
 CORE_SYSTEM_APPS = [
     # System modules in core/system/ - v533 architecture
