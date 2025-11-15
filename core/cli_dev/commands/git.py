@@ -175,29 +175,45 @@ def git_status():
 @git_group.command('setup')
 @click.option('--force', is_flag=True, help='Force setup even if remotes exist')
 def git_setup(force):
-    """Setup git remotes for dev and prod repositories"""
-    click.echo("🔧 Setting up git remotes\n")
+    """Setup git remotes for dev, server, and prod repositories (3-repo architecture)"""
+    click.echo("🔧 Setting up git remotes (3-repo architecture)\n")
 
-    dev_url = "https://github.com/unibosoft/unibos_dev.git"
+    dev_url = "https://github.com/unibosoft/unibos-dev.git"
+    server_url = "https://github.com/unibosoft/unibos-server.git"
     prod_url = "https://github.com/unibosoft/unibos.git"
 
     # Check if remotes exist
-    origin_exists = check_remote_exists('origin')
+    dev_exists = check_remote_exists('dev')
+    server_exists = check_remote_exists('server')
     prod_exists = check_remote_exists('prod')
 
-    # Setup origin (dev)
-    if origin_exists and not force:
-        click.echo(f"   ℹ️  Remote 'origin' already exists")
-        result = run_command(['git', 'remote', 'get-url', 'origin'])
+    # Setup dev
+    if dev_exists and not force:
+        click.echo(f"   ℹ️  Remote 'dev' already exists")
+        result = run_command(['git', 'remote', 'get-url', 'dev'])
         click.echo(f"      URL: {result.stdout.strip()}")
     else:
-        if origin_exists:
-            click.echo(f"   🔄 Updating remote 'origin'")
-            run_command(['git', 'remote', 'set-url', 'origin', dev_url])
+        if dev_exists:
+            click.echo(f"   🔄 Updating remote 'dev'")
+            run_command(['git', 'remote', 'set-url', 'dev', dev_url])
         else:
-            click.echo(f"   ➕ Adding remote 'origin' (dev)")
-            run_command(['git', 'remote', 'add', 'origin', dev_url])
+            click.echo(f"   ➕ Adding remote 'dev' (development)")
+            run_command(['git', 'remote', 'add', 'dev', dev_url])
         click.echo(f"      URL: {dev_url}")
+
+    # Setup server
+    if server_exists and not force:
+        click.echo(f"\n   ℹ️  Remote 'server' already exists")
+        result = run_command(['git', 'remote', 'get-url', 'server'])
+        click.echo(f"      URL: {result.stdout.strip()}")
+    else:
+        if server_exists:
+            click.echo(f"\n   🔄 Updating remote 'server'")
+            run_command(['git', 'remote', 'set-url', 'server', server_url])
+        else:
+            click.echo(f"\n   ➕ Adding remote 'server' (production server)")
+            run_command(['git', 'remote', 'add', 'server', server_url])
+        click.echo(f"      URL: {server_url}")
 
     # Setup prod
     if prod_exists and not force:
@@ -209,11 +225,11 @@ def git_setup(force):
             click.echo(f"\n   🔄 Updating remote 'prod'")
             run_command(['git', 'remote', 'set-url', 'prod', prod_url])
         else:
-            click.echo(f"\n   ➕ Adding remote 'prod'")
+            click.echo(f"\n   ➕ Adding remote 'prod' (production nodes)")
             run_command(['git', 'remote', 'add', 'prod', prod_url])
         click.echo(f"      URL: {prod_url}")
 
-    click.echo("\n✅ Git remotes configured successfully")
+    click.echo("\n✅ Git remotes configured successfully (3 repositories)")
 
 
 @git_group.command('push-dev')
@@ -408,6 +424,175 @@ def push_prod(dry_run, force):
 
         click.echo(f"   🗑️  Deleting temporary branch: {temp_branch}")
         run_command(['git', 'branch', '-D', temp_branch], check=False)
+
+
+@git_group.command('push-all')
+@click.argument('message')
+@click.option('--repos', '-r',
+              type=click.Choice(['dev', 'server', 'prod', 'all']),
+              default='all',
+              help='Which repositories to push to (default: all)')
+@click.option('--dry-run', '-d', is_flag=True,
+              help='Show what would be pushed without actually pushing')
+def push_all(message, repos, dry_run):
+    """
+    Push to multiple repositories with correct .gitignore templates
+
+    3-REPO ARCHITECTURE:
+    - dev: All CLIs, all settings (development)
+    - server: cli_server + cli_node, no cli_dev (production server)
+    - prod: cli_node only, minimal (production nodes)
+
+    USAGE:
+        unibos-dev git push-all "feat: add new feature"
+        unibos-dev git push-all "fix: bug fix" --repos dev
+        unibos-dev git push-all "test commit" --dry-run
+
+    This command:
+    1. Commits changes with the provided message
+    2. Pushes to each repo with appropriate .gitignore template
+    3. Ensures security (cli_dev never goes to server/prod)
+    """
+    project_root = get_project_root()
+
+    # Verify .gitignore templates exist
+    templates = {
+        'dev': project_root / '.gitignore.dev',
+        'server': project_root / '.gitignore.server',
+        'prod': project_root / '.gitignore.prod'
+    }
+
+    missing = [name for name, path in templates.items() if not path.exists()]
+    if missing:
+        click.echo(f"❌ Error: Missing .gitignore templates: {', '.join(missing)}", err=True)
+        sys.exit(1)
+
+    click.echo(f"{'🔍 DRY RUN MODE' if dry_run else '🚀 PUSHING TO REPOSITORIES'}")
+    click.echo(f"📝 Commit message: {message}")
+    click.echo("")
+
+    # Determine which repos to push to
+    repo_list = []
+    if repos == 'all':
+        repo_list = ['dev', 'server', 'prod']
+    else:
+        repo_list = [repos]
+
+    click.echo(f"📦 Target repositories: {', '.join(repo_list)}")
+    click.echo("")
+
+    # Step 1: Ensure we're on main branch
+    try:
+        result = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                              capture_output=True, text=True, check=True)
+        current_branch = result.stdout.strip()
+
+        if current_branch != 'main':
+            click.echo(f"⚠️  Warning: Currently on branch '{current_branch}'", err=True)
+            if not dry_run and not click.confirm("Continue anyway?"):
+                sys.exit(0)
+    except subprocess.CalledProcessError as e:
+        click.echo(f"❌ Error checking git branch: {e}", err=True)
+        sys.exit(1)
+
+    # Step 2: Stage and commit changes
+    click.echo("1️⃣  Staging and committing changes...")
+    if not dry_run:
+        try:
+            # Stage all changes
+            subprocess.run(['git', 'add', '-A'], check=True)
+
+            # Create commit
+            subprocess.run(['git', 'commit', '-m', message], check=True)
+            click.echo("   ✅ Commit created")
+        except subprocess.CalledProcessError as e:
+            # Check if it's just "nothing to commit"
+            if 'nothing to commit' in str(e):
+                click.echo("   ℹ️  No changes to commit, pushing existing commits")
+            else:
+                click.echo(f"   ❌ Commit failed: {e}", err=True)
+                sys.exit(1)
+    else:
+        click.echo("   [DRY RUN] Would create commit")
+
+    click.echo("")
+
+    # Step 3: Push to each repository
+    for i, repo in enumerate(repo_list, 1):
+        _push_to_single_repo(repo, dry_run, project_root, i, len(repo_list))
+
+    # Step 4: Restore dev .gitignore
+    click.echo(f"{len(repo_list) + 1}️⃣  Restoring .gitignore.dev as active...")
+    if not dry_run:
+        subprocess.run(['cp', str(templates['dev']), str(project_root / '.gitignore')], check=True)
+        click.echo("   ✅ .gitignore restored to dev template")
+    else:
+        click.echo("   [DRY RUN] Would restore .gitignore.dev")
+
+    click.echo("")
+    click.echo("✅ ALL DONE!")
+    click.echo("")
+    click.echo("📊 Summary:")
+    for repo in repo_list:
+        repo_name = 'unibos' if repo == 'prod' else f'unibos-{repo}'
+        click.echo(f"   ✓ {repo:6s} → https://github.com/unibosoft/{repo_name}.git")
+
+
+def _push_to_single_repo(repo, dry_run, root_dir, step_num, total_steps):
+    """Helper function to push to a single repository with correct .gitignore"""
+
+    # Map repo name to template and remote
+    repo_config = {
+        'dev': {
+            'template': '.gitignore.dev',
+            'remote': 'dev',
+            'url': 'unibos-dev',
+            'description': '3 CLIs, all settings'
+        },
+        'server': {
+            'template': '.gitignore.server',
+            'remote': 'server',
+            'url': 'unibos-server',
+            'description': '2 CLIs (server+node), no cli_dev'
+        },
+        'prod': {
+            'template': '.gitignore.prod',
+            'remote': 'prod',
+            'url': 'unibos',
+            'description': '1 CLI (node only), minimal'
+        }
+    }
+
+    config = repo_config[repo]
+
+    click.echo(f"{step_num + 1}️⃣  Pushing to {repo} repo ({config['description']})...")
+
+    # Copy appropriate .gitignore
+    if not dry_run:
+        subprocess.run(['cp', str(root_dir / config['template']),
+                       str(root_dir / '.gitignore')], check=True)
+        click.echo(f"   ✅ {config['template']} activated")
+    else:
+        click.echo(f"   [DRY RUN] Would activate {config['template']}")
+
+    # Push to remote
+    if not dry_run:
+        try:
+            result = subprocess.run(
+                ['git', 'push', config['remote'], 'main'],
+                capture_output=True, text=True, check=True
+            )
+            if "Everything up-to-date" in result.stderr:
+                click.echo(f"   ✅ Already up-to-date")
+            else:
+                click.echo(f"   ✅ Pushed to {config['url']}")
+        except subprocess.CalledProcessError as e:
+            click.echo(f"   ❌ Push failed: {e.stderr}", err=True)
+            click.echo(f"   Continuing with other repositories...")
+    else:
+        click.echo(f"   [DRY RUN] Would push to {config['remote']}")
+
+    click.echo("")
 
 
 @git_group.command('sync-prod')
