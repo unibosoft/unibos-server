@@ -11,14 +11,14 @@ Version Format: MAJOR.MINOR.PATCH
 """
 
 # Current version
-__version__ = "1.0.0"
-__version_info__ = (1, 0, 0)
+__version__ = "0.534.0"
+__version_info__ = (0, 534, 0)
 
 # Version metadata
-VERSION_NAME = "First Public Release"
-VERSION_CODENAME = "Foundation"  # Solid foundation for modular OS
+VERSION_NAME = "Interactive CLI Revival"
+VERSION_CODENAME = "Phoenix"  # v527 rises from the ashes
 RELEASE_DATE = "2025-11-15"
-RELEASE_TYPE = "stable"  # development, alpha, beta, rc, stable
+RELEASE_TYPE = "development"  # development, alpha, beta, rc, stable
 
 # Development history
 DEVELOPMENT_HISTORY = {

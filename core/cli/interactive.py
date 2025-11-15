@@ -29,6 +29,11 @@ from .ui import (
     Keys,
     MenuItem,
     MenuState,
+    draw_header,
+    draw_sidebar_sections,
+    draw_content_area,
+    draw_footer,
+    clear_content_area,
 )
 
 
@@ -86,113 +91,82 @@ class InteractiveMode(ABC):
 
     def render_header(self):
         """
-        Render header area
+        Render v527-style header (single line, orange background)
 
-        Override in subclass for custom header
+        Override in subclass for custom breadcrumb
         """
-        cols, _ = get_terminal_size()
+        import os
+        username = os.environ.get('USER', 'user')[:15]
+        breadcrumb = self.get_breadcrumb()
 
-        # Title bar
-        title_text = f" {self.title} {self.version} "
-        padding = (cols - len(title_text)) // 2
-        header = f"{Colors.BG_ORANGE}{Colors.BLACK}{Colors.BOLD}"
-        header += " " * padding + title_text + " " * (cols - padding - len(title_text))
-        header += Colors.RESET
-
-        move_cursor(1, 1)
-        print(header)
-
-        # Section tabs
-        move_cursor(1, 2)
-        tabs = ""
-        for i, section in enumerate(self.state.sections):
-            if i == self.state.current_section:
-                tabs += f"{Colors.BG_CONTENT}{Colors.ORANGE}{Colors.BOLD} {section.get('icon', '')} {section['label']} {Colors.RESET}"
-            else:
-                tabs += f"{Colors.DIM} {section.get('icon', '')} {section['label']} {Colors.RESET}"
-            tabs += "  "
-        print(tabs)
+        draw_header(
+            title=self.title.lower(),
+            version=self.version,
+            breadcrumb=breadcrumb,
+            username=username
+        )
 
     def render_footer(self):
         """
-        Render footer with navigation hints
+        Render v527-style footer with navigation hints and time
 
-        Override in subclass for custom footer
+        Override in subclass for custom hints
         """
-        cols, lines = get_terminal_size()
-
-        hints = f"{Colors.DIM}↑↓: Navigate  ←→: Sections  Enter: Select  ESC: Back/Exit{Colors.RESET}"
-        move_cursor(1, lines)
-        print(f"{Colors.BG_DARK_GRAY}{' ' * cols}{Colors.RESET}")
-        move_cursor(3, lines)
-        print(hints)
+        hints = "↑↓: Navigate  ←→: Sections  Enter: Select  ESC: Exit"
+        draw_footer(hints=hints, show_time=True)
 
     def render_sidebar(self):
         """
-        Render left sidebar with menu items
+        Render v527-style sidebar with all sections
 
-        Override in subclass for custom sidebar layout
+        Uses new draw_sidebar_sections function
         """
-        cols, lines = get_terminal_size()
-        sidebar_width = 35
-        content_y_start = 4
-
-        current_section = self.state.get_current_section()
-        if not current_section:
-            return
-
-        items = current_section.get('items', [])
-
-        for i, item in enumerate(items):
-            y = content_y_start + i
-            if y >= lines - 1:  # Don't overflow into footer
-                break
-
-            # Highlight selected item
-            if i == self.state.selected_index and not self.state.in_submenu:
-                bg = Colors.BG_CONTENT
-                fg = Colors.ORANGE + Colors.BOLD
-            else:
-                bg = ""
-                fg = Colors.DIM if not item.enabled else ""
-
-            # Format item text
-            icon = item.icon + " " if item.icon else ""
-            text = f"{icon}{item.label}"
-            if len(text) > sidebar_width - 4:
-                text = text[:sidebar_width - 7] + "..."
-
-            move_cursor(2, y)
-            print(f"{bg}{fg}{text:<{sidebar_width - 2}}{Colors.RESET}")
+        draw_sidebar_sections(
+            sections=self.state.sections,
+            current_section=self.state.current_section,
+            selected_index=self.state.selected_index,
+            in_submenu=self.state.in_submenu is not None,
+            sidebar_width=25
+        )
 
     def render_content(self):
         """
-        Render right content area
+        Render content area (right side)
 
-        Override in subclass for custom content display
+        Override in subclass for custom content
         """
-        cols, lines = get_terminal_size()
-        sidebar_width = 35
-        content_x = sidebar_width + 2
-        content_width = cols - content_x - 2
-        content_y_start = 4
-
-        # Get selected item
         item = self.state.get_selected_item()
         if not item:
             return
 
-        # Show description if available
+        # Build content lines
+        lines = []
         if item.description:
-            y = content_y_start
-            wrapped = wrap_text(item.description, content_width - 4)
-            for line in wrapped[:lines - content_y_start - 2]:
-                move_cursor(content_x, y)
-                print(f"{Colors.DIM}{line}{Colors.RESET}")
-                y += 1
+            lines = item.description.split('\n')
+
+        draw_content_area(
+            title=item.label,
+            lines=lines,
+            sidebar_width=25
+        )
+
+    def get_breadcrumb(self) -> str:
+        """
+        Get navigation breadcrumb
+
+        Override in subclass for custom breadcrumb
+        """
+        current_section = self.state.get_current_section()
+        if current_section:
+            section_label = current_section.get('label', '')
+            item = self.state.get_selected_item()
+            if item:
+                return f"{section_label} › {item.label}"
+            return section_label
+        return ""
 
     def render(self):
-        """Render entire UI"""
+        """Render entire UI (v527 style)"""
         clear_screen()
         self.render_header()
         self.render_sidebar()

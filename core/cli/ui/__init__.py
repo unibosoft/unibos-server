@@ -29,6 +29,14 @@ from .menu import (
     MenuItem,
     MenuState,
 )
+from .layout import (
+    draw_header,
+    draw_sidebar_sections,
+    draw_content_area,
+    draw_footer,
+    clear_content_area,
+    draw_box,
+)
 
 __all__ = [
     'Colors',
@@ -46,4 +54,10 @@ __all__ = [
     'Keys',
     'MenuItem',
     'MenuState',
+    'draw_header',
+    'draw_sidebar_sections',
+    'draw_content_area',
+    'draw_footer',
+    'clear_content_area',
+    'draw_box',
 ]
