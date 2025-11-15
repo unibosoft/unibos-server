@@ -52,9 +52,9 @@ Changelog = "https://github.com/unibosoft/unibos_dev/blob/main/CHANGELOG.md"
 Releases = "https://github.com/unibosoft/unibos_dev/releases"
 
 [project.scripts]
-unibos = "core.cli_node.main:main"
-unibos-dev = "core.cli_dev.main:main"
-unibos-server = "core.cli_server.main:main"
+unibos = "core.profiles.prod.main:main"
+unibos-dev = "core.profiles.dev.main:main"
+unibos-server = "core.profiles.server.main:main"
 
 [tool.setuptools]
 packages = {find = {}}

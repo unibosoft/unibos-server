@@ -26,15 +26,15 @@
 #
 # Repo: https://github.com/unibosoft/unibos
 # Purpose: Standalone node deployment (offline-first, P2P)
-# Includes: cli_node ONLY, node settings, node deployment, all modules
-# Excludes: cli_dev, cli_server (GÜVENLİK), archive/, data/, dev files
+# Includes: prod profile ONLY, node settings, node deployment, all modules
+# Excludes: dev profile, server profile (GÜVENLİK), archive/, data/, dev files
 # =============================================================================
 
-# ===== CRITICAL: EXCLUDE DEV & SERVER CLIs (SECURITY) =====
-# Only node CLI should be on production nodes
-core/cli_dev/
+# ===== CRITICAL: EXCLUDE DEV & SERVER PROFILES (SECURITY) =====
+# Only prod profile should be on production nodes
+core/profiles/dev/
 setup-dev.py
-core/cli_server/
+core/profiles/server/
 setup-server.py
 
 # ===== CRITICAL: NO ARCHIVES ON NODES =====

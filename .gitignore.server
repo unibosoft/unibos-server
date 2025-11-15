@@ -26,13 +26,13 @@
 #
 # Repo: https://github.com/unibosoft/unibos-server
 # Purpose: Production server deployment (central hub)
-# Includes: cli_server, cli_node, server/node settings, server deployment
-# Excludes: cli_dev (GÜVENLİK), archive/, data/, dev-only files
+# Includes: server profile, prod profile, server/node settings, server deployment
+# Excludes: dev profile (GÜVENLİK), archive/, data/, dev-only files
 # =============================================================================
 
-# ===== CRITICAL: EXCLUDE DEVELOPMENT CLI (SECURITY) =====
-# Development CLI should NEVER be on production server
-core/cli_dev/
+# ===== CRITICAL: EXCLUDE DEVELOPMENT PROFILE (SECURITY) =====
+# Development profile should NEVER be on production server
+core/profiles/dev/
 setup-dev.py
 
 # ===== CRITICAL: NO ARCHIVES ON SERVER =====
