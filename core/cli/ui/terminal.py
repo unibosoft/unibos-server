@@ -73,7 +73,7 @@ def get_spinner_frame(index: int) -> str:
     Returns:
         Unicode spinner character
     """
-    spinners = ['', '', '9', '8', '<', '4', '&', ''', '', '']
+    spinners = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
     return spinners[index % len(spinners)]
 
 
