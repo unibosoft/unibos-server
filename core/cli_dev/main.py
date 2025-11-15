@@ -64,15 +64,35 @@ cli.add_command(platform_command)
 
 
 def main():
-    """Main entry point for the CLI"""
-    try:
-        cli(obj={})
-    except KeyboardInterrupt:
-        click.echo("\n\n👋 Interrupted by user")
-        sys.exit(130)
-    except Exception as e:
-        click.echo(f"\n❌ Error: {e}", err=True)
-        sys.exit(1)
+    """
+    Main entry point for the CLI
+
+    Hybrid mode:
+    - With arguments → Click commands
+    - Without arguments → Interactive TUI mode
+    """
+    # Check if running in interactive mode (no arguments provided)
+    if len(sys.argv) == 1:
+        # No arguments - run interactive TUI mode
+        try:
+            from core.cli_dev.interactive import run_interactive
+            run_interactive()
+        except KeyboardInterrupt:
+            click.echo("\n\n👋 Goodbye!")
+            sys.exit(0)
+        except Exception as e:
+            click.echo(f"\n❌ Error: {e}", err=True)
+            sys.exit(1)
+    else:
+        # Arguments provided - run Click CLI
+        try:
+            cli(obj={})
+        except KeyboardInterrupt:
+            click.echo("\n\n👋 Interrupted by user")
+            sys.exit(130)
+        except Exception as e:
+            click.echo(f"\n❌ Error: {e}", err=True)
+            sys.exit(1)
 
 
 if __name__ == '__main__':
