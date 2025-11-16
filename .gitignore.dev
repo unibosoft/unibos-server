@@ -7,27 +7,29 @@
 # Bu template .gitignore dosyasına kopyalanarak kullanılır:
 #   cp .gitignore.dev .gitignore
 #
-# TEMPLATE ÇALIŞMA MANTIĞI (3-Repo Architecture):
-# - .gitignore.dev    → unibos-dev repo için (bu dosya)
-# - .gitignore.server → unibos-server repo için
-# - .gitignore.prod   → unibos (prod) repo için
+# TEMPLATE ÇALIŞMA MANTIĞI (4-Repo Architecture):
+# - .gitignore.dev     → unibos-dev repo için (bu dosya)
+# - .gitignore.manager → unibos-manager repo için
+# - .gitignore.server  → unibos-server repo için
+# - .gitignore.prod    → unibos (prod) repo için
 #
 # push-all komutu her repo'ya push ederken doğru template'i otomatik kopyalar:
-#   dev   → cp .gitignore.dev .gitignore    → push to dev
-#   server→ cp .gitignore.server .gitignore → push to server
-#   prod  → cp .gitignore.prod .gitignore   → push to prod
+#   dev     → cp .gitignore.dev .gitignore     → push to dev
+#   manager → cp .gitignore.manager .gitignore → push to manager
+#   server  → cp .gitignore.server .gitignore  → push to server
+#   prod    → cp .gitignore.prod .gitignore    → push to prod
 #
 # DEĞİŞİKLİK YAPARKEN:
 # ✅ Bu template'i (.gitignore.dev) düzenleyebilirsiniz
-# ✅ Ortak değişiklikleri .gitignore.server ve .gitignore.prod'a da ekleyin
+# ✅ Ortak değişiklikleri diğer template'lere (.manager, .server, .prod) de ekleyin
 # ✅ cp .gitignore.dev .gitignore ile aktif hale getirin
 #
 # Bu şablon unibos-dev repo'su için tasarlanmıştır.
-# Tüm development tools, tüm CLIs, tüm ayarlar dahildir.
+# Tüm development tools, tüm profiller (dev, manager, server, prod), tüm modüller dahildir.
 #
 # Repo: https://github.com/unibosoft/unibos-dev
-# Purpose: Full development environment with all tools
-# Includes: All CLIs (dev, server, node), all settings, all modules
+# Purpose: Full development environment with all tools and profiles
+# Includes: All 4 profiles (dev, manager, server, prod), all modules, all settings
 # =============================================================================
 
 # ===== CRITICAL: DEVELOPMENT-ONLY DATA (NEVER COMMIT) =====

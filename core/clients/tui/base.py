@@ -221,7 +221,15 @@ class BaseTUI(ABC):
         # Render content area with persistent buffer or selected item description
         if self.content_buffer['lines']:
             # Show buffered content from last command
-            content = '\n'.join(self.content_buffer['lines'])
+            # Handle both list and string types defensively
+            lines = self.content_buffer['lines']
+            if isinstance(lines, str):
+                content = lines
+            elif isinstance(lines, list):
+                content = '\n'.join(lines)
+            else:
+                content = str(lines)
+
             self.content_area.draw(
                 title=self.content_buffer['title'],
                 content=content,
@@ -298,7 +306,6 @@ class BaseTUI(ABC):
         Returns:
             True to continue, False to exit
         """
-
         sections = self.get_menu_sections()
 
         if key == Keys.UP:
@@ -410,6 +417,36 @@ class BaseTUI(ABC):
         """Cleanup on exit"""
         pass
 
+    def get_key(self) -> str:
+        """
+        Get a single keypress from user
+
+        Returns:
+            Key code string ('UP', 'DOWN', 'LEFT', 'RIGHT', 'ENTER', 'ESC', or character)
+        """
+        import time
+        while True:
+            key = get_single_key(timeout=0.1)
+            if key:
+                # Map Keys constants to simple strings
+                if key == Keys.UP:
+                    return 'UP'
+                elif key == Keys.DOWN:
+                    return 'DOWN'
+                elif key == Keys.LEFT:
+                    return 'LEFT'
+                elif key == Keys.RIGHT:
+                    return 'RIGHT'
+                elif key == Keys.ENTER or key == '\r' or key == '\n':
+                    return 'ENTER'
+                elif key == Keys.ESC or key == '\x1b':
+                    return 'ESC'
+                elif key == Keys.TAB:
+                    return 'TAB'
+                else:
+                    return key
+            time.sleep(0.01)
+
     def update_content(self, title: str, lines: List[str], color: str = Colors.RESET):
         """Update the content buffer with new information"""
         self.content_buffer['title'] = title
@@ -516,14 +553,26 @@ class BaseTUI(ABC):
 
         # Show output
         if result.stdout:
-            stdout_lines = result.stdout.split('\n')
+            # Handle both string and list types defensively
+            if isinstance(result.stdout, str):
+                stdout_lines = result.stdout.split('\n')
+            elif isinstance(result.stdout, list):
+                stdout_lines = result.stdout
+            else:
+                stdout_lines = [str(result.stdout)]
             lines.extend(stdout_lines)
 
         # Show errors if any
         if result.stderr:
             lines.append("")
             lines.append("Errors:")
-            stderr_lines = result.stderr.split('\n')
+            # Handle both string and list types defensively
+            if isinstance(result.stderr, str):
+                stderr_lines = result.stderr.split('\n')
+            elif isinstance(result.stderr, list):
+                stderr_lines = result.stderr
+            else:
+                stderr_lines = [str(result.stderr)]
             lines.extend(stderr_lines)
 
         # Show exit status if non-zero

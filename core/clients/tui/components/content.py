@@ -62,8 +62,16 @@ class ContentArea:
         # Process content
         y = content_y_start + 3
         if content:
-            # Split content into lines
-            lines_list = content.split('\n')
+            # Split content into lines - handle both string and list types
+            if isinstance(content, list):
+                # If content is already a list, use it directly
+                lines_list = content
+            elif isinstance(content, str):
+                # If content is a string, split it
+                lines_list = content.split('\n')
+            else:
+                # Fallback: convert to string and split
+                lines_list = str(content).split('\n')
 
             # Wrap long lines
             wrapped_lines = []
@@ -71,7 +79,12 @@ class ContentArea:
                 if len(line) > content_width - 2:
                     # Wrap long lines but preserve some structure
                     wrapped = wrap_text(line, content_width - 2)
-                    wrapped_lines.extend(wrapped.split('\n'))
+                    # wrap_text() already returns a list, so extend directly
+                    if isinstance(wrapped, list):
+                        wrapped_lines.extend(wrapped)
+                    else:
+                        # Fallback for unexpected types
+                        wrapped_lines.append(str(wrapped))
                 else:
                     wrapped_lines.append(line)
 

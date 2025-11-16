@@ -7,33 +7,37 @@
 # Bu template .gitignore dosyasına kopyalanarak kullanılır:
 #   cp .gitignore.server .gitignore
 #
-# TEMPLATE ÇALIŞMA MANTIĞI (3-Repo Architecture):
-# - .gitignore.dev    → unibos-dev repo için
-# - .gitignore.server → unibos-server repo için (bu dosya)
-# - .gitignore.prod   → unibos (prod) repo için
+# TEMPLATE ÇALIŞMA MANTIĞI (4-Repo Architecture):
+# - .gitignore.dev     → unibos-dev repo için
+# - .gitignore.manager → unibos-manager repo için
+# - .gitignore.server  → unibos-server repo için (bu dosya)
+# - .gitignore.prod    → unibos (prod) repo için
 #
 # push-all komutu her repo'ya push ederken doğru template'i otomatik kopyalar:
-#   dev   → cp .gitignore.dev .gitignore    → push to dev
-#   server→ cp .gitignore.server .gitignore → push to server
-#   prod  → cp .gitignore.prod .gitignore   → push to prod
+#   dev     → cp .gitignore.dev .gitignore     → push to dev
+#   manager → cp .gitignore.manager .gitignore → push to manager
+#   server  → cp .gitignore.server .gitignore  → push to server
+#   prod    → cp .gitignore.prod .gitignore    → push to prod
 #
 # DEĞİŞİKLİK YAPARKEN:
 # ✅ Bu template'i (.gitignore.server) düzenleyebilirsiniz
-# ✅ Ortak değişiklikleri .gitignore.dev ve .gitignore.prod'a da ekleyin
+# ✅ Ortak değişiklikleri diğer template'lere de ekleyin
 #
 # Bu şablon unibos-server repo'su için tasarlanmıştır.
 # Merkezi production server (rocksteady) için.
 #
 # Repo: https://github.com/unibosoft/unibos-server
 # Purpose: Production server deployment (central hub)
-# Includes: server profile, prod profile, server/node settings, server deployment
-# Excludes: dev profile (GÜVENLİK), archive/, data/, dev-only files
+# Includes: server profile, prod profile, all modules (backend)
+# Excludes: dev profile, manager profile (GÜVENLİK), archive/, data/
 # =============================================================================
 
-# ===== CRITICAL: EXCLUDE DEVELOPMENT PROFILE (SECURITY) =====
-# Development profile should NEVER be on production server
+# ===== CRITICAL: EXCLUDE DEV & MANAGER PROFILES (SECURITY) =====
+# Development and manager profiles should NEVER be on production server
 core/profiles/dev/
+core/profiles/manager/
 setup-dev.py
+setup-manager.py
 
 # ===== CRITICAL: NO ARCHIVES ON SERVER =====
 # Archives are development-only, never on production

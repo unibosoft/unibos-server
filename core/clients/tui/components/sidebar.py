@@ -118,12 +118,20 @@ class Sidebar:
             move_cursor(1, y)
             sys.stdout.write(f"{bg}{' ' * self.width}{Colors.RESET}")
 
-            # Draw item text
+            # Draw item text with number
             move_cursor(2, y)
 
-            # Add item number for quick select (0-9)
-            if i < 10 and not is_dimmed:
-                number_fg = Colors.YELLOW if i != selected_index else fg
+            # ALWAYS show item number for quick select (0-9)
+            # This is critical for v527-style navigation
+            if i < 10:
+                # Determine number color
+                if i == selected_index and not is_dimmed:
+                    # Selected item - use same color as item text
+                    number_fg = fg
+                else:
+                    # Not selected - use yellow/dim based on dimmed state
+                    number_fg = Colors.DIM if is_dimmed else Colors.YELLOW
+
                 sys.stdout.write(f"{bg}{number_fg}{i}{Colors.RESET} ")
                 move_cursor(4, y)
 

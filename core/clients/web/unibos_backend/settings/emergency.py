@@ -88,9 +88,9 @@ WSGI_APPLICATION = 'unibos_backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'unibos_dev',  # Development database
-        'USER': 'unibos_dev_user',
-        'PASSWORD': 'unibos_password',
+        'NAME': 'unibos_db',  # Development database (imported from v533)
+        'USER': 'berkhatirli',  # Using local macOS user
+        'PASSWORD': '',  # No password for local dev
         'HOST': 'localhost',
         'PORT': '5432',
         'CONN_MAX_AGE': 60,
