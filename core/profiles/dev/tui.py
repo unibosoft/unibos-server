@@ -6,6 +6,10 @@ Development TUI with full v527 features and shared infrastructure
 import subprocess
 from pathlib import Path
 from typing import List
+import os
+import signal
+import time
+import psutil
 
 from core.clients.tui import BaseTUI
 from core.clients.tui.components import MenuSection
@@ -14,6 +18,33 @@ from core.clients.cli.framework.ui import MenuItem, Colors, clear_screen
 
 class UnibosDevTUI(BaseTUI):
     """Enhanced TUI for unibos-dev with complete functionality"""
+
+    def __init__(self):
+        """Initialize dev TUI with proper config"""
+        from core.clients.tui.base import TUIConfig
+
+        config = TUIConfig(
+            title="unibos-dev",
+            version="v0.534.0",
+            location="dev environment",
+            sidebar_width=30,
+            show_splash=True,  # Re-enabled splash screen
+            quick_splash=False,
+            lowercase_ui=True,  # v527 style
+            show_breadcrumbs=True,
+            show_time=True,
+            show_hostname=True,
+            show_status_led=True
+        )
+
+        super().__init__(config)
+
+        # PID file for tracking server process
+        self.server_pid_file = Path('/tmp/unibos_tui_django_server.pid')
+        self.server_log_file = Path('/tmp/unibos_django_server.log')
+
+        # Register dev-specific handlers
+        self.register_dev_handlers()
 
     def get_profile_name(self) -> str:
         """Get profile name"""
@@ -275,29 +306,6 @@ class UnibosDevTUI(BaseTUI):
             ),
         ]
 
-    def __init__(self):
-        """Initialize dev TUI with proper config"""
-        from core.clients.tui.base import TUIConfig
-
-        config = TUIConfig(
-            title="unibos-dev",
-            version="v0.534.0",
-            location="dev environment",
-            sidebar_width=30,
-            show_splash=True,  # Re-enabled splash screen
-            quick_splash=False,
-            lowercase_ui=True,  # v527 style
-            show_breadcrumbs=True,
-            show_time=True,
-            show_hostname=True,
-            show_status_led=True
-        )
-
-        super().__init__(config)
-
-        # Register dev-specific handlers
-        self.register_dev_handlers()
-
     def register_dev_handlers(self):
         """Register all development action handlers"""
         # Development actions
@@ -327,37 +335,132 @@ class UnibosDevTUI(BaseTUI):
         self.register_action('platform_config', self.handle_platform_config)
         self.register_action('platform_identity', self.handle_platform_identity)
 
+    def _check_server_running(self) -> tuple[bool, int]:
+        """Check if the TUI-started server is running
+
+        Returns:
+            tuple: (is_running, pid) - pid is 0 if not running
+        """
+        # First check our PID file
+        if self.server_pid_file.exists():
+            try:
+                pid = int(self.server_pid_file.read_text().strip())
+                # Check if process exists and is still a Django process
+                try:
+                    # Use psutil for more reliable process checking
+                    import psutil
+                    proc = psutil.Process(pid)
+                    # Check if this is still our Django process
+                    cmdline = ' '.join(proc.cmdline())
+                    if 'manage.py' in cmdline and 'runserver' in cmdline:
+                        return True, pid
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    # Process no longer exists or we can't access it
+                    self.server_pid_file.unlink(missing_ok=True)
+            except (ValueError, FileNotFoundError):
+                pass
+
+        return False, 0
+
+    def _check_port_in_use(self, port: int = 8000) -> bool:
+        """Check if port is in use"""
+        import socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(('127.0.0.1', port))
+                return False
+            except socket.error:
+                return True
+
+    def _find_django_processes(self) -> list:
+        """Find all Django runserver processes"""
+        try:
+            import psutil
+            django_processes = []
+            for proc in psutil.process_iter(['pid', 'cmdline']):
+                try:
+                    cmdline = ' '.join(proc.info['cmdline'] or [])
+                    if 'manage.py' in cmdline and 'runserver' in cmdline:
+                        django_processes.append({
+                            'pid': proc.info['pid'],
+                            'cmdline': cmdline
+                        })
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+            return django_processes
+        except ImportError:
+            # Fallback to pgrep if psutil not available
+            result = subprocess.run(
+                ['pgrep', '-f', 'manage.py runserver'],
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0:
+                pids = result.stdout.strip().split('\n')
+                return [{'pid': int(pid), 'cmdline': 'manage.py runserver'} for pid in pids if pid]
+            return []
+
     # Development handlers
     def handle_dev_run(self, item):
-        """Start development server"""
+        """Start development server with proper process tracking"""
         import subprocess
         import os
         import time
 
-        # Check if server is already running
-        check_result = subprocess.run(
-            ['pgrep', '-f', 'manage.py runserver'],
-            capture_output=True
-        )
+        # Check if our TUI-started server is already running
+        tui_running, tui_pid = self._check_server_running()
 
-        if check_result.returncode == 0:
-            # Server already running
+        if tui_running:
+            # Our TUI server is already running
             self.update_content(
                 title="Development Server Status",
                 lines=[
-                    "⚠️  Development server is already running!",
+                    "✅ TUI-started server is already running!",
                     "",
+                    f"Process ID: {tui_pid}",
                     "Server is accessible at: http://127.0.0.1:8000",
+                    "",
                     "Use 'Stop Server' to stop it first."
                 ],
+                color=Colors.GREEN
+            )
+        elif self._check_port_in_use(8000):
+            # Port is in use but not by our TUI server
+            other_processes = self._find_django_processes()
+
+            lines = [
+                "⚠️  Port 8000 is in use by another process!",
+                "",
+                "Another Django server may be running outside the TUI.",
+                ""
+            ]
+
+            if other_processes:
+                lines.append("Found Django processes:")
+                for proc in other_processes[:3]:  # Show up to 3 processes
+                    lines.append(f"  PID {proc['pid']}: {proc['cmdline'][:60]}...")
+                lines.append("")
+
+            lines.extend([
+                "Options:",
+                "1. Stop the other server manually",
+                "2. Use 'Stop Server' to kill all Django processes",
+                "3. Start server on a different port"
+            ])
+
+            self.update_content(
+                title="Port Already In Use",
+                lines=lines,
                 color=Colors.YELLOW
             )
         else:
-            # Start server in background, redirect output to log file
-            log_file = '/tmp/unibos_django_server.log'
-
+            # Start server in background with proper tracking
             try:
-                with open(log_file, 'w') as f:
+                # Ensure log file exists and is writable
+                self.server_log_file.touch()
+
+                with open(self.server_log_file, 'w') as f:
+                    # Start the server process
                     process = subprocess.Popen(
                         ['unibos-dev', 'dev', 'run'],
                         stdout=f,
@@ -365,28 +468,38 @@ class UnibosDevTUI(BaseTUI):
                         preexec_fn=os.setsid  # Create new process group
                     )
 
-                # Wait a moment to check if it started
-                time.sleep(2)
+                    # Save PID to file
+                    self.server_pid_file.write_text(str(process.pid))
+
+                # Wait a moment to check if it started successfully
+                time.sleep(3)
 
                 if process.poll() is None:
                     # Server started successfully
                     self.update_content(
                         title="Development Server Started",
                         lines=[
-                            "✅ Development server started!",
+                            "✅ Development server started successfully!",
                             "",
+                            f"Process ID: {process.pid}",
                             "🌐 Server running at: http://127.0.0.1:8000",
-                            "📋 Logs: /tmp/unibos_django_server.log",
-                            "⏹️  Use 'Stop Server' to stop it",
+                            f"📋 Logs: {self.server_log_file}",
                             "",
-                            "The server is running in the background."
+                            "The server is running in the background.",
+                            "Use 'Stop Server' to stop it.",
+                            "",
+                            "⏹️  This TUI session is tracking the server process."
                         ],
                         color=Colors.GREEN
                     )
                 else:
-                    # Server failed to start, show log
-                    with open(log_file, 'r') as f:
-                        log_content = f.read()[-500:]  # Last 500 chars
+                    # Server failed to start, show error from log
+                    self.server_pid_file.unlink(missing_ok=True)
+
+                    log_content = ""
+                    if self.server_log_file.exists():
+                        with open(self.server_log_file, 'r') as f:
+                            log_content = f.read()[-1000:]  # Last 1000 chars
 
                     self.update_content(
                         title="Server Start Failed",
@@ -395,7 +508,7 @@ class UnibosDevTUI(BaseTUI):
                             "",
                             "Error output:",
                             "─" * 40,
-                            log_content
+                            log_content or "No error output captured"
                         ],
                         color=Colors.RED
                     )
@@ -405,7 +518,12 @@ class UnibosDevTUI(BaseTUI):
                     lines=[
                         "❌ Failed to start server!",
                         "",
-                        f"Error: {e}"
+                        f"Error: {e}",
+                        "",
+                        "Please check:",
+                        "• unibos-dev command is available",
+                        "• Django is properly configured",
+                        "• Port 8000 is not in use"
                     ],
                     color=Colors.RED
                 )
@@ -414,57 +532,101 @@ class UnibosDevTUI(BaseTUI):
         return True
 
     def handle_dev_stop(self, item):
-        """Stop development server"""
+        """Stop development server with improved process management"""
         import subprocess
+        import signal
+        import time
 
-        # Kill all Django runserver processes
-        result = subprocess.run(
-            ['pkill', '-f', 'manage.py runserver'],
-            capture_output=True,
-            text=True
-        )
+        # Check if our TUI server is running
+        tui_running, tui_pid = self._check_server_running()
 
-        if result.returncode == 0:
+        stopped_processes = []
+        errors = []
+
+        if tui_running:
+            # Try to stop our TUI server gracefully
+            try:
+                os.kill(tui_pid, signal.SIGTERM)
+                time.sleep(1)
+
+                # Check if it stopped
+                try:
+                    os.kill(tui_pid, 0)  # Check if process still exists
+                    # Still running, force kill
+                    os.kill(tui_pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass  # Process already terminated
+
+                stopped_processes.append(f"TUI server (PID {tui_pid})")
+                self.server_pid_file.unlink(missing_ok=True)
+            except Exception as e:
+                errors.append(f"Failed to stop TUI server: {e}")
+
+        # Find and kill any other Django processes
+        other_processes = self._find_django_processes()
+        for proc in other_processes:
+            if proc['pid'] != tui_pid:  # Don't try to kill it twice
+                try:
+                    os.kill(proc['pid'], signal.SIGTERM)
+                    stopped_processes.append(f"Django process (PID {proc['pid']})")
+                except ProcessLookupError:
+                    pass  # Already dead
+                except PermissionError:
+                    errors.append(f"No permission to stop PID {proc['pid']}")
+                except Exception as e:
+                    errors.append(f"Failed to stop PID {proc['pid']}: {e}")
+
+        # Prepare response
+        if stopped_processes:
+            lines = [
+                "✅ Successfully stopped processes:",
+                ""
+            ]
+            for proc in stopped_processes:
+                lines.append(f"  • {proc}")
+
+            if errors:
+                lines.extend(["", "⚠️  Some errors occurred:"])
+                for error in errors:
+                    lines.append(f"  • {error}")
+
+            lines.extend([
+                "",
+                "The Django development server has been terminated.",
+                "Port 8000 is now free.",
+                "",
+                "Use 'Start Server' to start it again."
+            ])
+
             self.update_content(
                 title="Development Server Stopped",
-                lines=[
-                    "✅ Development server stopped!",
-                    "",
-                    "The Django development server has been terminated.",
-                    "",
-                    "Use 'Start Server' to start it again."
-                ],
+                lines=lines,
                 color=Colors.GREEN
             )
-        else:
-            # Check if server was running
-            check_result = subprocess.run(
-                ['pgrep', '-f', 'manage.py runserver'],
-                capture_output=True
+        elif errors:
+            self.update_content(
+                title="Stop Server Failed",
+                lines=[
+                    "❌ Failed to stop server!",
+                    "",
+                    "Errors:"
+                ] + [f"  • {e}" for e in errors] + [
+                    "",
+                    "You may need to manually kill the processes:",
+                    "  pkill -f 'manage.py runserver'"
+                ],
+                color=Colors.RED
             )
-
-            if check_result.returncode != 0:
-                self.update_content(
-                    title="Server Status",
-                    lines=[
-                        "ℹ️  No development server is running.",
-                        "",
-                        "Use 'Start Server' to start it."
-                    ],
-                    color=Colors.CYAN
-                )
-            else:
-                self.update_content(
-                    title="Stop Server Failed",
-                    lines=[
-                        "❌ Failed to stop server!",
-                        "",
-                        "You may need to manually kill the process.",
-                        "",
-                        "Try: pkill -f 'manage.py runserver'"
-                    ],
-                    color=Colors.RED
-                )
+        else:
+            self.update_content(
+                title="Server Status",
+                lines=[
+                    "ℹ️  No development server is running.",
+                    "",
+                    "Use 'Start Server' to start it."
+                ],
+                color=Colors.CYAN
+            )
 
         self.render()
         return True
@@ -508,45 +670,64 @@ class UnibosDevTUI(BaseTUI):
         return True
 
     def handle_dev_logs(self, item):
-        """View logs"""
+        """View logs with support for both TUI and general Django logs"""
         import os
 
-        log_file = '/tmp/unibos_django_server.log'
+        lines = []
+        log_found = False
 
-        if os.path.exists(log_file):
-            # Read last 50 lines of log for content area
-            with open(log_file, 'r') as f:
-                lines = f.readlines()
-                last_lines = lines[-50:] if len(lines) > 50 else lines
+        # Check TUI server log first
+        if self.server_log_file.exists():
+            with open(self.server_log_file, 'r') as f:
+                log_lines = f.readlines()
+                if log_lines:
+                    last_lines = log_lines[-50:] if len(log_lines) > 50 else log_lines
+                    lines.extend([
+                        f"TUI Server logs (last {len(last_lines)} lines):",
+                        f"File: {self.server_log_file}",
+                        "",
+                        "─" * 40,
+                        ""
+                    ])
+                    for line in last_lines:
+                        line = line.rstrip()
+                        if line:
+                            lines.append(line)
+                    log_found = True
 
-            # Format lines for content area
-            content = [
-                f"Server logs (last {len(last_lines)} lines):",
-                f"File: {log_file}",
-                "",
-                "─" * 40,
-                ""
-            ]
+        # Also check fallback log location
+        fallback_log = Path('/tmp/unibos_django_server.log')
+        if fallback_log.exists() and fallback_log != self.server_log_file:
+            with open(fallback_log, 'r') as f:
+                log_lines = f.readlines()
+                if log_lines:
+                    if log_found:
+                        lines.extend(["", "─" * 40, "", "Other Django server logs:", ""])
+                    last_lines = log_lines[-30:] if len(log_lines) > 30 else log_lines
+                    for line in last_lines:
+                        line = line.rstrip()
+                        if line:
+                            lines.append(line)
+                    log_found = True
 
-            for line in last_lines:
-                # Keep full lines for scrolling support
-                line = line.rstrip()
-                if line:
-                    content.append(line)
-
+        if log_found:
             self.update_content(
                 title="Development Server Logs",
-                lines=content,
+                lines=lines,
                 color=Colors.CYAN
             )
         else:
+            # Check if server is running
+            tui_running, _ = self._check_server_running()
+            status_msg = "The server is running but hasn't generated logs yet." if tui_running else "The server may not have been started yet."
+
             self.update_content(
                 title="No Logs Available",
                 lines=[
-                    "ℹ️  No log file found.",
+                    "ℹ️  No log files found.",
                     "",
-                    "The server may not have been started yet.",
-                    "Use 'Start Server' to start it first."
+                    status_msg,
+                    "Use 'Start Server' to start it first." if not tui_running else "Try again in a moment."
                 ],
                 color=Colors.CYAN
             )

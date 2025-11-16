@@ -67,42 +67,52 @@ def version_context(request):
     version_data = None
 
     try:
-        # Path resolution: modules/web_ui/backend -> project root
-        # modules/web_ui/backend -> modules -> project_root (4 levels up)
-        project_root = Path(__file__).parent.parent.parent.parent
+        # Path resolution: core/system/web_ui/backend -> project root (4 levels up)
+        project_root = Path(__file__).parent.parent.parent.parent.parent
 
         # Try paths in priority order:
         version_paths = [
-            project_root / 'VERSION.json',  # Project root (v533+)
-            project_root / 'platform' / 'runtime' / 'web' / 'backend' / 'VERSION.json',  # Backend (v533+)
-            project_root / 'platform' / 'runtime' / 'cli' / 'src' / 'VERSION.json',  # CLI src (v533+)
+            project_root / 'VERSION.json',  # Project root
+            project_root / 'core' / 'clients' / 'web' / 'VERSION.json',  # Web client specific
         ]
 
         for version_file in version_paths:
             if version_file.exists():
-                with open(version_file, 'r') as f:
+                with open(version_file, 'r', encoding='utf-8') as f:
                     version_data = json.load(f)
                 break
 
-        # If still not found, use fallback
+        # If still not found, use fallback with proper format
         if not version_data:
             version_data = {
-                "version": "v533",
-                "build_number": "unknown",
-                "release_date": "2025-11-10"
+                "version": "v0.534.0",
+                "build": "20251116_0550",
+                "build_number": "20251116_0550",
+                "release_date": "2025-11-16"
             }
     except Exception as e:
-        # Fallback version on any error
+        # Fallback version on any error with proper format
         version_data = {
-            "version": "v533",
-            "build_number": "unknown",
-            "release_date": "2025-11-10"
+            "version": "v0.534.0",
+            "build": "20251116_0550",
+            "build_number": "20251116_0550",
+            "release_date": "2025-11-16"
         }
 
+    # Ensure consistent format for version and build number
+    version = version_data.get('version', 'v0.534.0')
+
+    # Get build number from either 'build' or 'build_number' field
+    # Build format should be YYYYMMDD_HHMM (e.g., 20251116_0550)
+    build = version_data.get('build') or version_data.get('build_number', '20251116_0550')
+
+    # Keep the timestamp format as-is - this is the standard UNIBOS build format
+    # Format: YYYYMMDD_HHMM represents the exact time when the version was created
+
     return {
-        'version': version_data.get('version', 'v533'),
-        'build_number': version_data.get('build_number', 'unknown'),
-        'release_date': version_data.get('release_date', '2025-11-10'),
+        'version': version,
+        'build_number': build,
+        'release_date': version_data.get('release_date', '2025-11-16'),
     }
 
 
