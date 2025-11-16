@@ -21,6 +21,15 @@ from core.profiles.dev.commands.git import git_group
 from core.profiles.dev.commands.platform import platform_command
 from core.version import __version__
 
+# Import manager profile CLI
+from core.profiles.manager.main import cli as manager_cli
+
+# Import individual dev commands for top-level access
+from core.profiles.dev.commands.dev import (
+    dev_run, dev_stop, dev_shell, dev_test,
+    dev_migrate, dev_makemigrations, dev_logs
+)
+
 
 @click.group()
 @click.version_option(version=__version__, prog_name='unibos-dev')
@@ -33,12 +42,14 @@ def cli(ctx, no_splash):
     versioning, and deployment operations.
 
     Examples:
+        unibos-dev                     # Launch interactive TUI
         unibos-dev status              # Show system status
-        unibos-dev dev run             # Start development server
+        unibos-dev run                 # Start development server (shortcut)
+        unibos-dev shell               # Open Django shell (shortcut)
+        unibos-dev dev run             # Start development server (full path)
         unibos-dev deploy rocksteady   # Deploy to production
         unibos-dev db backup           # Create database backup
         unibos-dev git push-dev        # Push to dev repository
-        unibos-dev git sync-prod       # Sync to local prod directory
     """
     # Store context for subcommands
     ctx.ensure_object(dict)
@@ -54,13 +65,26 @@ def cli(ctx, no_splash):
         show_compact_header()
 
 
-# Register command groups
+# Register command groups (full paths - backwards compatibility)
 cli.add_command(deploy_group)
 cli.add_command(dev_group)
 cli.add_command(db_group)
 cli.add_command(status_command)
 cli.add_command(git_group)
 cli.add_command(platform_command)
+
+# Register manager profile as a command group
+cli.add_command(manager_cli, name='manager')
+
+# Register top-level shortcuts for common dev commands
+# These allow: unibos-dev run instead of unibos-dev dev run
+cli.add_command(dev_run, name='run')
+cli.add_command(dev_stop, name='stop')
+cli.add_command(dev_shell, name='shell')
+cli.add_command(dev_test, name='test')
+cli.add_command(dev_migrate, name='migrate')
+cli.add_command(dev_makemigrations, name='makemigrations')
+cli.add_command(dev_logs, name='logs')
 
 
 def main():

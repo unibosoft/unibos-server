@@ -55,6 +55,7 @@ Releases = "https://github.com/unibosoft/unibos_dev/releases"
 unibos = "core.profiles.prod.main:main"
 unibos-dev = "core.profiles.dev.main:main"
 unibos-server = "core.profiles.server.main:main"
+unibos-manager = "core.profiles.manager.main:main"
 
 [tool.setuptools]
 include-package-data = true
