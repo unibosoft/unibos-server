@@ -202,9 +202,15 @@ core/web/unibos_backend/settings/dev_no_redis.py
 # Actually, keep both since server can also be node
 # core/deployment/node.py  # KEEP - server can be node too
 
-# ===== IGNORE FILES (META) =====
-# NOTE: .gitignore.dev, .gitignore.server, .gitignore.prod are templates
-# They SHOULD be in the repo, so they are NOT ignored here
+# ===== IGNORE FILES THEMSELVES (META) =====
+# NOTE: .gitignore.* templates SHOULD be in dev repo only
+# Server repo only needs active .gitignore
+.gitignore.dev
+.gitignore.manager
+.gitignore.server
+.gitignore.prod
+
+# Legacy ignore files
 .archiveignore
 .rsyncignore
 .prodignore

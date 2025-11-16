@@ -203,9 +203,15 @@ core/web/unibos_backend/settings/production_*.py
 # Exclude: server deployment
 core/deployment/server.py
 
-# ===== IGNORE FILES (META) =====
-# NOTE: .gitignore.dev, .gitignore.server, .gitignore.prod are templates
-# They SHOULD be in the repo, so they are NOT ignored here
+# ===== IGNORE FILES THEMSELVES (META) =====
+# NOTE: .gitignore.* templates SHOULD be in dev repo only
+# Prod repo only needs active .gitignore
+.gitignore.dev
+.gitignore.manager
+.gitignore.server
+.gitignore.prod
+
+# Legacy ignore files
 .archiveignore
 .rsyncignore
 .prodignore

@@ -222,5 +222,7 @@ screenshot_move_log.json
 modules/*/.enabled
 
 # ===== IGNORE FILES THEMSELVES (META) =====
-# NOTE: .gitignore.dev, .gitignore.server, .gitignore.prod are templates
-# They SHOULD be in the repo, so they are NOT ignored here
+# NOTE: All .gitignore.* templates SHOULD be in dev repo (single source of truth)
+# This is the ONLY repo that contains all 4 templates:
+#   .gitignore.dev, .gitignore.manager, .gitignore.server, .gitignore.prod
+# Other repos will ignore these templates and only use active .gitignore
