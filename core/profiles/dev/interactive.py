@@ -334,5 +334,11 @@ class UnibosDevInteractive(InteractiveMode):
 
 def run_interactive():
     """Run unibos-dev in interactive mode"""
-    interactive = UnibosDevInteractive()
-    interactive.run(show_splash=True)
+    # Use the new enhanced TUI if available
+    try:
+        from .tui import run_interactive as run_enhanced_tui
+        run_enhanced_tui()
+    except ImportError:
+        # Fallback to old interactive mode
+        interactive = UnibosDevInteractive()
+        interactive.run(show_splash=True)

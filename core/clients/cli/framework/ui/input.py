@@ -48,6 +48,11 @@ def get_single_key(timeout: float = 0.1) -> str:
     """
     debug_mode = os.environ.get('UNIBOS_DEBUG', '').lower() == 'true'
 
+    # Check if we're in a proper terminal environment
+    if not sys.stdin.isatty():
+        # Not a TTY, return None to avoid crashes
+        return None
+
     try:
         if platform.system() == 'Windows':
             import msvcrt
@@ -86,7 +91,17 @@ def get_single_key(timeout: float = 0.1) -> str:
 
             import termios, tty
             fd = sys.stdin.fileno()
-            old_settings = termios.tcgetattr(fd)
+
+            # Try to get terminal settings, handle error gracefully
+            try:
+                old_settings = termios.tcgetattr(fd)
+            except termios.error as e:
+                # Terminal doesn't support these operations (e.g., in some IDEs)
+                if debug_mode:
+                    with open('/tmp/unibos_key_debug.log', 'a') as f:
+                        f.write(f"termios.tcgetattr failed: {e}\n")
+                # Return None to indicate no input available
+                return None
 
             try:
                 # Set terminal to non-canonical mode with timeout

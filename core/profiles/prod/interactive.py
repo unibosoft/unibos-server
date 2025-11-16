@@ -54,25 +54,25 @@ class UnibosNodeInteractive(InteractiveMode):
                     MenuItem(
                         id='node_status',
                         label='node status',
-                        icon='=�',
+                        icon='=',
                         description='show node health, services, and system info'
                     ),
                     MenuItem(
                         id='node_identity',
                         label='node identity',
-                        icon='=',
+                        icon='=',
                         description='show node uuid, name, and network info'
                     ),
                     MenuItem(
                         id='node_services',
                         label='local services',
-                        icon='�',
+                        icon='=',
                         description='manage local django, postgresql, redis'
                     ),
                     MenuItem(
                         id='node_web',
                         label='web interface',
-                        icon='<',
+                        icon='<',
                         description='start/stop local web ui'
                     ),
                 ]
@@ -85,7 +85,7 @@ class UnibosNodeInteractive(InteractiveMode):
                     MenuItem(
                         id='p2p_discover',
                         label='discover peers',
-                        icon='=',
+                        icon='=',
                         description='scan local network for other unibos nodes'
                     ),
                     MenuItem(
@@ -97,13 +97,13 @@ class UnibosNodeInteractive(InteractiveMode):
                     MenuItem(
                         id='p2p_broadcast',
                         label='broadcast message',
-                        icon='=�',
+                        icon='=',
                         description='send message to all peers in network'
                     ),
                     MenuItem(
                         id='p2p_mesh_status',
                         label='mesh status',
-                        icon='=x',
+                        icon='=x',
                         description='show mesh network topology and health'
                     ),
                 ]
@@ -116,25 +116,25 @@ class UnibosNodeInteractive(InteractiveMode):
                     MenuItem(
                         id='mod_list',
                         label='installed modules',
-                        icon='=�',
+                        icon='=',
                         description='show all installed modules and their status'
                     ),
                     MenuItem(
                         id='mod_start',
                         label='start module',
-                        icon='�',
+                        icon='=',
                         description='start a specific module'
                     ),
                     MenuItem(
                         id='mod_stop',
                         label='stop module',
-                        icon='�',
+                        icon='=',
                         description='stop a running module'
                     ),
                     MenuItem(
                         id='mod_config',
                         label='module config',
-                        icon='�',
+                        icon='=',
                         description='configure module settings'
                     ),
                 ]
@@ -147,25 +147,25 @@ class UnibosNodeInteractive(InteractiveMode):
                     MenuItem(
                         id='sync_status',
                         label='sync status',
-                        icon='=�',
+                        icon='=',
                         description='show connection status to central server'
                     ),
                     MenuItem(
                         id='sync_now',
                         label='sync now',
-                        icon='=',
+                        icon='=',
                         description='manually trigger sync with server'
                     ),
                     MenuItem(
                         id='sync_queue',
                         label='offline queue',
-                        icon='=�',
+                        icon='=',
                         description='show queued operations waiting for sync'
                     ),
                     MenuItem(
                         id='sync_config',
                         label='sync settings',
-                        icon='�',
+                        icon='=',
                         description='configure sync frequency and options'
                     ),
                 ]

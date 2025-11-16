@@ -5,6 +5,8 @@ Animated welcome screen with ASCII art logo
 
 import time
 import json
+import sys
+import os
 from pathlib import Path
 from .colors import Colors
 from .layout import clear_screen, get_terminal_size, move_cursor, print_centered
@@ -52,116 +54,139 @@ def show_splash_screen(quick: bool = False):
     Args:
         quick: If True, skip animation delays
     """
-    clear_screen()
-    cols, lines = get_terminal_size()
+    try:
+        # Check if we're in a terminal environment
+        if not sys.stdout.isatty():
+            # Non-terminal environment, skip splash
+            return
 
-    # Get version info
-    version_info = load_version_info()
-    version = version_info['version']
+        # Check if terminal is too small
+        cols, lines = get_terminal_size()
+        if cols < 60 or lines < 20:
+            # Terminal too small for splash, skip
+            return
 
-    # Welcome box
-    welcome_box = [
-        f"{Colors.ORANGE}╭{'─' * 24}╮{Colors.RESET}",
-        f"{Colors.ORANGE}│{Colors.RESET} {Colors.BOLD}* welcome to unibos! *{Colors.RESET} {Colors.ORANGE}│{Colors.RESET}",
-        f"{Colors.ORANGE}╰{'─' * 24}╯{Colors.RESET}"
-    ]
+        # Check for environment variables that might indicate non-interactive mode
+        if os.environ.get('CI') or os.environ.get('NO_SPLASH'):
+            return
 
-    # ASCII art - Large UNIBOS logo (3D shadow effect)
-    logo_art = [
-        f"",
-        f"{Colors.ORANGE}██╗   ██╗███╗   ██╗██╗██████╗  ██████╗ ███████╗{Colors.RESET}",
-        f"{Colors.ORANGE}██║   ██║████╗  ██║██║██╔══██╗██╔═══██╗██╔════╝{Colors.RESET}",
-        f"{Colors.ORANGE}██║   ██║██╔██╗ ██║██║██████╔╝██║   ██║███████╗{Colors.RESET}",
-        f"{Colors.ORANGE}██║   ██║██║╚██╗██║██║██╔══██╗██║   ██║╚════██║{Colors.RESET}",
-        f"{Colors.ORANGE}╚██████╔╝██║ ╚████║██║██████╔╝╚██████╔╝███████║{Colors.RESET}",
-        f"{Colors.ORANGE} ╚═════╝ ╚═╝  ╚═══╝╚═╝╚═════╝  ╚═════╝ ╚══════╝{Colors.RESET} {Colors.YELLOW}{version}{Colors.RESET}",
-        f""
-    ]
+        clear_screen()
 
-    # Calculate centering
-    box_width = 26
-    logo_width = 48
+        # Get version info
+        version_info = load_version_info()
+        version = version_info['version']
 
-    # Center welcome box at top
-    box_y = 4
-    box_x = max(1, (cols - box_width) // 2)
+        # Welcome box
+        welcome_box = [
+            f"{Colors.ORANGE}╭{'─' * 24}╮{Colors.RESET}",
+            f"{Colors.ORANGE}│{Colors.RESET} {Colors.BOLD}* welcome to unibos! *{Colors.RESET} {Colors.ORANGE}│{Colors.RESET}",
+            f"{Colors.ORANGE}╰{'─' * 24}╯{Colors.RESET}"
+        ]
 
-    # Draw welcome box
-    for i, line in enumerate(welcome_box):
-        move_cursor(box_x, box_y + i)
-        print(line, end='', flush=True)
+        # ASCII art - Large UNIBOS logo (3D shadow effect)
+        logo_art = [
+            f"",
+            f"{Colors.ORANGE}██╗   ██╗███╗   ██╗██╗██████╗  ██████╗ ███████╗{Colors.RESET}",
+            f"{Colors.ORANGE}██║   ██║████╗  ██║██║██╔══██╗██╔═══██╗██╔════╝{Colors.RESET}",
+            f"{Colors.ORANGE}██║   ██║██╔██╗ ██║██║██████╔╝██║   ██║███████╗{Colors.RESET}",
+            f"{Colors.ORANGE}██║   ██║██║╚██╗██║██║██╔══██╗██║   ██║╚════██║{Colors.RESET}",
+            f"{Colors.ORANGE}╚██████╔╝██║ ╚████║██║██████╔╝╚██████╔╝███████║{Colors.RESET}",
+            f"{Colors.ORANGE} ╚═════╝ ╚═╝  ╚═══╝╚═╝╚═════╝  ╚═════╝ ╚══════╝{Colors.RESET} {Colors.YELLOW}{version}{Colors.RESET}",
+            f""
+        ]
+
+        # Calculate centering
+        box_width = 26
+        logo_width = 48
+
+        # Center welcome box at top
+        box_y = 4
+        box_x = max(1, (cols - box_width) // 2)
+
+        # Draw welcome box
+        for i, line in enumerate(welcome_box):
+            move_cursor(box_x, box_y + i)
+            print(line, end='', flush=True)
+            if not quick:
+                time.sleep(0.02)
+
+        # Center the logo art
+        logo_y = box_y + 6
+        logo_x = max(1, (cols - logo_width) // 2)
+
+        # Animate logo appearance
+        animation_delay = 0 if quick else 0.05
+        for i, line in enumerate(logo_art):
+            move_cursor(logo_x, logo_y + i)
+            print(line, end='', flush=True)
+            time.sleep(animation_delay)
+
+        # Show additional info below
+        info_y = logo_y + len(logo_art) + 2
+        location = version_info['location']
+
+        info_lines = [
+            f"{Colors.DIM}unicorn bodrum operating system{Colors.RESET}",
+            f"{Colors.DIM}build {version_info['build']}{Colors.RESET}",
+            f"",
+            f"{Colors.DIM}by {version_info['author']}{Colors.RESET}",
+            f"{Colors.DIM}{location}{Colors.RESET}"
+        ]
+
+        for i, line in enumerate(info_lines):
+            # Adjust centering for longer location line
+            if i == 4:  # Location line
+                text_x = max(1, (cols - len(Colors.strip(location))) // 2)
+            else:
+                text_x = max(1, (cols - 45) // 2)
+            move_cursor(text_x, info_y + i)
+            print(line, end='', flush=True)
+            if not quick:
+                time.sleep(0.03)
+
         if not quick:
-            time.sleep(0.02)
+            time.sleep(0.3)
 
-    # Center the logo art
-    logo_y = box_y + 6
-    logo_x = max(1, (cols - logo_width) // 2)
+        # Loading animation
+        loading_y = info_y + len(info_lines) + 2
+        loading_text = "initializing system components..."
+        loading_x = max(1, (cols - len(loading_text)) // 2)
 
-    # Animate logo appearance
-    animation_delay = 0 if quick else 0.05
-    for i, line in enumerate(logo_art):
-        move_cursor(logo_x, logo_y + i)
-        print(line, end='', flush=True)
-        time.sleep(animation_delay)
+        # Show loading text
+        move_cursor(loading_x, loading_y)
+        print(f"{Colors.DIM}{loading_text}{Colors.RESET}", flush=True)
 
-    # Show additional info below
-    info_y = logo_y + len(logo_art) + 2
-    location = version_info['location']
+        if not quick:
+            # Animated dots
+            dot_x = loading_x + len(loading_text)
+            for _ in range(3):
+                for i in range(4):
+                    move_cursor(dot_x, loading_y)
+                    print(f"{Colors.DIM}{'.' * i}{' ' * (3-i)}{Colors.RESET}", end='', flush=True)
+                    time.sleep(0.1)
 
-    info_lines = [
-        f"{Colors.DIM}unicorn bodrum operating system{Colors.RESET}",
-        f"{Colors.DIM}build {version_info['build']}{Colors.RESET}",
-        f"",
-        f"{Colors.DIM}by {version_info['author']}{Colors.RESET}",
-        f"{Colors.DIM}{location}{Colors.RESET}"
-    ]
-
-    for i, line in enumerate(info_lines):
-        # Adjust centering for longer location line
-        if i == 4:  # Location line
-            text_x = max(1, (cols - len(Colors.strip(location))) // 2)
+        # Final pause
+        if not quick:
+            time.sleep(0.5)
         else:
-            text_x = max(1, (cols - 45) // 2)
-        move_cursor(text_x, info_y + i)
-        print(line, end='', flush=True)
-        if not quick:
-            time.sleep(0.03)
+            time.sleep(0.1)
 
-    if not quick:
-        time.sleep(0.3)
-
-    # Loading animation
-    loading_y = info_y + len(info_lines) + 2
-    loading_text = "initializing system components..."
-    loading_x = max(1, (cols - len(loading_text)) // 2)
-
-    # Show loading text
-    move_cursor(loading_x, loading_y)
-    print(f"{Colors.DIM}{loading_text}{Colors.RESET}", flush=True)
-
-    if not quick:
-        # Animated dots
-        dot_x = loading_x + len(loading_text)
-        for _ in range(3):
-            for i in range(4):
-                move_cursor(dot_x, loading_y)
-                print(f"{Colors.DIM}{'.' * i}{' ' * (3-i)}{Colors.RESET}", end='', flush=True)
-                time.sleep(0.1)
-
-    # Final pause
-    if not quick:
-        time.sleep(0.5)
-    else:
-        time.sleep(0.1)
+    except Exception:
+        # Silently fail on any error - don't break the TUI launch
+        pass
 
 
 def show_compact_header():
     """Show compact version of header (no animation)"""
-    cols, _ = get_terminal_size()
-    version_info = load_version_info()
+    try:
+        cols, _ = get_terminal_size()
+        version_info = load_version_info()
 
-    # Single line header
-    header = f"{Colors.ORANGE}🪐 unibos{Colors.RESET} {Colors.YELLOW}{version_info['version']}{Colors.RESET} {Colors.DIM}| unicorn bodrum operating system{Colors.RESET}"
+        # Single line header
+        header = f"{Colors.ORANGE}🪐 unibos{Colors.RESET} {Colors.YELLOW}{version_info['version']}{Colors.RESET} {Colors.DIM}| unicorn bodrum operating system{Colors.RESET}"
 
-    print_centered(header, 2)
-    print()  # Add spacing
+        print_centered(header, 2)
+        print()  # Add spacing
+    except Exception:
+        # Silently fail on any error
+        pass

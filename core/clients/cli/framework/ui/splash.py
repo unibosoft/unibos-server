@@ -35,14 +35,18 @@ from core.version import __version__
 def get_simple_key():
     """Get a single keypress (simple version for splash screen)"""
     if TERMIOS_AVAILABLE:
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
         try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
-            return ch
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            fd = sys.stdin.fileno()
+            old_settings = termios.tcgetattr(fd)
+            try:
+                tty.setraw(sys.stdin.fileno())
+                ch = sys.stdin.read(1)
+                return ch
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        except (termios.error, OSError):
+            # Fallback for non-terminal environments
+            return input()
     elif platform.system() == 'Windows':
         try:
             import msvcrt

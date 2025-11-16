@@ -16,7 +16,7 @@ def status_command(detailed):
     click.echo(click.style('📊 UNIBOS System Status', fg='cyan', bold=True))
     click.echo()
 
-    root_dir = Path(__file__).parent.parent.parent.parent
+    root_dir = Path(__file__).parent.parent.parent.parent.parent  # Up 5 levels to project root
 
     # Version info
     try:
@@ -39,7 +39,7 @@ def status_command(detailed):
         ('Core', root_dir / 'core'),
         ('Modules', root_dir / 'modules'),
         ('Data', root_dir / 'data'),
-        ('Deployment', root_dir / 'core' / 'deployment'),
+        ('Deployment', root_dir / 'deployment'),
     ]
 
     click.echo(click.style('📁 Directory Structure:', fg='cyan'))
@@ -51,7 +51,7 @@ def status_command(detailed):
     click.echo()
 
     # Django status
-    django_path = root_dir / 'core' / 'web' / 'manage.py'
+    django_path = root_dir / 'core' / 'clients' / 'web' / 'manage.py'
     if django_path.exists():
         click.echo(click.style('🌐 Django:', fg='cyan'))
         click.echo(f"  {click.style('✓', fg='green')} Django installed")
