@@ -375,26 +375,34 @@ class BaseTUI(ABC):
         sections = self.get_menu_sections()
 
         if key == Keys.UP:
+            old_section = self.state.current_section
             if self.state.navigate_up():
-                # v527 EXACT: Full sidebar redraw WITHOUT screen clear (no blink!)
-                self.sidebar.draw(
-                    sections, self.state.current_section,
-                    self.state.selected_index, bool(self.state.in_submenu)
-                )
-                # Update content area for selected item
-                self.update_content_for_selection()
+                if self.state.current_section != old_section:
+                    # Section changed (including circular wrap) - full render needed
+                    self.render()
+                else:
+                    # Same section - just redraw sidebar and content
+                    self.sidebar.draw(
+                        sections, self.state.current_section,
+                        self.state.selected_index, bool(self.state.in_submenu)
+                    )
+                    self.update_content_for_selection()
 
         elif key == Keys.DOWN:
             current_section = sections[self.state.current_section] if sections else None
             max_items = len(current_section.items) if current_section else 0
+            old_section = self.state.current_section
             if self.state.navigate_down(max_items):
-                # v527 EXACT: Full sidebar redraw WITHOUT screen clear (no blink!)
-                self.sidebar.draw(
-                    sections, self.state.current_section,
-                    self.state.selected_index, bool(self.state.in_submenu)
-                )
-                # Update content area for selected item
-                self.update_content_for_selection()
+                if self.state.current_section != old_section:
+                    # Section changed (including circular wrap) - full render needed
+                    self.render()
+                else:
+                    # Same section - just redraw sidebar and content
+                    self.sidebar.draw(
+                        sections, self.state.current_section,
+                        self.state.selected_index, bool(self.state.in_submenu)
+                    )
+                    self.update_content_for_selection()
 
         elif key == Keys.LEFT:
             if self.state.navigate_left():
