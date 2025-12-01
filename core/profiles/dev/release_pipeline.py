@@ -314,36 +314,64 @@ class ReleasePipeline:
 
         self._log(f"creating {archive_name}/")
 
-        # Patterns to exclude from archive
-        exclude_patterns = [
+        # Directories to completely exclude (won't be copied at all)
+        exclude_dirs = {
             '.git',
             '__pycache__',
-            '*.pyc',
-            '.DS_Store',
             'node_modules',
             'venv',
             '.venv',
-            '*.egg-info',
             'dist',
             'build',
             '.pytest_cache',
+        }
+
+        # Files to exclude
+        exclude_files = {
+            '.DS_Store',
             '.coverage',
-            'archive/versions',  # Don't copy other archives
-        ]
+        }
+
+        # File extensions to exclude
+        exclude_extensions = {'.pyc'}
+
+        # Paths relative to project root to exclude
+        exclude_paths = {
+            'archive',  # Don't copy archive directory at all
+        }
 
         def ignore_patterns(directory, files):
             ignored = []
+            rel_dir = os.path.relpath(directory, self.project_root)
+
             for f in files:
                 full_path = os.path.join(directory, f)
                 rel_path = os.path.relpath(full_path, self.project_root)
 
-                for pattern in exclude_patterns:
-                    if pattern in rel_path or f == pattern:
-                        ignored.append(f)
-                        break
-                    if pattern.startswith('*') and f.endswith(pattern[1:]):
-                        ignored.append(f)
-                        break
+                # Check if it's an excluded directory
+                if f in exclude_dirs:
+                    ignored.append(f)
+                    continue
+
+                # Check if it's an excluded file
+                if f in exclude_files:
+                    ignored.append(f)
+                    continue
+
+                # Check file extension
+                if any(f.endswith(ext) for ext in exclude_extensions):
+                    ignored.append(f)
+                    continue
+
+                # Check if path starts with excluded path
+                if any(rel_path.startswith(ep) or rel_path == ep for ep in exclude_paths):
+                    ignored.append(f)
+                    continue
+
+                # Check for .egg-info directories
+                if f.endswith('.egg-info'):
+                    ignored.append(f)
+                    continue
 
             return ignored
 
