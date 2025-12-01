@@ -310,30 +310,48 @@ class BaseTUI(ABC):
             # V527 Protection 8: Mark render as complete
             self._last_render_complete = True
 
-    def _redraw_header_footer(self):
-        """Redraw only header and footer to prevent disappearing during navigation"""
-        # Flush any pending input to prevent escape sequences appearing in footer
-        flush_input_buffer(times=2)
-
-        # Get language display
-        lang_code = self.i18n.get_language()
-        lang_flag = self.i18n.get_language_flag(lang_code)
-        lang_name = self.i18n.get_language_display_name(lang_code)
-        language_display = f"{lang_flag} {lang_name}"
-
-        # Redraw header
-        self.header.draw(
-            breadcrumb=self.get_breadcrumb(),
-            username=self.get_username(),
-            language=language_display
-        )
-
-        # Redraw footer
-        self.footer.draw(
-            hints=self.get_navigation_hints(),
-            status=self.get_system_status()
-        )
+    def _navigation_redraw(self, sections):
+        """Atomic redraw for navigation - prevents flicker and escape sequence leaks"""
+        # Hide cursor for entire operation
+        sys.stdout.write('\033[?25l')
         sys.stdout.flush()
+
+        # Flush any pending input
+        flush_input_buffer(times=3)
+
+        try:
+            # Draw all components without intermediate flushes
+            self.sidebar.draw(
+                sections, self.state.current_section,
+                self.state.selected_index, bool(self.state.in_submenu)
+            )
+            self.update_content_for_selection()
+
+            # Get language display
+            lang_code = self.i18n.get_language()
+            lang_flag = self.i18n.get_language_flag(lang_code)
+            lang_name = self.i18n.get_language_display_name(lang_code)
+            language_display = f"{lang_flag} {lang_name}"
+
+            # Redraw header
+            self.header.draw(
+                breadcrumb=self.get_breadcrumb(),
+                username=self.get_username(),
+                language=language_display
+            )
+
+            # Redraw footer
+            self.footer.draw(
+                hints=self.get_navigation_hints(),
+                status=self.get_system_status()
+            )
+
+            # Single final flush
+            sys.stdout.flush()
+        finally:
+            # Always show cursor
+            sys.stdout.write('\033[?25h')
+            sys.stdout.flush()
 
     def get_breadcrumb(self) -> str:
         """Get current navigation breadcrumb"""
@@ -401,27 +419,13 @@ class BaseTUI(ABC):
 
         if key == Keys.UP:
             if self.state.navigate_up():
-                # Redraw sidebar
-                self.sidebar.draw(
-                    sections, self.state.current_section,
-                    self.state.selected_index, bool(self.state.in_submenu)
-                )
-                self.update_content_for_selection()
-                # Always redraw header/footer after sidebar to prevent disappearing
-                self._redraw_header_footer()
+                self._navigation_redraw(sections)
 
         elif key == Keys.DOWN:
             current_section = sections[self.state.current_section] if sections else None
             max_items = len(current_section.items) if current_section else 0
             if self.state.navigate_down(max_items):
-                # Redraw sidebar
-                self.sidebar.draw(
-                    sections, self.state.current_section,
-                    self.state.selected_index, bool(self.state.in_submenu)
-                )
-                self.update_content_for_selection()
-                # Always redraw header/footer after sidebar to prevent disappearing
-                self._redraw_header_footer()
+                self._navigation_redraw(sections)
 
         elif key == Keys.LEFT:
             if self.state.navigate_left():
