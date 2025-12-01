@@ -119,7 +119,7 @@ class BaseTUI(ABC):
 
         # V527: Keypress debouncing to prevent rapid navigation corruption
         self.last_keypress_time = 0
-        self.min_keypress_interval = 0.08  # 80ms debounce (increased from 50ms for stability)
+        self.min_keypress_interval = 0.03  # 30ms debounce (fast navigation)
 
         # V527: Navigation lock to prevent concurrent rendering (Protection 1)
         self._rendering = False
@@ -318,22 +318,24 @@ class BaseTUI(ABC):
         self._rendering = True
 
         try:
+            # CRITICAL: Disable terminal echo to prevent escape sequences appearing
+            import termios
+            fd = sys.stdin.fileno()
+            old_settings = termios.tcgetattr(fd)
+            new_settings = list(old_settings)
+            new_settings[3] = new_settings[3] & ~termios.ECHO  # Disable echo
+            termios.tcsetattr(fd, termios.TCSANOW, new_settings)
+        except:
+            old_settings = None
+
+        try:
             cols, lines = get_terminal_size()
 
-            # Hide cursor and disable line wrap
-            sys.stdout.write('\033[?25l\033[?7l')
+            # Hide cursor
+            sys.stdout.write('\033[?25l')
             sys.stdout.flush()
 
-            # Aggressive input flush
-            flush_input_buffer(times=5)
-            try:
-                import select
-                while select.select([sys.stdin], [], [], 0)[0]:
-                    sys.stdin.read(1)
-            except:
-                pass
-
-            # Draw sidebar
+            # Draw sidebar (no separate flush inside)
             self.sidebar.draw(
                 sections, self.state.current_section,
                 self.state.selected_index, bool(self.state.in_submenu)
@@ -348,26 +350,30 @@ class BaseTUI(ABC):
             lang_name = self.i18n.get_language_display_name(lang_code)
             language_display = f"{lang_flag} {lang_name}"
 
-            # Redraw header at line 1 (explicit position)
-            sys.stdout.write('\033[1;1H')
+            # Redraw header
             self.header.draw(
                 breadcrumb=self.get_breadcrumb(),
                 username=self.get_username(),
                 language=language_display
             )
 
-            # Redraw footer at last line (explicit position)
-            sys.stdout.write(f'\033[{lines};1H')
+            # Redraw footer
             self.footer.draw(
                 hints=self.get_navigation_hints(),
                 status=self.get_system_status()
             )
 
-            # Final flush
+            # Single final flush
             sys.stdout.flush()
         finally:
-            # Re-enable line wrap and show cursor
-            sys.stdout.write('\033[?7h\033[?25h')
+            # Restore terminal settings
+            if old_settings:
+                try:
+                    termios.tcsetattr(fd, termios.TCSANOW, old_settings)
+                except:
+                    pass
+            # Show cursor
+            sys.stdout.write('\033[?25h')
             sys.stdout.flush()
             self._rendering = False
 
