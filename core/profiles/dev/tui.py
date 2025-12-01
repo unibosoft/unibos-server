@@ -1136,14 +1136,14 @@ class UnibosDevTUI(BaseTUI):
 
         # Menu options
         options = [
-            ("info", "📊 Current Version Info", "show detailed version information"),
-            ("browse", "📋 Browse Archives", "view version archive history"),
-            ("create", "📦 Quick Release", "create new version archive with wizard"),
-            ("increment", "🔼 Increment Version", "bump version number"),
-            ("analyze", "📈 Archive Analyzer", "analyze archive statistics"),
-            ("git_status", "🔀 Git Status", "show git repository status"),
-            ("git_tag", "🏷️  Create Git Tag", "create and push git tag"),
-            ("back", "← Back to Dev Tools", "return to main menu"),
+            ("info", "📊 current version info", "show detailed version information"),
+            ("browse", "📋 browse archives", "view version archive history"),
+            ("create", "📦 quick release", "create new version archive with wizard"),
+            ("increment", "🔼 increment version", "bump version number"),
+            ("analyze", "📈 archive analyzer", "analyze archive statistics"),
+            ("git_status", "🔀 git status", "show git repository status"),
+            ("git_tag", "🏷️  create git tag", "create and push git tag"),
+            ("back", "← back to dev tools", "return to main menu"),
         ]
 
         selected = 0
@@ -1155,12 +1155,12 @@ class UnibosDevTUI(BaseTUI):
 
             # Build menu display
             lines = [
-                "📋 Version Manager",
+                "📋 version manager",
                 "",
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
                 f"  current: v{__version__} {build_display}",
-                f"  codename: {VERSION_CODENAME}",
-                f"  type: {RELEASE_TYPE}",
+                f"  codename: {VERSION_CODENAME.lower()}",
+                f"  type: {RELEASE_TYPE.lower()}",
             ]
 
             if build_info:
@@ -1180,7 +1180,7 @@ class UnibosDevTUI(BaseTUI):
             lines.extend([
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
                 "",
-                "navigation: ↑↓ to move, Enter to select, ESC to go back"
+                "navigation: ↑↓ to move, enter to select, esc to go back"
             ])
 
             self.update_content(
@@ -1236,7 +1236,7 @@ class UnibosDevTUI(BaseTUI):
         build_info = parse_build_timestamp(__build__)
 
         lines = [
-            "📊 Current Version Information",
+            "📊 current version information",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             "",
@@ -1245,9 +1245,9 @@ class UnibosDevTUI(BaseTUI):
             f"    build:     {__build__}",
             f"    full:      v{__version__}+build.{__build__}",
             "",
-            f"    name:      {VERSION_NAME}",
-            f"    codename:  {VERSION_CODENAME}",
-            f"    type:      {RELEASE_TYPE}",
+            f"    name:      {VERSION_NAME.lower()}",
+            f"    codename:  {VERSION_CODENAME.lower()}",
+            f"    type:      {RELEASE_TYPE.lower()}",
             f"    date:      {RELEASE_DATE}",
             "",
         ]
@@ -1257,7 +1257,7 @@ class UnibosDevTUI(BaseTUI):
                 "  build timestamp:",
                 f"    date:      {build_info['date']}",
                 f"    time:      {build_info['time']}",
-                f"    readable:  {build_info['readable']}",
+                f"    readable:  {build_info['readable'].lower()}",
                 "",
             ])
 
@@ -1271,7 +1271,7 @@ class UnibosDevTUI(BaseTUI):
             "",
             "  next milestone:",
             f"    version:   {NEXT_VERSION}",
-            f"    name:      {NEXT_RELEASE_NAME}",
+            f"    name:      {NEXT_RELEASE_NAME.lower()}",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             "",
@@ -1303,11 +1303,11 @@ class UnibosDevTUI(BaseTUI):
 
         # Release type options
         options = [
-            ("build", "📦 Build Only", "new build, same version (daily work)"),
-            ("patch", "🔧 Patch Release", "bug fix (v1.0.0 → v1.0.1)"),
-            ("minor", "✨ Minor Release", "new feature (v1.0.0 → v1.1.0)"),
-            ("major", "🚀 Major Release", "breaking change (v1.0.0 → v2.0.0)"),
-            ("back", "← Cancel", "return without changes"),
+            ("build", "📦 build only", "new build, same version (daily work)"),
+            ("patch", "🔧 patch release", "bug fix (v1.0.0 → v1.0.1)"),
+            ("minor", "✨ minor release", "new feature (v1.0.0 → v1.1.0)"),
+            ("major", "🚀 major release", "breaking change (v1.0.0 → v2.0.0)"),
+            ("back", "← cancel", "return without changes"),
         ]
 
         selected = 0
@@ -1316,7 +1316,7 @@ class UnibosDevTUI(BaseTUI):
             new_build = get_new_build()
 
             lines = [
-                "📦 Quick Release Wizard",
+                "📦 quick release wizard",
                 "",
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
                 f"  current version: v{__version__}",
@@ -1339,7 +1339,7 @@ class UnibosDevTUI(BaseTUI):
             lines.extend([
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
                 "",
-                "navigation: ↑↓ to move, Enter to select, ESC to cancel"
+                "navigation: ↑↓ to move, enter to select, esc to cancel"
             ])
 
             self.update_content(
@@ -1394,7 +1394,7 @@ class UnibosDevTUI(BaseTUI):
         archive_name = f"unibos_v{new_version}_b{new_build}"
 
         lines = [
-            "🚀 Release Process",
+            "🚀 release process",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             f"  release type: {release_type}",
@@ -1435,17 +1435,17 @@ class UnibosDevTUI(BaseTUI):
         parts = [int(x) for x in __version__.split('.')]
 
         options = [
-            ("patch", f"🔧 Patch: v{parts[0]}.{parts[1]}.{parts[2]+1}", "bug fixes, small improvements"),
-            ("minor", f"✨ Minor: v{parts[0]}.{parts[1]+1}.0", "new features"),
-            ("major", f"🚀 Major: v{parts[0]+1}.0.0", "breaking changes"),
-            ("back", "← Cancel", "return without changes"),
+            ("patch", f"🔧 patch: v{parts[0]}.{parts[1]}.{parts[2]+1}", "bug fixes, small improvements"),
+            ("minor", f"✨ minor: v{parts[0]}.{parts[1]+1}.0", "new features"),
+            ("major", f"🚀 major: v{parts[0]+1}.0.0", "breaking changes"),
+            ("back", "← cancel", "return without changes"),
         ]
 
         selected = 0
 
         while True:
             lines = [
-                "🔼 Version Increment",
+                "🔼 version increment",
                 "",
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
                 f"  current version: v{__version__}",
@@ -1469,9 +1469,9 @@ class UnibosDevTUI(BaseTUI):
                 "  when to use:",
                 "    patch: bug fix, security patch",
                 "    minor: new feature, enhancement",
-                "    major: breaking API change, rewrite",
+                "    major: breaking api change, rewrite",
                 "",
-                "navigation: ↑↓ to move, Enter to select, ESC to cancel"
+                "navigation: ↑↓ to move, enter to select, esc to cancel"
             ])
 
             self.update_content(
@@ -1503,17 +1503,17 @@ class UnibosDevTUI(BaseTUI):
         from core.version import __version__, __build__, VERSION_CODENAME
 
         lines = [
-            "🏷️  Create Git Tag",
+            "🏷️  create git tag",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             f"  tag name:    v{__version__}",
             f"  build:       {__build__}",
-            f"  codename:    {VERSION_CODENAME}",
+            f"  codename:    {VERSION_CODENAME.lower()}",
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             "",
             "  commands to run:",
             "",
-            f"  git tag -a v{__version__} -m \"UNIBOS v{__version__}\"",
+            f"  git tag -a v{__version__} -m \"unibos v{__version__}\"",
             f"  git push dev v{__version__}",
             f"  git push server v{__version__}",
             f"  git push manager v{__version__}",
@@ -1614,7 +1614,7 @@ class UnibosDevTUI(BaseTUI):
 
         # Build display
         lines = [
-            "📋 Version Archive History",
+            "📋 version archive history",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         ]
@@ -1683,7 +1683,7 @@ class UnibosDevTUI(BaseTUI):
         archive_dir = Path("/Users/berkhatirli/Desktop/unibos-dev/archive/versions")
 
         lines = [
-            "📈 Archive Analyzer",
+            "📈 archive analyzer",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         ]
