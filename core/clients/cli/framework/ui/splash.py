@@ -2,6 +2,15 @@
 UNIBOS CLI Splash Screen
 Animated welcome screen with ASCII art logo
 
+!! MERKEZI SPLASH MODÜLÜ !!
+Bu dosya tüm splash ekranları için TEK KAYNAK'tır.
+Diğer splash.py dosyaları bu modülü re-export eder:
+  - core/clients/tui/framework/splash.py
+  - core/profiles/dev/ui/splash.py
+  - core/profiles/server/ui/splash.py
+
+Splash'te değişiklik yapmak için SADECE BU DOSYAYI düzenle!
+
 Ported from v527 main.py (lines 7870-7995)
 Reference: docs/development/cli_v527_reference.md
 """
@@ -29,7 +38,7 @@ else:
 
 from .colors import Colors
 from .terminal import clear_screen, get_terminal_size, move_cursor
-from core.version import __version__
+from core.version import __version__, __build__
 
 
 def get_simple_key():
@@ -121,11 +130,11 @@ def show_splash_screen(quick: bool = False):
 
     # Show additional info below
     info_y = logo_y + len(logo_art) + 2
-    location = "bitez, bodrum, muğla, türkiye"
+    location = "bitez, bodrum, muğla, türkiye, dünya, güneş sistemi, samanyolu, evren"
 
     info_lines = [
         f"{Colors.DIM}unicorn bodrum operating system{Colors.RESET}",
-        f"{Colors.DIM}build {__version__}{Colors.RESET}",
+        f"{Colors.DIM}build {__build__}{Colors.RESET}",
         "",
         f"{Colors.DIM}by berk hatırlı{Colors.RESET}",
         f"{Colors.DIM}{location}{Colors.RESET}"
