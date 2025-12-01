@@ -3,7 +3,7 @@
     "major": 1,
     "minor": 0,
     "patch": 0,
-    "build": "20251202000434"
+    "build": "20251202000650"
   },
   "display": {
     "semantic": "1.0.0",
@@ -14,8 +14,8 @@
   },
   "build_info": {
     "date": "2025-12-02",
-    "time": "00:04:34",
-    "timestamp": "20251202000434"
+    "time": "00:06:50",
+    "timestamp": "20251202000650"
   },
   "git": {
     "commit": null,
@@ -31,7 +31,7 @@
   "release_info": {
     "release_date": "2025-12-01",
     "author": "berk hatirli",
-    "location": "bitez, bodrum, mugla, turkiye",
+    "location": "bitez, bodrum, mu\u011fla, t\u00fcrkiye, d\u00fcnya, g\u00fcne\u015f sistemi, samanyolu, evren",
     "release_type": "stable",
     "codename": "Phoenix Rising"
   },

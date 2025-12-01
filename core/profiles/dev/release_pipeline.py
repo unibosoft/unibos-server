@@ -244,9 +244,8 @@ class ReleasePipeline:
         # Always update version
         steps.append(PipelineStep("update_version", "update version files"))
 
-        # Archive for minor and major
-        if release_type in ['patch', 'minor', 'major']:
-            steps.append(PipelineStep("create_archive", "create archive"))
+        # Archive for all release types (every build gets archived)
+        steps.append(PipelineStep("create_archive", "create archive"))
 
         # Git operations
         steps.append(PipelineStep("git_commit", "git commit"))

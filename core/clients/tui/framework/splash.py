@@ -20,29 +20,43 @@ def load_version_info() -> dict:
         Version info dict
     """
     try:
-        # Navigate from core/cli/ui/ to root
-        root_dir = Path(__file__).parent.parent.parent.parent
+        # Navigate from core/clients/tui/framework/ to root
+        root_dir = Path(__file__).parent.parent.parent.parent.parent
         version_file = root_dir / 'VERSION.json'
 
         if version_file.exists():
             with open(version_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
+
+                # New format (v1.0.0+)
+                if 'version' in data and isinstance(data['version'], dict):
+                    v = data['version']
+                    version = f"v{v.get('major', 0)}.{v.get('minor', 0)}.{v.get('patch', 0)}"
+                    build = v.get('build', 'unknown')
+                else:
+                    # Old format fallback
+                    version = data.get('version', 'v1.0.0')
+                    build = data.get('build', 'unknown')
+
+                # Get release info
+                release_info = data.get('release_info', {})
+
                 return {
-                    'version': data.get('version', 'v533'),
-                    'build': data.get('build', 'unknown'),
-                    'build_date': data.get('build_date', 'unknown'),
-                    'author': data.get('author', 'berk hatırlı'),
-                    'location': data.get('location', 'bitez, bodrum, muğla, türkiye')
+                    'version': version,
+                    'build': build,
+                    'build_date': data.get('build_info', {}).get('date', 'unknown'),
+                    'author': release_info.get('author', 'berk hatirli'),
+                    'location': release_info.get('location', 'bitez, bodrum, mugla, turkiye')
                 }
     except Exception:
         pass
 
     # Fallback version info
     return {
-        'version': 'v533+',
+        'version': 'v1.0.0',
         'build': 'development',
         'build_date': 'unknown',
-        'author': 'berk hatırlı',
+        'author': 'berk hatirli',
         'location': 'bitez, bodrum, muğla, türkiye, dünya, güneş sistemi, samanyolu, evren'
     }
 
