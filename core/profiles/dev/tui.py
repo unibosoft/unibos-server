@@ -1130,7 +1130,7 @@ class UnibosDevTUI(BaseTUI):
             __version__, __build__, get_full_version,
             parse_build_timestamp, get_archive_name, RELEASE_TYPE, VERSION_CODENAME
         )
-        from core.clients.cli.framework.ui import get_single_key, Keys, hide_cursor
+        from core.clients.cli.framework.ui import get_single_key, Keys, hide_cursor, get_terminal_size
 
         # Menu options
         options = [
@@ -1147,7 +1147,18 @@ class UnibosDevTUI(BaseTUI):
         selected = 0
         need_redraw = True
 
+        # Track terminal size for resize detection
+        last_cols, last_lines = get_terminal_size()
+
         while True:
+            # Check for terminal resize
+            cols, lines = get_terminal_size()
+            if cols != last_cols or lines != last_lines:
+                last_cols, last_lines = cols, lines
+                # Full redraw on resize
+                self.render()
+                need_redraw = True
+
             # Only redraw when needed
             if need_redraw:
                 self._draw_version_submenu(options, selected, __version__, __build__, VERSION_CODENAME, RELEASE_TYPE)
@@ -1188,7 +1199,8 @@ class UnibosDevTUI(BaseTUI):
                 elif option_key == 'git_tag':
                     self._version_create_tag()
 
-                # after sub-action, redraw version manager menu
+                # after sub-action, full redraw needed
+                self.render()
                 need_redraw = True
             elif key == Keys.ESC or key == '\x1b' or key == Keys.LEFT:
                 # v527: both esc and left arrow go back
