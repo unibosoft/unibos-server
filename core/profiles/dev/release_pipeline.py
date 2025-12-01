@@ -199,7 +199,7 @@ class ReleasePipeline:
                             self._step_git_branch(new_version)
                         elif step.id.startswith("push_"):
                             repo = step.id.replace("push_", "")
-                            self._step_push_repo(repo)
+                            self._step_push_repo(repo, version=new_version, build=new_build)
 
                         step.status = "success"
 
@@ -401,7 +401,7 @@ class ReleasePipeline:
         # Create branch from current HEAD
         self._run_command(['git', 'branch', '-f', branch_name], check=False)
 
-    def _step_push_repo(self, repo: str):
+    def _step_push_repo(self, repo: str, version: str = None, build: str = None):
         """Push to specific repository with correct gitignore"""
         self._log(f"pushing to {repo}")
 
@@ -428,7 +428,8 @@ class ReleasePipeline:
             if template_path.exists():
                 shutil.copy(template_path, gitignore_path)
 
-            # Push to remote
+            # Push main branch
+            self._log(f"pushing main to {repo}")
             result = self._run_command(
                 ['git', 'push', repo, 'main', '--force'],
                 check=False
@@ -442,10 +443,39 @@ class ReleasePipeline:
                 )
 
             if result.returncode != 0:
-                raise Exception(f"Push failed: {result.stderr}")
+                raise Exception(f"Push main failed: {result.stderr}")
+
+            # Push version branch (e.g., v1.0.0)
+            if version:
+                branch_name = f"v{version}"
+                # Create or update the version branch
+                self._run_command(['git', 'branch', '-f', branch_name], check=False)
+
+                self._log(f"pushing {branch_name} to {repo}")
+                result = self._run_command(
+                    ['git', 'push', repo, branch_name, '--force'],
+                    check=False
+                )
+                if result.returncode != 0:
+                    self._log(f"warning: could not push {branch_name} to {repo}")
+
+            # Push build branch (e.g., build.20251201235142)
+            if build:
+                build_branch = f"build.{build}"
+                # Create build branch
+                self._run_command(['git', 'branch', '-f', build_branch], check=False)
+
+                self._log(f"pushing {build_branch} to {repo}")
+                result = self._run_command(
+                    ['git', 'push', repo, build_branch, '--force'],
+                    check=False
+                )
+                if result.returncode != 0:
+                    self._log(f"warning: could not push {build_branch} to {repo}")
 
             # Push tags
-            self._run_command(['git', 'push', repo, '--tags'], check=False)
+            self._log(f"pushing tags to {repo}")
+            self._run_command(['git', 'push', repo, '--tags', '--force'], check=False)
 
         finally:
             # Restore original gitignore

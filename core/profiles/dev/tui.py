@@ -1375,11 +1375,11 @@ class UnibosDevTUI(BaseTUI):
         self.update_content(title="release pipeline", lines=lines, color=Colors.CYAN)
         self.render()
 
-        # Run pipeline (dry_run for now - remove when ready)
+        # Run pipeline
         result = pipeline.run(
             release_type=pipeline_type,
             message=f"chore: release v{new_version}",
-            repos=['dev'],  # Start with dev only
+            repos=['dev', 'server', 'manager', 'prod'],
             dry_run=False
         )
 
