@@ -196,7 +196,7 @@ class ReleasePipeline:
                         elif step.id == "git_tag":
                             self._step_git_tag(new_version)
                         elif step.id == "git_branch":
-                            self._step_git_branch(new_version)
+                            self._step_git_branch(new_version, new_build)
                         elif step.id.startswith("push_"):
                             repo = step.id.replace("push_", "")
                             self._step_push_repo(repo, version=new_version, build=new_build)
@@ -393,9 +393,12 @@ class ReleasePipeline:
             '-m', f'Release {tag_name}'
         ])
 
-    def _step_git_branch(self, version: str):
+    def _step_git_branch(self, version: str, build: str = None):
         """Create git branch for major releases"""
-        branch_name = f"release/v{version}"
+        if build:
+            branch_name = f"v{version}+build.{build}"
+        else:
+            branch_name = f"v{version}"
         self._log(f"creating branch {branch_name}")
 
         # Create branch from current HEAD
@@ -445,9 +448,9 @@ class ReleasePipeline:
             if result.returncode != 0:
                 raise Exception(f"Push main failed: {result.stderr}")
 
-            # Push version branch (e.g., release/v1.0.0)
-            if version:
-                branch_name = f"release/v{version}"
+            # Push version+build branch (e.g., v1.0.0+build.20251201235836)
+            if version and build:
+                branch_name = f"v{version}+build.{build}"
                 # Create or update the version branch
                 self._run_command(['git', 'branch', '-f', branch_name], check=False)
 
@@ -458,20 +461,6 @@ class ReleasePipeline:
                 )
                 if result.returncode != 0:
                     self._log(f"warning: could not push {branch_name} to {repo}")
-
-            # Push build branch (e.g., build.20251201235142)
-            if build:
-                build_branch = f"build.{build}"
-                # Create build branch
-                self._run_command(['git', 'branch', '-f', build_branch], check=False)
-
-                self._log(f"pushing {build_branch} to {repo}")
-                result = self._run_command(
-                    ['git', 'push', repo, build_branch, '--force'],
-                    check=False
-                )
-                if result.returncode != 0:
-                    self._log(f"warning: could not push {build_branch} to {repo}")
 
             # Push tags
             self._log(f"pushing tags to {repo}")
