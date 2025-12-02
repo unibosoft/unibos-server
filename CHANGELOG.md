@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Birlikteyiz Earthquake Auto-Fetch**
+  - Background thread scheduler for automatic earthquake data fetching (every 5 minutes)
+  - EMSC WebSocket listener for real-time earthquake notifications
+  - Global singleton pattern to prevent duplicate schedulers
+  - Separate asyncio event loop for WebSocket in dedicated thread
+
+- **Dev Profile Enhancements**
+  - `unibos-dev dev run` - Uvicorn-based ASGI development server
+  - `unibos-dev dev stop` - Stop development server
+  - `unibos-dev dev status` - Check server status
+  - Background mode support with PID tracking
+  - Changelog manager for version tracking
+
+### Fixed
+
+- **Q+W Solitaire Shortcut**
+  - Fixed keyboard shortcut only working on second press
+  - Added `?qw=1` parameter bypass for `solitaire_exited` session flag
+  - Security model: Entry is easy, EXIT requires password
+  - Added comprehensive documentation comments
+
+### Changed
+
+- **TUI Framework**
+  - Improved i18n system with language detection and fallback
+  - Enhanced footer component with dynamic content
+  - Refactored base TUI classes for better maintainability
+  - Updated English and Turkish translations
+
+- **System Components**
+  - Updated administration backend views
+  - Enhanced web_ui context processors
+  - Updated gunicorn configuration
+  - Added new dependencies to requirements.txt
+
+### Removed
+
+- Deprecated `.archiveignore` file (no longer needed)
+
 ---
 
 ## [1.0.0] - 2025-11-15
