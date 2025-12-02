@@ -221,15 +221,20 @@ def show_compact_header(cli_name: str = "unibos"):
     Args:
         cli_name: Name of CLI (unibos, unibos-dev, unibos-server)
     """
+    # Skip header if not running in an interactive TTY
+    # This prevents escape code issues when output is captured (e.g., by TUI)
+    if not sys.stdout.isatty():
+        return
+
     cols, _ = get_terminal_size()
     version = f"v{__version__}"
 
-    # Single line header
+    # Single line header - no cursor positioning, just print
     header = f"{Colors.ORANGE}🪐 {cli_name}{Colors.RESET} {Colors.YELLOW}{version}{Colors.RESET} {Colors.DIM}| unicorn bodrum operating system{Colors.RESET}"
 
-    # Center it
+    # Center it with spaces instead of cursor movement
     clean_header = Colors.strip(header)
-    header_x = max(1, (cols - len(clean_header)) // 2)
-    move_cursor(header_x, 2)
-    print(header, flush=True)
+    padding = max(0, (cols - len(clean_header)) // 2)
+    print()
+    print(' ' * padding + header, flush=True)
     print()  # Add spacing

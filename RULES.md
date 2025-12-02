@@ -2,6 +2,7 @@
 
 > **⚠️ KRİTİK:** Bu dosya ana dizindedir, Claude her oturumda MUTLAKA görecektir.
 > **AMAÇ:** Claude'u doğru kural dosyalarına yönlendirmek, detay vermek DEĞİL!
+> **VERSİYON:** v1.0.0 (First Stable Release - Phoenix Rising)
 
 ---
 
@@ -21,7 +22,8 @@
    • Manuel dev→prod sync veya git push komutları
 
 ✅ HER ZAMAN HER ZAMAN HER ZAMAN:
-   • ./tools/scripts/unibos_version.sh (versiyonlama için)
+   • unibos-dev TUI → versions → 📦 quick release (versiyonlama için)
+   • ReleasePipeline sınıfı (core/profiles/dev/release_pipeline.py)
    • ./tools/scripts/backup_database.sh (database backup için)
    • ./core/deployment/rocksteady_deploy.sh (deployment için)
    • unibos git sync-prod (local prod sync için)
@@ -87,7 +89,7 @@ git status --short
 # → Uncommitted changes varsa: Not et, kullanıcıya bildir
 
 # D. Current version
-grep '"version"' apps/cli/src/VERSION.json | head -1
+python3 -c "from core.version import __version__, __build__; print(f'v{__version__}+{__build__}')"
 ```
 
 ### 2️⃣ Detaylı Protokol (Oku ve Uygula)
@@ -105,7 +107,7 @@ Merhaba Berk! 👋
 📸 Screenshot: [VAR: dosya adı / YOK]
 ⏰ Istanbul: [YYYY-MM-DD HH:MM:SS +03:00]
 🔧 Git status: [Clean / X files changed]
-📌 Version: [vXXX]
+📌 Version: [v1.0.0+BUILD_TIMESTAMP]
 
 Ne üzerinde çalışmamı istersin?
 ```
@@ -117,12 +119,14 @@ Ne üzerinde çalışmamı istersin?
 ### Versiyonlama Yapacaksan:
 1. **[docs/development/VERSIONING_WORKFLOW.md](docs/development/VERSIONING_WORKFLOW.md)** ← Hızlı workflow özeti
 2. **[docs/development/VERSIONING_RULES.md](docs/development/VERSIONING_RULES.md)** ← Detaylı kurallar
-3. **Script:** `./tools/scripts/unibos_version.sh`
+3. **TUI:** `unibos-dev` → versions → 📦 quick release
+4. **Pipeline:** `core/profiles/dev/release_pipeline.py`
 
 ### Arşivleme Yapacaksan:
 1. **[docs/development/VERSIONING_RULES.md](docs/development/VERSIONING_RULES.md)** ← "Archive Exclusion Rules" bölümü
 2. **[.archiveignore](.archiveignore)** ← Hariç tutulan dosyalar
-3. **Script:** `./tools/scripts/unibos_version.sh` (Option 5: Archive Only)
+3. **Pipeline:** `ReleasePipeline._step_create_archive()` metodu
+4. **Konum:** `archive/versions/unibos_v{VERSION}_b{BUILD}/`
 
 ### Database Backup Yapacaksan:
 1. **[docs/development/VERSIONING_RULES.md](docs/development/VERSIONING_RULES.md)** ← "Database Backup System" bölümü
@@ -155,6 +159,14 @@ Ne üzerinde çalışmamı istersin?
 ```
 RULES.md (bu dosya - YÖNLENDME)
     ↓
+core/
+    ├── version.py (versiyon bilgisi: __version__, __build__)
+    ├── profiles/dev/
+    │   ├── tui.py (Dev TUI - versions menüsü)
+    │   └── release_pipeline.py (ReleasePipeline sınıfı)
+    └── clients/cli/framework/ui/
+        └── splash.py (MERKEZI splash modülü)
+    ↓
 docs/development/
     ├── VERSIONING_WORKFLOW.md (hızlı referans)
     ├── VERSIONING_RULES.md (DETAYLI KURALLAR - BURAYA GIT!)
@@ -162,7 +174,6 @@ docs/development/
     └── [diğer dokümanlar]
     ↓
 tools/scripts/
-    ├── unibos_version.sh (versioning master script)
     ├── backup_database.sh
     └── verify_database_backup.sh
 core/deployment/
@@ -178,7 +189,7 @@ core/deployment/
 - [ ] `RULES.md` okudum (bu dosya)
 - [ ] `VERSIONING_WORKFLOW.md` okudum (hızlı workflow)
 - [ ] `docs/development/VERSIONING_RULES.md` okudum (detaylı kurallar)
-- [ ] Script kullanacağım (manuel komut YOK!)
+- [ ] TUI veya ReleasePipeline kullanacağım (manuel komut YOK!)
 
 ### Script Değiştireceksen:
 - [ ] Hangi kuralın etkilendiğini tespit ettim
@@ -270,32 +281,35 @@ Her değişiklik sonrası kendine şu soruları sor:
 
 ## 📝 Son Güncelleme
 
-**Tarih:** 2025-11-13 (Updated)
-**Neden:** Dev/prod workflow kuralları ve validation eklendi
-**Değişiklikler:**
-- ✅ Dev/prod workflow section eklendi (RULES.md)
-- ✅ dev-prod-workflow.md, git-workflow-usage.md, .prodignore validation matrix'e eklendi
-- ✅ CLI git commands (push-dev, push-prod, sync-prod) mandatory kullanım
-- ✅ Manuel rsync/git push yasaklandı (dev→prod için)
-- ✅ Database naming standardized (unibos_dev/unibos_dev_user vs unibos_db/unibos_db_user)
-- ✅ .prodignore updated to exclude .archiveignore
-- ✅ core/deployment/ dizini oluşturuldu (deploy/ yerine)
-- ✅ rocksteady_deploy.sh version-agnostic yapıldı
-- ✅ Otomatik architecture detection (core/web vs platform/*)
-- ✅ Pre-flight size checks (Flutter build, logs, venv detection)
-- ✅ Otomatik dependency checking ve kurulum
-- ✅ core/deployment/README.md oluşturuldu (comprehensive guide)
+**Tarih:** 2025-12-02
+**Versiyon:** v1.0.0+20251202003028 (Phoenix Rising)
+**Neden:** v1.0.0 stable release ve yeni versiyonlama sistemi
 
-**Bir Önceki Güncelleme:** 2025-11-15 - Versiyonlama sistemi ve semantic versioning
+**Değişiklikler:**
+- ✅ Semantic Versioning + Timestamp Build sistemi (`v1.0.0+BUILD`)
+- ✅ ReleasePipeline sınıfı eklendi (`core/profiles/dev/release_pipeline.py`)
+- ✅ TUI'dan quick release desteği (versions → 📦 quick release)
+- ✅ 4 repo'ya otomatik push (dev, server, manager, prod)
+- ✅ Merkezi splash modülü (`core/clients/cli/framework/ui/splash.py`)
+- ✅ Arşiv yapısı güncellendi (`unibos_v{VERSION}_b{BUILD}`)
+- ✅ Header formatı: `v1.0.0+20251202003028`
+- ✅ TUI otomatik restart after release
+- ✅ Archive exclusion düzeltildi (archive kendini kopyalamıyor)
+- ✅ Git status TUI'da düzeltildi
+- ✅ Conventional Commits + Otomatik CHANGELOG sistemi eklendi
+- ✅ ChangelogManager sınıfı (`core/profiles/dev/changelog_manager.py`)
+
+**Bir Önceki Güncelleme:** 2025-11-15 - Dev/prod workflow ve deployment kuralları
 **Sonraki Gözden Geçirme:** Her major script veya kural değişikliğinde
 
 ---
 
-## 📌 VERSİYONLAMA KURALLARI (2025-11-15)
+## 📌 VERSİYONLAMA KURALLARI (2025-12-02)
 
-### Semantic Versioning (SemVer)
+### Semantic Versioning + Timestamp Build
 ```
-MAJOR.MINOR.PATCH (örn: 1.2.3)
+FORMAT: MAJOR.MINOR.PATCH+BUILD_TIMESTAMP
+ÖRNEK:  v1.0.0+20251202003028
 
 MAJOR (X.0.0): Breaking changes
   ↳ CLI komut yapısı değişti
@@ -311,46 +325,158 @@ PATCH (0.0.X): Bug fixler
   ↳ Hata düzeltmeleri
   ↳ Küçük iyileştirmeler
   ↳ Dokümantasyon güncellemeleri
+
+BUILD (YYYYMMDDHHmmss): Her release'de otomatik güncellenir
+  ↳ Timestamp formatı: 20251202003028 (2 Aralık 2025, 00:30:28)
 ```
 
 ### Version Dosyası
 ```python
-# Versiyon bilgisi: core/version.py
-# Setup dosyaları: core/version.__version__ kullanır
-# CLI: core/version.__version__ kullanır
+# core/version.py
+__version__ = "1.0.0"           # Semantic version
+__version_info__ = (1, 0, 0)    # Tuple format
+__build__ = "20251202003028"    # Timestamp build
+
+# Fonksiyonlar:
+get_version()           # "1.0.0"
+get_build()             # "20251202003028"
+get_full_version()      # Dict with all info
+get_short_version_string()  # "v1.0.0"
+parse_build_timestamp() # Parse build to date/time
 ```
 
-### Version Değiştirme Prosedürü
-```bash
-# 1. core/version.py güncelle
-# 2. CHANGELOG.md güncelle
-# 3. Git tag oluştur
-# 4. Setup dosyaları otomatik çeker
-
-# Örnek:
-# core/version.py: __version__ = "1.0.0"
-# git tag -a v1.0.0 -m "First public release"
+### Version Değiştirme Prosedürü (TUI)
+```
+1. unibos-dev komutu ile TUI'yi aç
+2. "versions" menüsüne git
+3. "📦 quick release" seç
+4. Release tipini seç:
+   - build: Sadece yeni timestamp (versiyon aynı)
+   - patch: 1.0.0 → 1.0.1
+   - minor: 1.0.0 → 1.1.0
+   - major: 1.0.0 → 2.0.0
+5. Pipeline otomatik çalışır:
+   - Version güncellenir
+   - Arşiv oluşturulur
+   - Git commit + tag
+   - 4 repo'ya push (dev, server, manager, prod)
+6. TUI otomatik restart olur
 ```
 
-### Pre-Release Versiyonları
-```
-v0.533.0    → Development milestone
-v1.0.0-rc.1 → Release candidate
-v1.0.0      → Stable release
+### Release Pipeline
+```python
+# core/profiles/dev/release_pipeline.py
+from core.profiles.dev.release_pipeline import ReleasePipeline
+
+pipeline = ReleasePipeline()
+result = pipeline.run(
+    release_type='minor',      # build, patch, minor, major
+    message='feat: new feature',
+    repos=['dev', 'server', 'manager', 'prod']
+)
 ```
 
-### Arşiv Koruması
+### Arşiv Yapısı
 ```
-archive/versions/pre-release/
-  ↳ v0.1.0 - v0.533.0 arşivi
-  ↳ Hiçbir zaman silinmez
-  ↳ .prodignore ile production'dan exclude
+archive/versions/
+  ├── old_pattern_v001_v533/     # Pre-1.0 arşivi (v0.1.0 - v0.533.0)
+  ├── unibos_v1.0.0_b20251202000650/
+  ├── unibos_v1.0.0_b20251202002447/
+  └── unibos_v1.0.0_b20251202003028/
+
+# Arşiv isimlendirme: unibos_v{VERSION}_b{BUILD}
+# Örnek: unibos_v1.0.0_b20251202003028
 ```
 
 ### Detaylı Döküman
-- `CHANGELOG.md` - Version history
-- `core/version.py` - Version metadata
-- `docs/development/versioning.md` - Detaylı kurallar (oluşturulacak)
+- `CHANGELOG.md` - Version history (otomatik güncellenir)
+- `core/version.py` - Version metadata & functions
+- `core/profiles/dev/release_pipeline.py` - Release automation
+- `core/profiles/dev/changelog_manager.py` - Changelog generator
+
+---
+
+## 📋 CHANGELOG YÖNETİMİ (Conventional Commits)
+
+### Commit Mesajı Formatı
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+### Commit Tipleri
+| Tip | Açıklama | Emoji | Version Etkisi |
+|-----|----------|-------|----------------|
+| `feat` | Yeni özellik | ✨ | MINOR bump |
+| `fix` | Bug fix | 🐛 | PATCH bump |
+| `docs` | Dokümantasyon | 📝 | - |
+| `style` | Kod stili (formatting) | 💄 | - |
+| `refactor` | Kod refactoring | ♻️ | - |
+| `perf` | Performans iyileştirme | ⚡ | - |
+| `test` | Test ekleme/güncelleme | ✅ | - |
+| `build` | Build sistemi/dependencies | 📦 | - |
+| `ci` | CI/CD konfigürasyonu | 👷 | - |
+| `chore` | Bakım işleri | 🔧 | - |
+
+### Breaking Changes (MAJOR bump)
+```bash
+# Seçenek 1: Ünlem işareti
+feat!: redesign CLI argument structure
+
+# Seçenek 2: Footer'da belirt
+feat(api): change response format
+
+BREAKING CHANGE: API response artık array yerine object döner
+```
+
+### Örnekler
+```bash
+# Yeni özellik
+feat(tui): add dark mode support
+
+# Bug fix
+fix(pipeline): resolve archive duplication issue
+
+# Scope olmadan
+docs: update README with new examples
+
+# Breaking change
+feat!: redesign module loading system
+
+# Detaylı commit
+feat(changelog): add automatic changelog generation
+
+Conventional Commits formatını parse ederek otomatik
+CHANGELOG.md oluşturur.
+
+- ChangelogManager sınıfı eklendi
+- ReleasePipeline entegrasyonu yapıldı
+- Keep a Changelog formatı kullanılıyor
+```
+
+### Otomatik CHANGELOG Güncellemesi
+```
+1. Release sırasında (📦 quick release)
+2. Son tag'den bu yana tüm commit'ler parse edilir
+3. Conventional Commits formatındakiler kategorize edilir
+4. CHANGELOG.md otomatik güncellenir
+5. [Unreleased] bölümü yeni version'a dönüşür
+```
+
+### Dosya Yapısı
+```
+CHANGELOG.md
+├── [Unreleased]          # Henüz release edilmemiş değişiklikler
+├── [1.1.0] - 2025-12-03  # En son release
+│   ├── Added             # feat commits
+│   ├── Changed           # refactor, style commits
+│   ├── Fixed             # fix commits
+│   └── ...
+└── [1.0.0] - 2025-12-01  # Önceki release
+```
 
 ---
 
