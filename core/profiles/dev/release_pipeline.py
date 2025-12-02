@@ -187,7 +187,9 @@ class ReleasePipeline:
                         step.message = "dry run"
                     else:
                         # Execute step
-                        if step.id == "update_version":
+                        if step.id == "update_changelog":
+                            self._step_update_changelog(new_version, new_build)
+                        elif step.id == "update_version":
                             self._step_update_version(new_version, new_build)
                         elif step.id == "create_archive":
                             archive_path = self._step_create_archive(new_version, new_build)
@@ -241,6 +243,9 @@ class ReleasePipeline:
         """Get pipeline steps based on release type"""
         steps = []
 
+        # Update changelog first (before version bump)
+        steps.append(PipelineStep("update_changelog", "update changelog"))
+
         # Always update version
         steps.append(PipelineStep("update_version", "update version files"))
 
@@ -260,6 +265,29 @@ class ReleasePipeline:
             steps.append(PipelineStep(f"push_{repo}", f"push to {repo}"))
 
         return steps
+
+    def _step_update_changelog(self, version: str, build: str):
+        """Update CHANGELOG.md from Conventional Commits"""
+        self._log("checking for changelog updates")
+
+        try:
+            from core.profiles.dev.changelog_manager import ChangelogManager
+
+            manager = ChangelogManager(self.project_root)
+            changes = manager.get_unreleased_changes()
+
+            if changes:
+                self._log(f"found {sum(len(v) for v in changes.values())} changes")
+                manager.update_changelog(version, build)
+                self._log("changelog updated")
+            else:
+                self._log("no conventional commits found, skipping changelog")
+
+        except ImportError:
+            self._log("changelog manager not available, skipping")
+        except Exception as e:
+            self._log(f"changelog update warning: {e}")
+            # Don't fail the pipeline for changelog issues
 
     def _step_update_version(self, version: str, build: str):
         """Update VERSION.json and core/version.py"""
