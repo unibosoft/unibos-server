@@ -19,6 +19,7 @@ from core.profiles.dev.commands.db import db_group
 from core.profiles.dev.commands.status import status_command
 from core.profiles.dev.commands.git import git_group
 from core.profiles.dev.commands.platform import platform_command
+from core.profiles.dev.commands.release import release_group
 from core.version import __version__
 
 # Import manager profile CLI
@@ -72,6 +73,7 @@ cli.add_command(db_group)
 cli.add_command(status_command)
 cli.add_command(git_group)
 cli.add_command(platform_command)
+cli.add_command(release_group)
 
 # Register manager profile as a command group
 cli.add_command(manager_cli, name='manager')
