@@ -491,6 +491,19 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'modules.birlikteyiz.backend.tasks.fetch_earthquakes',
         'schedule': timedelta(minutes=5),  # Fetch earthquake data every 5 minutes
     },
+    # Node Registry Tasks
+    'check-node-heartbeats': {
+        'task': 'core.system.nodes.backend.tasks.check_node_heartbeats',
+        'schedule': timedelta(minutes=1),  # Check every minute for stale nodes
+    },
+    'cleanup-stale-node-metrics': {
+        'task': 'core.system.nodes.backend.tasks.cleanup_stale_metrics',
+        'schedule': timedelta(days=1),  # Daily cleanup of old metrics
+    },
+    'cleanup-old-node-events': {
+        'task': 'core.system.nodes.backend.tasks.cleanup_old_events',
+        'schedule': timedelta(days=1),  # Daily cleanup of old events
+    },
 }
 
 # Email Configuration
@@ -503,6 +516,13 @@ EMAIL_HOST_USER = 'berk@recaria.org'
 EMAIL_HOST_PASSWORD = 'Recaria2025Mail!'
 DEFAULT_FROM_EMAIL = 'berk@recaria.org'
 SERVER_EMAIL = 'berk@recaria.org'
+
+# Node Registry Settings
+NODE_HEARTBEAT_TIMEOUT_MINUTES = 5  # Mark offline after no heartbeat
+NODE_STALE_THRESHOLD_MINUTES = 15  # Consider stale after this time
+NODE_METRICS_RETENTION_DAYS = 7  # Keep metrics for 7 days
+NODE_EVENTS_RETENTION_DAYS = 30  # Keep events for 30 days
+CENTRAL_REGISTRY_URL = None  # Set in server/prod settings if not central
 
 # Security Settings
 SECURE_BROWSER_XSS_FILTER = True
