@@ -106,12 +106,12 @@ db.sqlite3*
 *.log
 *.log.*
 logs/
-core/web/logs/
+core/clients/web/logs/
 
 # ===== DJANGO GENERATED =====
 staticfiles/
-core/web/staticfiles/
-core/web/media/
+core/clients/web/staticfiles/
+core/clients/web/media/
 modules/*/backend/staticfiles/
 modules/*/backend/media/
 modules/*/backend/uploads/
@@ -196,12 +196,12 @@ pushed_versions.txt
 # ===== EXCLUDE DEV-ONLY SETTINGS =====
 # Keep: server.py, node.py, base.py
 # Exclude: development.py, dev_*.py
-core/web/unibos_backend/settings/development.py
-core/web/unibos_backend/settings/dev_*.py
-core/web/unibos_backend/settings/emergency.py
-core/web/unibos_backend/settings/dev_postgres.py
-core/web/unibos_backend/settings/dev_simple.py
-core/web/unibos_backend/settings/dev_no_redis.py
+core/clients/web/unibos_backend/settings/development.py
+core/clients/web/unibos_backend/settings/dev_*.py
+core/clients/web/unibos_backend/settings/emergency.py
+core/clients/web/unibos_backend/settings/dev_postgres.py
+core/clients/web/unibos_backend/settings/dev_simple.py
+core/clients/web/unibos_backend/settings/dev_no_redis.py
 
 # ===== EXCLUDE NODE DEPLOYMENT (SERVER DOESN'T NEED IT) =====
 # Keep server deployment, exclude node deployment

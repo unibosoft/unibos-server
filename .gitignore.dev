@@ -99,8 +99,8 @@ debug_output.txt
 
 # ===== DJANGO GENERATED =====
 staticfiles/
-core/web/staticfiles/
-core/web/media/
+core/clients/web/staticfiles/
+core/clients/web/media/
 modules/*/backend/staticfiles/
 modules/*/backend/media/
 modules/*/backend/uploads/
