@@ -593,22 +593,24 @@ repair_installation() {
 # =============================================================================
 
 uninstall_unibos() {
-    log_step "Uninstalling UNIBOS..."
+    log_step "uninstalling unibos..."
 
     echo ""
-    echo -e "  ${RED}WARNING: This will remove:${NC}"
-    echo "    - UNIBOS installation at $INSTALL_DIR"
-    echo "    - Systemd services (unibos, unibos-celery)"
-    echo "    - mDNS service configuration"
+    echo -e "  ${RED}warning: this will remove:${NC}"
+    echo "    - unibos installation at $INSTALL_DIR"
+    echo "    - systemd services (unibos, unibos-celery)"
+    echo "    - mdns service configuration"
     echo ""
-    echo -e "  ${YELLOW}Database and system packages will NOT be removed.${NC}"
+    echo -e "  ${YELLOW}database and system packages will not be removed.${NC}"
     echo ""
 
-    read -p "  Are you sure? [y/N] " -n 1 -r
+    # Read from /dev/tty for pipe support
+    echo -n "  are you sure? [y/N] "
+    read -n 1 -r REPLY </dev/tty
     echo ""
 
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        log "Cancelled."
+        log "cancelled."
         exit 0
     fi
 
