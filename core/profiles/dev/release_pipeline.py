@@ -361,7 +361,7 @@ class ReleasePipeline:
         }
 
         # File extensions to exclude
-        exclude_extensions = {'.pyc'}
+        exclude_extensions = {'.pyc', '.sql'}
 
         # Paths relative to project root to exclude
         exclude_paths = {
