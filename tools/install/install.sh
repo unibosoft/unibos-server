@@ -29,10 +29,9 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Configuration
-UNIBOS_VERSION="1.1.0"
-UNIBOS_REPO="https://github.com/berkhatirli/unibos.git"
-UNIBOS_RELEASE_URL="https://unibos.recaria.org/releases/latest.tar.gz"
-CENTRAL_REGISTRY_URL="https://unibos.recaria.org"
+UNIBOS_VERSION="1.1.1"
+UNIBOS_REPO="https://github.com/unibosoft/unibos.git"
+CENTRAL_REGISTRY_URL="https://recaria.org"
 INSTALL_DIR="$HOME/unibos"
 VENV_DIR="$INSTALL_DIR/core/clients/web/venv"
 SERVICE_PORT=8000
@@ -101,41 +100,38 @@ detect_platform() {
     CPU_CORES=$(nproc 2>/dev/null || echo 1)
 
     # Determine recommended configuration
+    # NOTE: All modules are always enabled until dynamic URL routing is implemented
+    RECOMMENDED_MODULES="all"
+
     if [ "$PLATFORM" = "raspberry-pi" ]; then
         case "$PLATFORM_DETAIL" in
             "zero2w")
                 WORKER_COUNT=1
                 WORKER_TYPE="sync"
-                RECOMMENDED_MODULES="wimm"
-                log_warn "Pi Zero 2W detected - limited resources, single module recommended"
+                log_warn "Pi Zero 2W detected - running with reduced workers"
                 ;;
             "pi3")
                 WORKER_COUNT=2
                 WORKER_TYPE="sync"
-                RECOMMENDED_MODULES="wimm,documents"
                 log_warn "Pi 3 detected - limited resources"
                 ;;
             "pi4")
                 if [ $RAM_MB -ge 4000 ]; then
                     WORKER_COUNT=3
                     WORKER_TYPE="uvicorn.workers.UvicornWorker"
-                    RECOMMENDED_MODULES="all"
                 else
                     WORKER_COUNT=2
                     WORKER_TYPE="uvicorn.workers.UvicornWorker"
-                    RECOMMENDED_MODULES="wimm,documents,currencies"
                 fi
                 ;;
             "pi5")
                 WORKER_COUNT=4
                 WORKER_TYPE="uvicorn.workers.UvicornWorker"
-                RECOMMENDED_MODULES="all"
                 log_success "Pi 5 detected - full performance mode"
                 ;;
             *)
                 WORKER_COUNT=2
                 WORKER_TYPE="sync"
-                RECOMMENDED_MODULES="wimm,documents"
                 ;;
         esac
     else
@@ -143,11 +139,9 @@ detect_platform() {
         if [ $RAM_MB -ge 4000 ]; then
             WORKER_COUNT=$((CPU_CORES > 4 ? 4 : CPU_CORES))
             WORKER_TYPE="uvicorn.workers.UvicornWorker"
-            RECOMMENDED_MODULES="all"
         else
             WORKER_COUNT=2
             WORKER_TYPE="sync"
-            RECOMMENDED_MODULES="wimm,documents"
         fi
     fi
 
@@ -260,18 +254,19 @@ install_unibos() {
         fi
     fi
 
-    # Clone repository
-    if command -v git &> /dev/null; then
-        log_info "Cloning from git repository..."
-        git clone --depth 1 "$UNIBOS_REPO" "$INSTALL_DIR" 2>/dev/null || {
-            log_warn "Git clone failed, trying release archive..."
-            mkdir -p "$INSTALL_DIR"
-            curl -sSL "$UNIBOS_RELEASE_URL" | tar xz -C "$INSTALL_DIR" --strip-components=1
-        }
-    else
-        log_info "Downloading release archive..."
-        mkdir -p "$INSTALL_DIR"
-        curl -sSL "$UNIBOS_RELEASE_URL" | tar xz -C "$INSTALL_DIR" --strip-components=1
+    # Clone repository (requires GitHub token for private repo)
+    log_info "Cloning from git repository..."
+    log_info "GitHub credentials required (use Personal Access Token as password)"
+
+    if ! git clone --depth 1 "$UNIBOS_REPO" "$INSTALL_DIR"; then
+        log_error "Git clone failed!"
+        log_info "Make sure you have:"
+        log_info "  1. A valid GitHub account with repo access"
+        log_info "  2. A Personal Access Token (PAT) with 'repo' scope"
+        log_info "  3. Use the token as password when prompted"
+        log_info ""
+        log_info "To create a PAT: GitHub → Settings → Developer settings → Personal access tokens"
+        exit 1
     fi
 
     cd "$INSTALL_DIR"
@@ -355,8 +350,9 @@ setup_environment() {
     # Source database credentials
     source "$INSTALL_DIR/data/config/db.env"
 
-    # Create .env file
-    cat > "$INSTALL_DIR/.env" << EOF
+    # Create .env file in web directory (where Django looks for it)
+    WEB_DIR="$INSTALL_DIR/core/clients/web"
+    cat > "$WEB_DIR/.env" << EOF
 # UNIBOS Edge Node Configuration
 # Generated: $(date -Iseconds)
 
@@ -368,6 +364,11 @@ ALLOWED_HOSTS=$LOCAL_IP,localhost,127.0.0.1,$(hostname),$(hostname).local
 
 # Database
 DATABASE_URL=$DATABASE_URL
+DB_NAME=$DB_NAME
+DB_USER=$DB_USER
+DB_PASS=$DB_PASS
+DB_HOST=localhost
+DB_PORT=5432
 
 # Redis
 REDIS_URL=redis://localhost:6379/0
@@ -388,7 +389,10 @@ WORKER_TYPE=$WORKER_TYPE
 ENABLED_MODULES=$RECOMMENDED_MODULES
 EOF
 
-    chmod 600 "$INSTALL_DIR/.env"
+    chmod 600 "$WEB_DIR/.env"
+
+    # Also create symlink in root for convenience
+    ln -sf "$WEB_DIR/.env" "$INSTALL_DIR/.env" 2>/dev/null || true
 
     log_success "Environment configured"
 }
@@ -442,12 +446,8 @@ EOF
 setup_systemd_service() {
     log_step "Setting up systemd service..."
 
-    # Determine worker command based on platform
-    if [ "$WORKER_TYPE" = "uvicorn.workers.UvicornWorker" ]; then
-        EXEC_CMD="$VENV_DIR/bin/gunicorn unibos_backend.asgi:application -k uvicorn.workers.UvicornWorker -w $WORKER_COUNT -b 0.0.0.0:$SERVICE_PORT"
-    else
-        EXEC_CMD="$VENV_DIR/bin/gunicorn unibos_backend.wsgi:application -w $WORKER_COUNT -b 0.0.0.0:$SERVICE_PORT"
-    fi
+    # Use uvicorn directly for ASGI support (required for Django Channels)
+    EXEC_CMD="$VENV_DIR/bin/uvicorn unibos_backend.asgi:application --host 0.0.0.0 --port $SERVICE_PORT --workers $WORKER_COUNT"
 
     # Create systemd service
     sudo tee /etc/systemd/system/unibos.service > /dev/null << EOF
@@ -464,6 +464,7 @@ Group=$USER
 WorkingDirectory=$INSTALL_DIR/core/clients/web
 EnvironmentFile=$INSTALL_DIR/.env
 Environment="PYTHONPATH=$INSTALL_DIR:$INSTALL_DIR/core/clients/web"
+Environment="UNIBOS_ROOT=$INSTALL_DIR"
 
 ExecStart=$EXEC_CMD
 ExecReload=/bin/kill -s HUP \$MAINPID
@@ -500,6 +501,7 @@ Group=$USER
 WorkingDirectory=$INSTALL_DIR/core/clients/web
 EnvironmentFile=$INSTALL_DIR/.env
 Environment="PYTHONPATH=$INSTALL_DIR:$INSTALL_DIR/core/clients/web"
+Environment="UNIBOS_ROOT=$INSTALL_DIR"
 
 ExecStart=$VENV_DIR/bin/celery -A unibos_backend worker --loglevel=info --concurrency=2
 Restart=always

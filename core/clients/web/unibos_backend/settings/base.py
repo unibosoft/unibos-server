@@ -73,7 +73,7 @@ THIRD_PARTY_APPS = [
 ]
 
 CORE_APPS = [
-    'core.base.models',  # Shared models (Item, Account, etc.) - must be loaded before modules
+    'core.base.modules_core',  # Core shared models (Item, Account, UserProfile, etc.) - must be loaded before modules
     # Note: modules.core.backend removed during v533 migration
     # Core functionality now distributed across individual modules
 ]
@@ -92,31 +92,39 @@ def get_dynamic_modules():
     Get dynamically loaded modules from ModuleRegistry
 
     Returns list of Django app labels for enabled modules.
-    Falls back to hardcoded list if registry unavailable.
+    Falls back to hardcoded list if registry unavailable or returns empty.
     """
+    fallback_modules = [
+        'modules.birlikteyiz.backend',
+        'modules.documents.backend',
+        'modules.currencies.backend',
+        'modules.personal_inflation.backend',
+        'modules.recaria.backend',
+        'modules.cctv.backend',
+        'modules.movies.backend',
+        'modules.music.backend',
+        'modules.restopos.backend',
+        'modules.wimm.backend',
+        'modules.wims.backend',
+        'modules.solitaire.backend',
+        'modules.store.backend',
+    ]
+
     try:
         from core.base.registry import get_module_registry
         registry = get_module_registry()
-        return registry.get_django_apps()
+        modules = registry.get_django_apps()
+
+        # If registry returns empty list, use fallback (no modules enabled yet)
+        if not modules:
+            return fallback_modules
+
+        return modules
     except Exception as e:
         # Fallback to hardcoded modules if registry fails
         # This ensures Django can still start even if module discovery fails
         print(f"Warning: Module registry unavailable ({e}), using fallback modules")
-        return [
-            'modules.birlikteyiz.backend',
-            'modules.documents.backend',
-            'modules.currencies.backend',
-            'modules.personal_inflation.backend',
-            'modules.recaria.backend',
-            'modules.cctv.backend',
-            'modules.movies.backend',
-            'modules.music.backend',
-            'modules.restopos.backend',
-            'modules.wimm.backend',
-            'modules.wims.backend',
-            'modules.solitaire.backend',
-            'modules.store.backend',
-        ]
+        return fallback_modules
 
 # Load modules dynamically
 UNIBOS_MODULES = get_dynamic_modules()

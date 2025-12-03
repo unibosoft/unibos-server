@@ -49,57 +49,24 @@ if os.environ.get('ALLOW_ALL_HOSTS', 'true').lower() == 'true':
     ALLOWED_HOSTS = ['*']
 
 # =============================================================================
-# DATABASE - Local PostgreSQL or SQLite Fallback
+# DATABASE - PostgreSQL Only (No SQLite)
 # =============================================================================
 
-# Check if PostgreSQL is available
-def check_postgres_available():
-    """Check if PostgreSQL is running and accessible."""
-    import socket
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1)
-        result = sock.connect_ex(('localhost', 5432))
-        sock.close()
-        return result == 0
-    except:
-        return False
-
-# Use environment variable or auto-detect
-USE_POSTGRES = os.environ.get('USE_POSTGRES', 'auto')
-if USE_POSTGRES == 'auto':
-    USE_POSTGRES = check_postgres_available()
-else:
-    USE_POSTGRES = USE_POSTGRES.lower() == 'true'
-
-if USE_POSTGRES:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME', 'unibos_db'),
-            'USER': os.environ.get('DB_USER', 'unibos_user'),
-            'PASSWORD': os.environ.get('DB_PASS', ''),
-            'HOST': os.environ.get('DB_HOST', 'localhost'),
-            'PORT': os.environ.get('DB_PORT', '5432'),
-            'OPTIONS': {
-                'connect_timeout': 5,
-            },
-            'CONN_MAX_AGE': 60,  # Lower connection pooling for edge
-        }
+# PostgreSQL configuration - optimized for edge devices
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'unibos_db'),
+        'USER': os.environ.get('DB_USER', 'unibos_user'),
+        'PASSWORD': os.environ.get('DB_PASS', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+        'OPTIONS': {
+            'connect_timeout': 5,
+        },
+        'CONN_MAX_AGE': 60,  # Connection pooling for edge
     }
-else:
-    # SQLite fallback for minimal installations
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR.parent.parent.parent / 'data' / 'db' / 'unibos.sqlite3',
-            'OPTIONS': {
-                'timeout': 20,
-            }
-        }
-    }
-    # Ensure SQLite directory exists
-    DATABASES['default']['NAME'].parent.mkdir(parents=True, exist_ok=True)
+}
 
 # =============================================================================
 # CACHE - Redis or File-based Fallback
@@ -276,29 +243,15 @@ LOGGING = {
 # MODULE CONFIGURATION - Selective Loading
 # =============================================================================
 
-# Get enabled modules from environment or use defaults based on resources
-ENABLED_MODULES = os.environ.get('ENABLED_MODULES', '')
+# Get enabled modules from environment or use defaults
+# NOTE: Currently urls.py loads all modules statically, so we enable all modules
+# TODO: Implement dynamic URL routing based on ENABLED_MODULES for memory savings
+ENABLED_MODULES = os.environ.get('ENABLED_MODULES', 'all')
 
-if ENABLED_MODULES:
+if ENABLED_MODULES != 'all':
     ENABLED_MODULES = [m.strip() for m in ENABLED_MODULES.split(',') if m.strip()]
 else:
-    # Auto-detect based on available memory
-    try:
-        with open('/proc/meminfo', 'r') as f:
-            meminfo = f.read()
-            mem_total = int([l for l in meminfo.split('\n') if 'MemTotal' in l][0].split()[1])
-            mem_mb = mem_total // 1024
-    except:
-        mem_mb = 4096  # Default to 4GB if can't detect
-
-    if mem_mb < 1024:  # < 1GB (Pi Zero 2W)
-        ENABLED_MODULES = ['wimm']
-    elif mem_mb < 2048:  # < 2GB
-        ENABLED_MODULES = ['wimm', 'documents']
-    elif mem_mb < 4096:  # < 4GB
-        ENABLED_MODULES = ['wimm', 'documents', 'personal_inflation', 'wims']
-    else:  # >= 4GB
-        ENABLED_MODULES = 'all'  # All modules
+    ENABLED_MODULES = 'all'  # All modules - required until dynamic URL loading is implemented
 
 # =============================================================================
 # EDGE-SPECIFIC SETTINGS
@@ -348,7 +301,7 @@ if not os.environ.get('PROMETHEUS_ENABLED', 'false').lower() == 'true':
 # Print configuration summary on startup
 print(f"🍓 Edge settings loaded")
 print(f"   Platform: {UNIBOS_PLATFORM} ({UNIBOS_PLATFORM_DETAIL})")
-print(f"   Database: {'PostgreSQL' if USE_POSTGRES else 'SQLite'}")
+print(f"   Database: PostgreSQL")
 print(f"   Cache: {'Redis' if USE_REDIS else 'File-based'}")
 print(f"   Celery: {'Enabled' if CELERY_ENABLED else 'Disabled (sync mode)'}")
 print(f"   Modules: {ENABLED_MODULES}")
