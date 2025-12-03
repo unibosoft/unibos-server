@@ -16,7 +16,7 @@
     "DEBUG": "False",
     "ALLOWED_HOSTS": "*",
     "DB_NAME": "unibos_db",
-    "DB_USER": "unibos_db_user",
+    "DB_USER": "unibos_user",
     "DB_PASSWORD": "unibos_password",
     "DB_HOST": "localhost",
     "DB_PORT": "5432",
