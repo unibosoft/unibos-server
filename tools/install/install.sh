@@ -14,7 +14,7 @@
 #   - Ubuntu/Debian Linux
 #
 # Author: UNIBOS Team
-# Version: 1.1.3
+# Version: 1.1.4
 #
 
 set -e
@@ -29,7 +29,7 @@ DIM='\033[2m'
 NC='\033[0m'
 
 # Configuration
-UNIBOS_VERSION="1.1.3"
+UNIBOS_VERSION="1.1.4"
 UNIBOS_REPO="https://github.com/unibosoft/unibos.git"
 CENTRAL_REGISTRY_URL="https://recaria.org"
 INSTALL_DIR="$HOME/unibos"
@@ -57,7 +57,77 @@ print_banner() {
     echo " | |_| | |\  || || |_) | |_| |___) |"
     echo "  \___/|_| \_|___|____/ \___/|____/ "
     echo -e "${NC}"
-    echo -e "  ${DIM}Edge Node Installer v${UNIBOS_VERSION}${NC}"
+    echo -e "  ${DIM}edge node installer v${UNIBOS_VERSION}${NC}"
+    echo ""
+}
+
+# =============================================================================
+# SYSTEM INFO
+# =============================================================================
+
+detect_system_info() {
+    # Platform detection
+    PLATFORM="linux"
+    PLATFORM_NAME="linux"
+
+    if [ -f /proc/cpuinfo ]; then
+        if grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null || \
+           grep -q "BCM" /proc/cpuinfo 2>/dev/null; then
+            PLATFORM="raspberry-pi"
+            if grep -q "Zero 2" /proc/device-tree/model 2>/dev/null; then
+                PLATFORM_NAME="raspberry pi zero 2w"
+            elif grep -q "Pi 5" /proc/device-tree/model 2>/dev/null; then
+                PLATFORM_NAME="raspberry pi 5"
+            elif grep -q "Pi 4" /proc/device-tree/model 2>/dev/null; then
+                PLATFORM_NAME="raspberry pi 4"
+            elif grep -q "Pi 3" /proc/device-tree/model 2>/dev/null; then
+                PLATFORM_NAME="raspberry pi 3"
+            else
+                PLATFORM_NAME="raspberry pi"
+            fi
+        fi
+    fi
+
+    # RAM and CPU
+    RAM_MB=0
+    [ -f /proc/meminfo ] && RAM_MB=$(grep MemTotal /proc/meminfo | awk '{print int($2/1024)}')
+    CPU_CORES=$(nproc 2>/dev/null || echo 1)
+
+    # UNIBOS status
+    UNIBOS_INSTALLED="no"
+    UNIBOS_RUNNING="no"
+    INSTALLED_VERSION=""
+
+    if [ -d "$INSTALL_DIR" ]; then
+        UNIBOS_INSTALLED="yes"
+        if [ -f "$INSTALL_DIR/VERSION.json" ]; then
+            INSTALLED_VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$INSTALL_DIR/VERSION.json" 2>/dev/null | cut -d'"' -f4)
+        fi
+        if systemctl is-active --quiet unibos 2>/dev/null; then
+            UNIBOS_RUNNING="yes"
+        fi
+    fi
+}
+
+print_system_info() {
+    echo -e "  ${DIM}─────────────────────────────────────${NC}"
+    echo -e "  ${CYAN}system${NC}"
+    echo -e "    platform    : ${PLATFORM_NAME}"
+    echo -e "    ram         : ${RAM_MB} mb"
+    echo -e "    cpu cores   : ${CPU_CORES}"
+    echo ""
+    echo -e "  ${CYAN}unibos${NC}"
+    if [ "$UNIBOS_INSTALLED" == "yes" ]; then
+        echo -e "    installed   : ${GREEN}yes${NC} (v${INSTALLED_VERSION:-unknown})"
+        if [ "$UNIBOS_RUNNING" == "yes" ]; then
+            echo -e "    status      : ${GREEN}running${NC}"
+        else
+            echo -e "    status      : ${YELLOW}stopped${NC}"
+        fi
+    else
+        echo -e "    installed   : ${DIM}no${NC}"
+    fi
+    echo -e "  ${DIM}─────────────────────────────────────${NC}"
     echo ""
 }
 
@@ -65,9 +135,9 @@ print_banner() {
 # MODE SELECTION (Arrow Key Navigation)
 # =============================================================================
 
-# Menu options
-MENU_OPTIONS=("Install" "Repair" "Uninstall")
-MENU_DESCRIPTIONS=("Fresh installation" "Fix existing installation" "Remove UNIBOS")
+# Menu options (lowercase)
+MENU_OPTIONS=("install" "repair" "uninstall")
+MENU_DESCRIPTIONS=("fresh installation" "fix existing installation" "remove unibos")
 MENU_COLORS=("$GREEN" "$YELLOW" "$RED")
 
 draw_menu() {
@@ -93,7 +163,12 @@ select_menu() {
     local selected=0
     local key
 
-    echo -e "  ${CYAN}Select action:${NC}  ${DIM}(↑↓ to navigate, Enter to select, q to quit)${NC}"
+    # Default to repair if already installed
+    if [ "$UNIBOS_INSTALLED" == "yes" ]; then
+        selected=1
+    fi
+
+    echo -e "  ${CYAN}select action${NC}  ${DIM}(↑↓ navigate, enter select, q quit)${NC}"
 
     # Draw initial menu
     draw_menu $selected
@@ -108,31 +183,35 @@ select_menu() {
         # Read single key
         IFS= read -rsn1 key
 
+        # Handle empty key (shouldn't happen but safety check)
+        if [ -z "$key" ]; then
+            # Enter key pressed
+            printf "\033[?25h"  # Show cursor
+            echo ""
+            SELECTED_MODE="${MENU_OPTIONS[$selected]}"
+            return 0
+        fi
+
         case "$key" in
             $'\x1b')  # Escape sequence (arrow keys)
-                read -rsn2 -t 0.1 key
-                case "$key" in
+                read -rsn2 -t 0.1 rest
+                case "$rest" in
                     '[A')  # Up arrow
-                        ((selected--))
+                        ((selected--)) || true
                         [ $selected -lt 0 ] && selected=$((${#MENU_OPTIONS[@]} - 1))
                         draw_menu $selected "redraw"
                         ;;
                     '[B')  # Down arrow
-                        ((selected++))
+                        ((selected++)) || true
                         [ $selected -ge ${#MENU_OPTIONS[@]} ] && selected=0
                         draw_menu $selected "redraw"
                         ;;
                 esac
                 ;;
-            '')  # Enter key
-                printf "\033[?25h"  # Show cursor
-                echo ""
-                SELECTED_MODE="${MENU_OPTIONS[$selected],,}"  # lowercase
-                return 0
-                ;;
             'q'|'Q')  # Quit
                 printf "\033[?25h"  # Show cursor
                 echo ""
+                log "cancelled."
                 exit 0
                 ;;
             '1')  # Quick select
@@ -588,6 +667,10 @@ print_summary() {
 
 main() {
     print_banner
+
+    # Detect system info first
+    detect_system_info
+    print_system_info
 
     # Check for command line argument
     MODE="${1:-}"

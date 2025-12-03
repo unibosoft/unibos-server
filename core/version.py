@@ -16,9 +16,9 @@ import json
 import os
 
 # Current version
-__version__ = "1.1.3"
-__version_info__ = (1, 1, 3)
-__build__ = "20251203220710"
+__version__ = "1.1.4"
+__version_info__ = (1, 1, 4)
+__build__ = "20251203221119"
 
 # Version metadata
 VERSION_NAME = "First Stable Release"
