@@ -180,14 +180,17 @@ select_menu() {
     # Trap to restore cursor on exit
     trap 'printf "\033[?25h"' EXIT
 
-    while true; do
-        # Read single key
-        IFS= read -rsn1 key
+    # Read from /dev/tty to handle pipe input (curl | bash)
+    exec 3</dev/tty
 
-        # Handle empty key (shouldn't happen but safety check)
+    while true; do
+        # Read single key from tty
+        IFS= read -rsn1 key <&3
+
+        # Handle empty key (Enter pressed)
         if [ -z "$key" ]; then
-            # Enter key pressed
             printf "\033[?25h"  # Show cursor
+            exec 3<&-  # Close fd
             echo ""
             SELECTED_MODE="${MENU_OPTIONS[$selected]}"
             return 0
@@ -195,7 +198,7 @@ select_menu() {
 
         case "$key" in
             $'\x1b')  # Escape sequence (arrow keys)
-                read -rsn2 -t 0.1 rest
+                read -rsn2 -t 0.1 rest <&3
                 case "$rest" in
                     '[A')  # Up arrow
                         ((selected--)) || true
@@ -211,24 +214,28 @@ select_menu() {
                 ;;
             'q'|'Q')  # Quit
                 printf "\033[?25h"  # Show cursor
+                exec 3<&-  # Close fd
                 echo ""
                 log "cancelled."
                 exit 0
                 ;;
             '1')  # Quick select
                 printf "\033[?25h"
+                exec 3<&-
                 echo ""
                 SELECTED_MODE="install"
                 return 0
                 ;;
             '2')
                 printf "\033[?25h"
+                exec 3<&-
                 echo ""
                 SELECTED_MODE="repair"
                 return 0
                 ;;
             '3')
                 printf "\033[?25h"
+                exec 3<&-
                 echo ""
                 SELECTED_MODE="uninstall"
                 return 0
