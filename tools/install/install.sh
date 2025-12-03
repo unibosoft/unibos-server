@@ -2,34 +2,34 @@
 #
 # UNIBOS Edge Node Installer
 # ==========================
-# Single-line installation for Raspberry Pi and Linux systems
+# Install, repair, or uninstall UNIBOS on Raspberry Pi and Linux systems
 #
 # Usage:
-#   curl -sSL https://unibos.recaria.org/install.sh | bash
-#   wget -qO- https://unibos.recaria.org/install.sh | bash
+#   curl -sSL https://recaria.org/install.sh | bash              # Install
+#   curl -sSL https://recaria.org/install.sh | bash -s repair    # Repair
+#   curl -sSL https://recaria.org/install.sh | bash -s uninstall # Uninstall
 #
 # Supported Platforms:
-#   - Raspberry Pi Zero 2W
-#   - Raspberry Pi 4 (2GB, 4GB, 8GB)
-#   - Raspberry Pi 5
+#   - Raspberry Pi Zero 2W, Pi 3, Pi 4, Pi 5
 #   - Ubuntu/Debian Linux
 #
 # Author: UNIBOS Team
-# Version: 1.0.0
+# Version: 1.1.2
 #
 
 set -e
 
-# Colors for output
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+DIM='\033[2m'
+NC='\033[0m'
 
 # Configuration
-UNIBOS_VERSION="1.1.1"
+UNIBOS_VERSION="1.1.2"
 UNIBOS_REPO="https://github.com/unibosoft/unibos.git"
 CENTRAL_REGISTRY_URL="https://recaria.org"
 INSTALL_DIR="$HOME/unibos"
@@ -37,14 +37,18 @@ VENV_DIR="$INSTALL_DIR/core/clients/web/venv"
 SERVICE_PORT=8000
 
 # Logging
-log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
-log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
-log_step() { echo -e "${CYAN}==>${NC} $1"; }
+log() { echo -e "  $1"; }
+log_ok() { echo -e "  ${GREEN}[OK]${NC} $1"; }
+log_warn() { echo -e "  ${YELLOW}[!]${NC} $1"; }
+log_err() { echo -e "  ${RED}[X]${NC} $1"; }
+log_step() { echo -e "\n${CYAN}$1${NC}"; }
 
-# Banner
+# =============================================================================
+# BANNER
+# =============================================================================
+
 print_banner() {
+    clear
     echo ""
     echo -e "${CYAN}"
     echo "  _   _ _   _ ___ ____   ___  ____  "
@@ -52,9 +56,23 @@ print_banner() {
     echo " | | | |  \| || ||  _ \| | | \___ \ "
     echo " | |_| | |\  || || |_) | |_| |___) |"
     echo "  \___/|_| \_|___|____/ \___/|____/ "
+    echo -e "${NC}"
+    echo -e "  ${DIM}Edge Node Installer v${UNIBOS_VERSION}${NC}"
     echo ""
-    echo -e "${NC}  Edge Node Installer v${UNIBOS_VERSION}"
-    echo "  =================================="
+}
+
+# =============================================================================
+# MODE SELECTION
+# =============================================================================
+
+show_menu() {
+    echo -e "  ${CYAN}Select action:${NC}"
+    echo ""
+    echo -e "    ${GREEN}1${NC}) Install    - Fresh installation"
+    echo -e "    ${YELLOW}2${NC}) Repair     - Fix existing installation"
+    echo -e "    ${RED}3${NC}) Uninstall  - Remove UNIBOS"
+    echo ""
+    echo -e "    ${DIM}q) Quit${NC}"
     echo ""
 }
 
@@ -68,7 +86,7 @@ detect_platform() {
     PLATFORM="linux"
     PLATFORM_DETAIL="generic"
     RAM_MB=0
-    CPU_CORES=0
+    CPU_CORES=1
 
     # Check if Raspberry Pi
     if [ -f /proc/cpuinfo ]; then
@@ -76,7 +94,6 @@ detect_platform() {
            grep -q "BCM" /proc/cpuinfo 2>/dev/null; then
             PLATFORM="raspberry-pi"
 
-            # Detect specific model
             if grep -q "Zero 2" /proc/device-tree/model 2>/dev/null; then
                 PLATFORM_DETAIL="zero2w"
             elif grep -q "Pi 5" /proc/device-tree/model 2>/dev/null; then
@@ -85,274 +102,139 @@ detect_platform() {
                 PLATFORM_DETAIL="pi4"
             elif grep -q "Pi 3" /proc/device-tree/model 2>/dev/null; then
                 PLATFORM_DETAIL="pi3"
-            else
-                PLATFORM_DETAIL="pi-unknown"
             fi
         fi
     fi
 
-    # Get RAM
-    if [ -f /proc/meminfo ]; then
-        RAM_MB=$(grep MemTotal /proc/meminfo | awk '{print int($2/1024)}')
-    fi
-
-    # Get CPU cores
+    # Get RAM and CPU
+    [ -f /proc/meminfo ] && RAM_MB=$(grep MemTotal /proc/meminfo | awk '{print int($2/1024)}')
     CPU_CORES=$(nproc 2>/dev/null || echo 1)
 
-    # Determine recommended configuration
-    # NOTE: All modules are always enabled until dynamic URL routing is implemented
-    RECOMMENDED_MODULES="all"
-
-    if [ "$PLATFORM" = "raspberry-pi" ]; then
-        case "$PLATFORM_DETAIL" in
-            "zero2w")
-                WORKER_COUNT=1
-                WORKER_TYPE="sync"
-                log_warn "Pi Zero 2W detected - running with reduced workers"
-                ;;
-            "pi3")
-                WORKER_COUNT=2
-                WORKER_TYPE="sync"
-                log_warn "Pi 3 detected - limited resources"
-                ;;
-            "pi4")
-                if [ $RAM_MB -ge 4000 ]; then
-                    WORKER_COUNT=3
-                    WORKER_TYPE="uvicorn.workers.UvicornWorker"
-                else
-                    WORKER_COUNT=2
-                    WORKER_TYPE="uvicorn.workers.UvicornWorker"
-                fi
-                ;;
-            "pi5")
-                WORKER_COUNT=4
-                WORKER_TYPE="uvicorn.workers.UvicornWorker"
-                log_success "Pi 5 detected - full performance mode"
-                ;;
-            *)
-                WORKER_COUNT=2
-                WORKER_TYPE="sync"
-                ;;
-        esac
-    else
-        # Generic Linux
-        if [ $RAM_MB -ge 4000 ]; then
-            WORKER_COUNT=$((CPU_CORES > 4 ? 4 : CPU_CORES))
-            WORKER_TYPE="uvicorn.workers.UvicornWorker"
-        else
-            WORKER_COUNT=2
-            WORKER_TYPE="sync"
-        fi
-    fi
-
-    log_success "Platform: $PLATFORM ($PLATFORM_DETAIL)"
-    log_info "RAM: ${RAM_MB}MB | CPU Cores: $CPU_CORES"
-    log_info "Workers: $WORKER_COUNT | Type: $WORKER_TYPE"
-    log_info "Recommended modules: $RECOMMENDED_MODULES"
-
-    export PLATFORM PLATFORM_DETAIL RAM_MB CPU_CORES WORKER_COUNT WORKER_TYPE RECOMMENDED_MODULES
-}
-
-# =============================================================================
-# DEPENDENCY INSTALLATION
-# =============================================================================
-
-check_root() {
-    if [ "$EUID" -eq 0 ]; then
-        log_error "Do not run this script as root!"
-        log_info "Run as normal user: curl -sSL .../install.sh | bash"
-        exit 1
-    fi
-}
-
-check_sudo() {
-    if ! sudo -n true 2>/dev/null; then
-        log_info "This script requires sudo privileges for some operations."
-        log_info "You may be prompted for your password."
-        sudo -v
-    fi
-}
-
-install_system_dependencies() {
-    log_step "Installing system dependencies..."
-
-    # Detect package manager
-    if command -v apt-get &> /dev/null; then
-        PKG_MANAGER="apt"
-    elif command -v dnf &> /dev/null; then
-        PKG_MANAGER="dnf"
-    elif command -v yum &> /dev/null; then
-        PKG_MANAGER="yum"
-    else
-        log_error "Unsupported package manager"
-        exit 1
-    fi
-
-    case $PKG_MANAGER in
-        apt)
-            sudo apt-get update -qq
-
-            # Core dependencies
-            sudo apt-get install -y -qq \
-                python3 python3-pip python3-venv python3-dev \
-                postgresql postgresql-contrib libpq-dev \
-                redis-server \
-                git curl wget \
-                build-essential \
-                avahi-daemon avahi-utils libnss-mdns \
-                libffi-dev libssl-dev
-
-            # Pi-specific optimizations
-            if [ "$PLATFORM" = "raspberry-pi" ]; then
-                # Reduce swappiness for SD card longevity
-                sudo sysctl -w vm.swappiness=10 2>/dev/null || true
-                echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf > /dev/null 2>/dev/null || true
-            fi
-            ;;
-        dnf|yum)
-            sudo $PKG_MANAGER install -y -q \
-                python3 python3-pip python3-devel \
-                postgresql postgresql-server postgresql-contrib \
-                redis \
-                git curl wget \
-                gcc make \
-                avahi avahi-tools nss-mdns \
-                libffi-devel openssl-devel
-            ;;
+    # Set worker config based on platform
+    case "$PLATFORM_DETAIL" in
+        "zero2w"|"pi3") WORKER_COUNT=1 ;;
+        "pi4") WORKER_COUNT=$((RAM_MB >= 4000 ? 3 : 2)) ;;
+        "pi5") WORKER_COUNT=4 ;;
+        *) WORKER_COUNT=$((CPU_CORES > 4 ? 4 : CPU_CORES)) ;;
     esac
 
-    # Ensure services are running
-    sudo systemctl enable postgresql redis-server avahi-daemon 2>/dev/null || \
-    sudo systemctl enable postgresql redis avahi-daemon 2>/dev/null || true
+    log_ok "$PLATFORM ($PLATFORM_DETAIL) - ${RAM_MB}MB RAM, $CPU_CORES cores"
 
-    sudo systemctl start postgresql 2>/dev/null || true
-    sudo systemctl start redis-server 2>/dev/null || sudo systemctl start redis 2>/dev/null || true
-    sudo systemctl start avahi-daemon 2>/dev/null || true
-
-    log_success "System dependencies installed"
+    export PLATFORM PLATFORM_DETAIL RAM_MB CPU_CORES WORKER_COUNT
 }
 
 # =============================================================================
-# UNIBOS INSTALLATION
+# PRE-FLIGHT CHECKS
 # =============================================================================
+
+check_requirements() {
+    log_step "Checking requirements..."
+
+    # Not root
+    if [ "$EUID" -eq 0 ]; then
+        log_err "Do not run as root! Use: curl ... | bash"
+        exit 1
+    fi
+
+    # Sudo available
+    if ! sudo -n true 2>/dev/null; then
+        log "Sudo password required for system packages..."
+        sudo -v || { log_err "Sudo required"; exit 1; }
+    fi
+
+    log_ok "Requirements OK"
+}
+
+# =============================================================================
+# INSTALL FUNCTIONS
+# =============================================================================
+
+install_dependencies() {
+    log_step "Installing dependencies..."
+
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq \
+            python3 python3-pip python3-venv python3-dev \
+            postgresql postgresql-contrib libpq-dev \
+            redis-server git curl wget build-essential \
+            avahi-daemon avahi-utils libnss-mdns \
+            libffi-dev libssl-dev 2>/dev/null
+    else
+        log_err "Only apt-based systems supported currently"
+        exit 1
+    fi
+
+    # Enable services
+    sudo systemctl enable postgresql redis-server avahi-daemon 2>/dev/null || true
+    sudo systemctl start postgresql redis-server avahi-daemon 2>/dev/null || true
+
+    log_ok "Dependencies installed"
+}
 
 install_unibos() {
     log_step "Installing UNIBOS..."
 
-    # Remove existing installation if present
+    # Clone repo
     if [ -d "$INSTALL_DIR" ]; then
-        log_warn "Existing installation found at $INSTALL_DIR"
-        read -p "Remove and reinstall? [y/N] " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            rm -rf "$INSTALL_DIR"
-        else
-            log_info "Keeping existing installation, updating..."
-            cd "$INSTALL_DIR"
-            git pull origin main 2>/dev/null || true
-            return 0
-        fi
+        log_warn "Existing installation found, updating..."
+        cd "$INSTALL_DIR" && git pull origin main 2>/dev/null || true
+    else
+        log "Cloning repository (GitHub credentials may be required)..."
+        git clone --depth 1 "$UNIBOS_REPO" "$INSTALL_DIR" || {
+            log_err "Clone failed. Use GitHub PAT as password."
+            exit 1
+        }
     fi
 
-    # Clone repository (requires GitHub token for private repo)
-    log_info "Cloning from git repository..."
-    log_info "GitHub credentials required (use Personal Access Token as password)"
-
-    if ! git clone --depth 1 "$UNIBOS_REPO" "$INSTALL_DIR"; then
-        log_error "Git clone failed!"
-        log_info "Make sure you have:"
-        log_info "  1. A valid GitHub account with repo access"
-        log_info "  2. A Personal Access Token (PAT) with 'repo' scope"
-        log_info "  3. Use the token as password when prompted"
-        log_info ""
-        log_info "To create a PAT: GitHub → Settings → Developer settings → Personal access tokens"
-        exit 1
-    fi
-
+    # Create venv and install
     cd "$INSTALL_DIR"
-
-    # Create Python virtual environment
-    log_info "Creating Python virtual environment..."
     python3 -m venv "$VENV_DIR"
+    "$VENV_DIR/bin/pip" install --upgrade pip wheel -q
 
-    # Upgrade pip
-    "$VENV_DIR/bin/pip" install --upgrade pip wheel setuptools -q
-
-    # Install UNIBOS
-    log_info "Installing UNIBOS packages..."
     cd "$INSTALL_DIR/core/clients/web"
     "$VENV_DIR/bin/pip" install -r requirements.txt -q 2>/dev/null || \
-    "$VENV_DIR/bin/pip" install django djangorestframework psycopg2-binary redis celery channels gunicorn uvicorn -q
+    "$VENV_DIR/bin/pip" install django djangorestframework psycopg2-binary \
+        redis celery channels daphne uvicorn django-environ django-redis \
+        djangorestframework-simplejwt django-cors-headers django-filter \
+        drf-spectacular django-extensions django-celery-beat channels-redis \
+        django-prometheus -q
 
-    # Install CLI
-    cd "$INSTALL_DIR"
-    "$VENV_DIR/bin/pip" install -e . -q 2>/dev/null || true
-
-    # Also install via pipx for system-wide CLI access
-    if command -v pipx &> /dev/null; then
-        pipx install -e "$INSTALL_DIR" --force 2>/dev/null || true
-    else
-        python3 -m pip install --user pipx 2>/dev/null || true
-        ~/.local/bin/pipx install -e "$INSTALL_DIR" --force 2>/dev/null || true
-    fi
-
-    log_success "UNIBOS installed"
+    log_ok "UNIBOS installed"
 }
 
-# =============================================================================
-# DATABASE SETUP
-# =============================================================================
-
 setup_database() {
-    log_step "Setting up PostgreSQL database..."
+    log_step "Setting up database..."
 
     DB_NAME="unibos_db"
     DB_USER="unibos_user"
-    DB_PASS=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 24)
+    DB_PASS=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 24)
 
-    # Create PostgreSQL user and database
-    sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';" 2>/dev/null || \
-        log_warn "User $DB_USER may already exist"
-
-    sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;" 2>/dev/null || \
-        log_warn "Database $DB_NAME may already exist"
-
+    sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';" 2>/dev/null || true
+    sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;" 2>/dev/null || true
     sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;" 2>/dev/null || true
+    sudo -u postgres psql -d $DB_NAME -c "GRANT ALL ON SCHEMA public TO $DB_USER;" 2>/dev/null || true
 
     # Save credentials
     mkdir -p "$INSTALL_DIR/data/config"
     cat > "$INSTALL_DIR/data/config/db.env" << EOF
-DATABASE_URL=postgres://$DB_USER:$DB_PASS@localhost:5432/$DB_NAME
 DB_NAME=$DB_NAME
 DB_USER=$DB_USER
 DB_PASS=$DB_PASS
-DB_HOST=localhost
-DB_PORT=5432
 EOF
     chmod 600 "$INSTALL_DIR/data/config/db.env"
 
-    log_success "Database configured"
+    log_ok "Database configured"
 }
 
-# =============================================================================
-# ENVIRONMENT CONFIGURATION
-# =============================================================================
-
 setup_environment() {
-    log_step "Setting up environment..."
+    log_step "Configuring environment..."
 
-    # Generate secret key
     SECRET_KEY=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 64)
-
-    # Get IP address
     LOCAL_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
-
-    # Source database credentials
     source "$INSTALL_DIR/data/config/db.env"
 
-    # Create .env file in web directory (where Django looks for it)
-    WEB_DIR="$INSTALL_DIR/core/clients/web"
-    cat > "$WEB_DIR/.env" << EOF
+    cat > "$INSTALL_DIR/.env" << EOF
 # UNIBOS Edge Node Configuration
 # Generated: $(date -Iseconds)
 
@@ -363,7 +245,7 @@ DEBUG=False
 ALLOWED_HOSTS=$LOCAL_IP,localhost,127.0.0.1,$(hostname),$(hostname).local
 
 # Database
-DATABASE_URL=$DATABASE_URL
+DATABASE_URL=postgres://$DB_USER:$DB_PASS@localhost:5432/$DB_NAME
 DB_NAME=$DB_NAME
 DB_USER=$DB_USER
 DB_PASS=$DB_PASS
@@ -383,78 +265,26 @@ CENTRAL_REGISTRY_URL=$CENTRAL_REGISTRY_URL
 
 # Performance
 WORKER_COUNT=$WORKER_COUNT
-WORKER_TYPE=$WORKER_TYPE
+WORKER_TYPE=uvicorn.workers.UvicornWorker
 
 # Modules
-ENABLED_MODULES=$RECOMMENDED_MODULES
+ENABLED_MODULES=all
 EOF
 
-    chmod 600 "$WEB_DIR/.env"
+    chmod 600 "$INSTALL_DIR/.env"
+    ln -sf "$INSTALL_DIR/.env" "$INSTALL_DIR/core/clients/web/.env" 2>/dev/null || true
 
-    # Also create symlink in root for convenience
-    ln -sf "$WEB_DIR/.env" "$INSTALL_DIR/.env" 2>/dev/null || true
-
-    log_success "Environment configured"
+    log_ok "Environment configured"
 }
 
-# =============================================================================
-# mDNS SETUP (AVAHI)
-# =============================================================================
+setup_services() {
+    log_step "Setting up services..."
 
-setup_mdns() {
-    log_step "Setting up mDNS advertisement..."
-
-    # Get node info
-    LOCAL_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
-    NODE_NAME=$(hostname)
-
-    # Create Avahi service file
-    sudo tee /etc/avahi/services/unibos.service > /dev/null << EOF
-<?xml version="1.0" standalone='no'?>
-<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
-<service-group>
-  <name replace-wildcards="yes">UNIBOS on %h</name>
-  <service>
-    <type>_unibos._tcp</type>
-    <port>$SERVICE_PORT</port>
-    <txt-record>version=$UNIBOS_VERSION</txt-record>
-    <txt-record>platform=$PLATFORM</txt-record>
-    <txt-record>platform_detail=$PLATFORM_DETAIL</txt-record>
-    <txt-record>node_type=edge</txt-record>
-    <txt-record>api=/api/v1/</txt-record>
-    <txt-record>health=/health/</txt-record>
-  </service>
-  <service>
-    <type>_http._tcp</type>
-    <port>$SERVICE_PORT</port>
-    <txt-record>path=/</txt-record>
-  </service>
-</service-group>
-EOF
-
-    # Restart Avahi
-    sudo systemctl restart avahi-daemon 2>/dev/null || true
-
-    log_success "mDNS configured: ${NODE_NAME}.local:$SERVICE_PORT"
-    log_info "Service type: _unibos._tcp"
-}
-
-# =============================================================================
-# SYSTEMD SERVICE
-# =============================================================================
-
-setup_systemd_service() {
-    log_step "Setting up systemd service..."
-
-    # Use uvicorn directly for ASGI support (required for Django Channels)
-    EXEC_CMD="$VENV_DIR/bin/uvicorn unibos_backend.asgi:application --host 0.0.0.0 --port $SERVICE_PORT --workers $WORKER_COUNT"
-
-    # Create systemd service
+    # Main service
     sudo tee /etc/systemd/system/unibos.service > /dev/null << EOF
 [Unit]
 Description=UNIBOS Edge Node
-Documentation=https://unibos.recaria.org/docs
-After=network.target postgresql.service redis.service avahi-daemon.service
+After=network.target postgresql.service redis.service
 Wants=postgresql.service redis.service
 
 [Service]
@@ -465,34 +295,19 @@ WorkingDirectory=$INSTALL_DIR/core/clients/web
 EnvironmentFile=$INSTALL_DIR/.env
 Environment="PYTHONPATH=$INSTALL_DIR:$INSTALL_DIR/core/clients/web"
 Environment="UNIBOS_ROOT=$INSTALL_DIR"
-
-ExecStart=$EXEC_CMD
-ExecReload=/bin/kill -s HUP \$MAINPID
-ExecStop=/bin/kill -s TERM \$MAINPID
-
+ExecStart=$VENV_DIR/bin/uvicorn unibos_backend.asgi:application --host 0.0.0.0 --port $SERVICE_PORT --workers $WORKER_COUNT
 Restart=always
 RestartSec=5
-StartLimitInterval=60
-StartLimitBurst=3
-
-# Security
-NoNewPrivileges=true
-PrivateTmp=true
-
-# Logging
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=unibos
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-    # Create Celery worker service
+    # Celery service
     sudo tee /etc/systemd/system/unibos-celery.service > /dev/null << EOF
 [Unit]
 Description=UNIBOS Celery Worker
-After=network.target redis.service unibos.service
+After=network.target redis.service
 
 [Service]
 Type=simple
@@ -502,7 +317,6 @@ WorkingDirectory=$INSTALL_DIR/core/clients/web
 EnvironmentFile=$INSTALL_DIR/.env
 Environment="PYTHONPATH=$INSTALL_DIR:$INSTALL_DIR/core/clients/web"
 Environment="UNIBOS_ROOT=$INSTALL_DIR"
-
 ExecStart=$VENV_DIR/bin/celery -A unibos_backend worker --loglevel=info --concurrency=2
 Restart=always
 RestartSec=5
@@ -511,98 +325,151 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-    # Reload systemd
+    # mDNS service
+    sudo tee /etc/avahi/services/unibos.service > /dev/null << EOF
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">UNIBOS on %h</name>
+  <service>
+    <type>_unibos._tcp</type>
+    <port>$SERVICE_PORT</port>
+    <txt-record>version=$UNIBOS_VERSION</txt-record>
+    <txt-record>platform=$PLATFORM_DETAIL</txt-record>
+  </service>
+</service-group>
+EOF
+
     sudo systemctl daemon-reload
-
-    log_success "Systemd services configured"
+    log_ok "Services configured"
 }
-
-# =============================================================================
-# DATABASE MIGRATIONS
-# =============================================================================
 
 run_migrations() {
-    log_step "Running database migrations..."
+    log_step "Running migrations..."
 
     cd "$INSTALL_DIR/core/clients/web"
-
-    # Set environment
     export PYTHONPATH="$INSTALL_DIR:$INSTALL_DIR/core/clients/web"
-    source "$INSTALL_DIR/.env"
+    set -a && source "$INSTALL_DIR/.env" && set +a
 
-    # Run migrations
-    "$VENV_DIR/bin/python" manage.py migrate --noinput 2>/dev/null || {
-        log_warn "Some migrations may have failed, continuing..."
-    }
+    "$VENV_DIR/bin/python" manage.py migrate --noinput 2>/dev/null || log_warn "Some migrations skipped"
+    "$VENV_DIR/bin/python" manage.py collectstatic --noinput 2>/dev/null || log_warn "Static files skipped"
 
-    log_success "Migrations completed"
+    log_ok "Migrations complete"
 }
-
-# =============================================================================
-# NODE REGISTRATION
-# =============================================================================
-
-register_node() {
-    log_step "Registering with central server..."
-
-    LOCAL_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
-    NODE_NAME=$(hostname)
-
-    # Try to register with central
-    REGISTRATION_RESPONSE=$(curl -s -X POST "$CENTRAL_REGISTRY_URL/api/v1/nodes/register/" \
-        -H "Content-Type: application/json" \
-        -d "{
-            \"hostname\": \"$NODE_NAME\",
-            \"node_type\": \"edge\",
-            \"platform\": \"$PLATFORM_DETAIL\",
-            \"ip_address\": \"$LOCAL_IP\",
-            \"port\": $SERVICE_PORT,
-            \"version\": \"$UNIBOS_VERSION\",
-            \"capabilities\": {
-                \"has_gpio\": $([ \"$PLATFORM\" = \"raspberry-pi\" ] && echo \"true\" || echo \"false\"),
-                \"can_run_django\": true,
-                \"can_run_celery\": true,
-                \"can_run_websocket\": $([ \"$WORKER_TYPE\" = \"uvicorn.workers.UvicornWorker\" ] && echo \"true\" || echo \"false\"),
-                \"ram_gb\": $((RAM_MB / 1024)),
-                \"cpu_cores\": $CPU_CORES
-            }
-        }" 2>/dev/null) || true
-
-    if echo "$REGISTRATION_RESPONSE" | grep -q "id"; then
-        NODE_ID=$(echo "$REGISTRATION_RESPONSE" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
-        echo "NODE_ID=$NODE_ID" >> "$INSTALL_DIR/.env"
-        log_success "Registered with central server (ID: $NODE_ID)"
-    else
-        log_warn "Could not register with central server (offline mode)"
-        log_info "Node will operate independently"
-    fi
-}
-
-# =============================================================================
-# START SERVICES
-# =============================================================================
 
 start_services() {
-    log_step "Starting UNIBOS services..."
+    log_step "Starting services..."
 
     sudo systemctl enable unibos unibos-celery 2>/dev/null || true
-    sudo systemctl start unibos 2>/dev/null || true
-    sudo systemctl start unibos-celery 2>/dev/null || true
+    sudo systemctl restart avahi-daemon 2>/dev/null || true
+    sudo systemctl start unibos unibos-celery 2>/dev/null || true
 
-    # Wait for service to start
     sleep 3
 
-    # Check status
     if systemctl is-active --quiet unibos; then
-        log_success "UNIBOS service is running"
+        log_ok "UNIBOS is running"
     else
-        log_warn "UNIBOS service may not have started properly"
-        log_info "Check logs: journalctl -u unibos -f"
+        log_warn "Service may still be starting..."
     fi
 }
 
 # =============================================================================
-# FINAL SUMMARY
+# REPAIR FUNCTIONS
+# =============================================================================
+
+repair_installation() {
+    log_step "Repairing UNIBOS installation..."
+
+    if [ ! -d "$INSTALL_DIR" ]; then
+        log_err "No installation found at $INSTALL_DIR"
+        log "Run install instead."
+        exit 1
+    fi
+
+    # Stop services
+    sudo systemctl stop unibos unibos-celery 2>/dev/null || true
+
+    # Update code
+    log "Updating code..."
+    cd "$INSTALL_DIR" && git pull origin main 2>/dev/null || log_warn "Git pull failed"
+
+    # Reinstall dependencies
+    log "Reinstalling Python packages..."
+    cd "$INSTALL_DIR/core/clients/web"
+    "$VENV_DIR/bin/pip" install -r requirements.txt -q 2>/dev/null || true
+
+    # Run migrations
+    log "Running migrations..."
+    export PYTHONPATH="$INSTALL_DIR:$INSTALL_DIR/core/clients/web"
+    set -a && source "$INSTALL_DIR/.env" && set +a
+    "$VENV_DIR/bin/python" manage.py migrate --noinput 2>/dev/null || true
+    "$VENV_DIR/bin/python" manage.py collectstatic --noinput 2>/dev/null || true
+
+    # Restart services
+    sudo systemctl daemon-reload
+    sudo systemctl start unibos unibos-celery 2>/dev/null || true
+
+    sleep 2
+
+    if systemctl is-active --quiet unibos; then
+        log_ok "Repair complete - UNIBOS is running"
+    else
+        log_warn "Repair complete - check logs: journalctl -u unibos -f"
+    fi
+}
+
+# =============================================================================
+# UNINSTALL FUNCTIONS
+# =============================================================================
+
+uninstall_unibos() {
+    log_step "Uninstalling UNIBOS..."
+
+    echo ""
+    echo -e "  ${RED}WARNING: This will remove:${NC}"
+    echo "    - UNIBOS installation at $INSTALL_DIR"
+    echo "    - Systemd services (unibos, unibos-celery)"
+    echo "    - mDNS service configuration"
+    echo ""
+    echo -e "  ${YELLOW}Database and system packages will NOT be removed.${NC}"
+    echo ""
+
+    read -p "  Are you sure? [y/N] " -n 1 -r
+    echo ""
+
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log "Cancelled."
+        exit 0
+    fi
+
+    # Stop and disable services
+    log "Stopping services..."
+    sudo systemctl stop unibos unibos-celery 2>/dev/null || true
+    sudo systemctl disable unibos unibos-celery 2>/dev/null || true
+
+    # Remove service files
+    log "Removing service files..."
+    sudo rm -f /etc/systemd/system/unibos.service
+    sudo rm -f /etc/systemd/system/unibos-celery.service
+    sudo rm -f /etc/avahi/services/unibos.service
+    sudo systemctl daemon-reload
+
+    # Remove installation
+    log "Removing installation..."
+    rm -rf "$INSTALL_DIR"
+
+    # Remove pipx installation
+    pipx uninstall unibos 2>/dev/null || true
+    ~/.local/bin/pipx uninstall unibos 2>/dev/null || true
+
+    log_ok "UNIBOS uninstalled"
+    echo ""
+    log "To remove database: sudo -u postgres dropdb unibos_db"
+    log "To remove db user:  sudo -u postgres dropuser unibos_user"
+}
+
+# =============================================================================
+# SUMMARY
 # =============================================================================
 
 print_summary() {
@@ -611,42 +478,26 @@ print_summary() {
 
     echo ""
     echo -e "${GREEN}============================================${NC}"
-    echo -e "${GREEN}   UNIBOS Edge Node Installation Complete   ${NC}"
+    echo -e "${GREEN}     UNIBOS Installation Complete!         ${NC}"
     echo -e "${GREEN}============================================${NC}"
     echo ""
-    echo -e "  ${CYAN}Platform:${NC}     $PLATFORM ($PLATFORM_DETAIL)"
-    echo -e "  ${CYAN}RAM:${NC}          ${RAM_MB}MB"
-    echo -e "  ${CYAN}CPU Cores:${NC}    $CPU_CORES"
-    echo -e "  ${CYAN}Workers:${NC}      $WORKER_COUNT"
+    echo -e "  ${CYAN}Access:${NC}"
+    echo -e "    http://$LOCAL_IP:$SERVICE_PORT"
+    echo -e "    http://${NODE_NAME}.local:$SERVICE_PORT"
     echo ""
-    echo -e "  ${CYAN}Access URLs:${NC}"
-    echo -e "    Local:    ${GREEN}http://$LOCAL_IP:$SERVICE_PORT${NC}"
-    echo -e "    mDNS:     ${GREEN}http://${NODE_NAME}.local:$SERVICE_PORT${NC}"
-    echo ""
-    echo -e "  ${CYAN}Services:${NC}"
+    echo -e "  ${CYAN}Commands:${NC}"
     echo -e "    Status:   sudo systemctl status unibos"
     echo -e "    Logs:     journalctl -u unibos -f"
     echo -e "    Restart:  sudo systemctl restart unibos"
     echo ""
-    echo -e "  ${CYAN}CLI:${NC}"
-    echo -e "    TUI:      unibos-server tui"
-    echo -e "    Status:   unibos-server status"
-    echo ""
-    echo -e "  ${CYAN}mDNS Discovery:${NC}"
-    echo -e "    Service:  _unibos._tcp.local"
-    echo -e "    Test:     avahi-browse -r _unibos._tcp"
-    echo ""
 
-    # Health check
-    echo -n "  Health Check: "
-    if curl -s "http://localhost:$SERVICE_PORT/health/quick/" | grep -q "ok"; then
+    # Quick health check
+    echo -n "  Health: "
+    if curl -s "http://localhost:$SERVICE_PORT/health/" 2>/dev/null | grep -q "ok"; then
         echo -e "${GREEN}OK${NC}"
     else
-        echo -e "${YELLOW}Pending (service may still be starting)${NC}"
+        echo -e "${YELLOW}Starting...${NC}"
     fi
-
-    echo ""
-    echo -e "${BLUE}Happy hacking!${NC}"
     echo ""
 }
 
@@ -657,25 +508,52 @@ print_summary() {
 main() {
     print_banner
 
-    # Pre-flight checks
-    check_root
-    check_sudo
+    # Check for command line argument
+    MODE="${1:-}"
 
-    # Installation steps
-    detect_platform
-    install_system_dependencies
-    install_unibos
-    setup_database
-    setup_environment
-    setup_mdns
-    setup_systemd_service
-    run_migrations
-    register_node
-    start_services
+    # If no argument, show menu
+    if [ -z "$MODE" ]; then
+        show_menu
+        read -p "  Choice [1]: " -n 1 -r choice
+        echo ""
 
-    # Done
-    print_summary
+        case "$choice" in
+            1|"") MODE="install" ;;
+            2) MODE="repair" ;;
+            3) MODE="uninstall" ;;
+            q|Q) echo ""; exit 0 ;;
+            *) log_err "Invalid choice"; exit 1 ;;
+        esac
+    fi
+
+    # Execute based on mode
+    case "$MODE" in
+        install)
+            check_requirements
+            detect_platform
+            install_dependencies
+            install_unibos
+            setup_database
+            setup_environment
+            setup_services
+            run_migrations
+            start_services
+            print_summary
+            ;;
+        repair)
+            check_requirements
+            detect_platform
+            repair_installation
+            ;;
+        uninstall)
+            uninstall_unibos
+            ;;
+        *)
+            log_err "Unknown mode: $MODE"
+            log "Usage: $0 [install|repair|uninstall]"
+            exit 1
+            ;;
+    esac
 }
 
-# Run main function
 main "$@"
