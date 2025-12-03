@@ -1,16 +1,16 @@
 {
   "version": {
     "major": 1,
-    "minor": 2,
-    "patch": 0,
+    "minor": 1,
+    "patch": 1,
     "build": "20251203174112"
   },
   "display": {
-    "semantic": "1.0.0",
-    "full": "1.0.0+build.20251201222554",
-    "short": "v1.0.0 @22:25",
-    "compact": "v1.0.0 1201@2225",
-    "archive": "unibos_v1.0.0_b20251201222554"
+    "semantic": "1.1.1",
+    "full": "1.1.1+build.20251203174112",
+    "short": "v1.1.1 @17:41",
+    "compact": "v1.1.1 1203@1741",
+    "archive": "unibos_v1.1.1_b20251203174112"
   },
   "build_info": {
     "date": "2025-12-03",

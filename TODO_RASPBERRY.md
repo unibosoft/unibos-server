@@ -40,15 +40,13 @@ Bu doküman, UNIBOS'un Raspberry Pi ve diğer edge cihazlarda çalışması içi
 
 ## Devam Eden Adımlar
 
-### 3. Edge Settings Dosyası
-- [ ] `core/clients/web/unibos_backend/settings/edge.py` oluştur
-  ```python
-  # Edge-specific settings
-  # - Lightweight configuration
-  # - Local-only database
-  # - Reduced logging
-  # - Pi Zero optimizations
-  ```
+### 3. Edge Settings Dosyası ✅
+- [x] `core/clients/web/unibos_backend/settings/edge.py` oluşturuldu
+  - SQLite/PostgreSQL auto-detection
+  - Redis/file-cache auto-detection
+  - Memory-based module selection
+  - mDNS settings
+  - Privacy defaults
 
 ### 4. Module Enablement System
 - [ ] Edge node'da sadece seçili modüllerin aktif olması
@@ -223,7 +221,7 @@ unibos-dev/
 │       └── web/
 │           └── unibos_backend/
 │               └── settings/
-│                   └── edge.py     [ ] YAPILACAK
+│                   └── edge.py     ✅ OLUŞTURULDU
 │
 └── TODO_RASPBERRY.md               ✅ BU DOSYA
 ```
@@ -344,11 +342,11 @@ curl -sSL https://unibos.recaria.org/install.sh | bash
 ## Sonraki Adımlar (Bu Oturum)
 
 1. [x] install.sh oluştur
-2. [ ] edge.py settings dosyası oluştur
+2. [x] edge.py settings dosyası oluştur
 3. [ ] install.sh'i executable yap ve test et
 4. [ ] Raspberry Pi'de gerçek test
 
 ---
 
-**Son Güncelleme:** 2025-12-03 17:30 UTC+3
+**Son Güncelleme:** 2025-12-03 18:00 UTC+3
 **Güncelleyen:** Claude + Berk
