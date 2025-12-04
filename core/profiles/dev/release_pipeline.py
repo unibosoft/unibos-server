@@ -352,12 +352,28 @@ class ReleasePipeline:
             'dist',
             'build',
             '.pytest_cache',
+            # Flutter/Mobile SDK directories
+            '.dart_tool',
+            'Pods',
+            '.symlinks',
+            'ephemeral',
+            '.pub-cache',
+            '.pub',
+            '.gradle',
         }
 
         # Files to exclude
         exclude_files = {
             '.DS_Store',
             '.coverage',
+            # Flutter/Mobile files
+            '.flutter-plugins',
+            '.flutter-plugins-dependencies',
+            '.packages',
+            'Podfile.lock',
+            'local.properties',
+            'Generated.xcconfig',
+            'ServiceDefinitions.json',
         }
 
         # File extensions to exclude
